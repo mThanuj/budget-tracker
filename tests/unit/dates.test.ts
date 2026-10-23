@@ -1,0 +1,45 @@
+import { describe, expect, it } from "vitest";
+import {
+  addDays,
+  addMonths,
+  isValidTimeZone,
+  monthOf,
+  monthRange,
+  todayInTz,
+} from "@/lib/dates";
+
+describe("todayInTz", () => {
+  // 2026-10-23 20:00 UTC is already Oct 24 in India, still Oct 23 in New York.
+  const now = new Date("2026-10-23T20:00:00Z");
+
+  it("returns the calendar date in the user's timezone, not the server's", () => {
+    expect(todayInTz("Asia/Kolkata", now)).toBe("2026-10-24");
+    expect(todayInTz("America/New_York", now)).toBe("2026-10-23");
+    expect(todayInTz("UTC", now)).toBe("2026-10-23");
+  });
+});
+
+describe("isValidTimeZone", () => {
+  it("accepts IANA zones and rejects junk", () => {
+    expect(isValidTimeZone("Asia/Kolkata")).toBe(true);
+    expect(isValidTimeZone("Mars/Base")).toBe(false);
+  });
+});
+
+describe("date arithmetic", () => {
+  it("adds days across month and leap-year boundaries", () => {
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+  });
+
+  it("adds months across year boundaries", () => {
+    expect(addMonths("2026-12", 1)).toBe("2027-01");
+    expect(addMonths("2026-01", -1)).toBe("2025-12");
+  });
+
+  it("builds half-open month ranges", () => {
+    expect(monthOf("2026-10-23")).toBe("2026-10");
+    expect(monthRange("2026-12")).toEqual({ start: "2026-12-01", end: "2027-01-01" });
+  });
+});

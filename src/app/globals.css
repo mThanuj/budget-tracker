@@ -1,26 +1,146 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Onest Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono Variable", ui-monospace, monospace;
+  --font-heading: "Young Serif", ui-serif, Georgia, serif;
+  --color-warning: var(--warning);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Design tokens: "clean & calm".
+ * Cool paper background, green-black ink, one accent (passbook teal).
+ * Spending is shown in ink, not red, so the app never feels judgmental.
+ */
+:root {
+  --background: #f6f7f4;
+  --foreground: #18211e;
+  --card: #ffffff;
+  --card-foreground: #18211e;
+  --popover: #ffffff;
+  --popover-foreground: #18211e;
+  --primary: #0f6e66;
+  --primary-foreground: #f4fbf9;
+  --secondary: #ebeeea;
+  --secondary-foreground: #18211e;
+  --muted: #edf0ec;
+  --muted-foreground: #5b6661;
+  --accent: #e4efec;
+  --accent-foreground: #0b4f49;
+  --destructive: #b4473c;
+  --warning: #a8701c;
+  --border: #e1e5e0;
+  --input: #d3d9d3;
+  --ring: #0f6e66;
+  --chart-1: #0f6e66;
+  --chart-2: #4a7fc1;
+  --chart-3: #cc7a3e;
+  --chart-4: #8a64b8;
+  --chart-5: #7d8f45;
+  --radius: 0.75rem;
+  --sidebar: #eff1ed;
+  --sidebar-foreground: #18211e;
+  --sidebar-primary: #0f6e66;
+  --sidebar-primary-foreground: #f4fbf9;
+  --sidebar-accent: #e3e8e3;
+  --sidebar-accent-foreground: #18211e;
+  --sidebar-border: #e1e5e0;
+  --sidebar-ring: #0f6e66;
+}
+
+.dark {
+  --background: #111514;
+  --foreground: #e6ece9;
+  --card: #171c1a;
+  --card-foreground: #e6ece9;
+  --popover: #1a201e;
+  --popover-foreground: #e6ece9;
+  --primary: #4fb3a6;
+  --primary-foreground: #0b1f1c;
+  --secondary: #222a27;
+  --secondary-foreground: #e6ece9;
+  --muted: #1e2522;
+  --muted-foreground: #95a19b;
+  --accent: #1c2e2a;
+  --accent-foreground: #cfeae5;
+  --destructive: #e07a6e;
+  --warning: #e0a94f;
+  --border: rgb(230 236 233 / 10%);
+  --input: rgb(230 236 233 / 16%);
+  --ring: #4fb3a6;
+  --chart-1: #4fb3a6;
+  --chart-2: #7fa7dc;
+  --chart-3: #e09a62;
+  --chart-4: #ae8fd6;
+  --chart-5: #a5b86a;
+  --sidebar: #141917;
+  --sidebar-foreground: #e6ece9;
+  --sidebar-primary: #4fb3a6;
+  --sidebar-primary-foreground: #0b1f1c;
+  --sidebar-accent: #1f2725;
+  --sidebar-accent-foreground: #e6ece9;
+  --sidebar-border: rgb(230 236 233 / 8%);
+  --sidebar-ring: #4fb3a6;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+  /* Amounts line up like a passbook. */
+  .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
 }

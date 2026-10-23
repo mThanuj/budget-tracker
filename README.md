@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Budget Tracker
 
-## Getting Started
+A budget tracker for people who are new to managing money: wallets, budgets,
+goals and an AI assistant that understands plain-English entries.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router, Cache Components) · Better Auth (Google) ·
+Drizzle ORM + Neon Postgres · Tailwind 4 + shadcn/ui (Base UI) · Vitest.
+
+## Local development
+
+No Docker needed locally; Docker is only used by the deployment pipeline.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local   # then fill in the values (see comments inside)
+pnpm db:migrate              # create/update tables in Neon
+pnpm dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Google OAuth needs `http://localhost:3000` as an authorized origin and
+`http://localhost:3000/api/auth/callback/google` as a redirect URI.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Dev server |
+| `pnpm build` / `pnpm start` | Production build / run it |
+| `pnpm test` | Unit tests and database tests (in-memory Postgres via PGlite) |
+| `pnpm typecheck` · `pnpm lint` | TypeScript and ESLint |
+| `pnpm db:generate` | Create a migration after editing `src/server/db/schema.ts` |
+| `pnpm db:migrate` | Apply migrations to the database in `.env.local` |
+| `pnpm db:studio` | Browse the database |
 
-## Learn More
+In sandboxes that can't open local sockets, build with
+`NEXT_WORKER_THREADS=1 pnpm build`.
 
-To learn more about Next.js, take a look at the following resources:
+## Project layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/            routes: landing (/), (app)/ signed-in pages, welcome, api/auth
+  components/     ui/ (shadcn), app/ (shell, nav), feature components
+  lib/            pure helpers shared by client and server (money, dates, ...)
+  server/         server-only: db/, auth, session (requireUser), actions/
+  proxy.ts        optimistic cookie check; real auth is requireUser()
+drizzle/          generated SQL migrations
+tests/            unit/ and db/ tests
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Conventions
 
-## Deploy on Vercel
+- Money is stored as integer minor units (`amountMinor`); see `src/lib/money.ts`.
+- Calendar dates are `YYYY-MM-DD` strings in the user's time zone; see `src/lib/dates.ts`.
+- Every server action and route calls `requireUser()` and filters by `userId`.
+- Pages render a static shell; anything that reads the session sits behind `<Suspense>`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The `Dockerfile` builds the standalone server for Hetzner + Coolify. Building
+needs no secrets; the runtime needs the variables listed in `.env.example`.

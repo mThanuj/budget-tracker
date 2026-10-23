@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+coverage
+tests
+.env*
+!.env.example
+Dockerfile
+.dockerignore
+README.md

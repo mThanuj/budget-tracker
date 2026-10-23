@@ -1,69 +1,63 @@
-import Image from "next/image";
+import { Brand } from "@/components/app/brand";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { PassbookDemo } from "./_components/passbook-demo";
 
-export default function Home() {
+const FEATURES = [
+  {
+    title: "Write it like a message",
+    body: "“paid 450 for dinner with my ICICI card” becomes a sorted entry in the right wallet. You check it, then save.",
+  },
+  {
+    title: "Budgets that speak up early",
+    body: "See what's left in each category. You get a heads-up at 80%, not a surprise at the end of the month.",
+  },
+  {
+    title: "Ask about your money",
+    body: "“How much did I spend on food in October?” Answers come from your own entries, not guesses.",
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-5 sm:px-8">
+      <header className="flex h-16 items-center justify-between">
+        <Brand />
+        <GoogleSignInButton label="Sign in" variant="ghost" size="default" />
+      </header>
+
+      <main className="flex-1">
+        <section className="grid items-center gap-12 py-12 md:py-20 lg:grid-cols-[1fr_minmax(0,32rem)] lg:gap-16">
+          <div className="max-w-xl">
+            <h1 className="font-heading text-[2.6rem] leading-[1.05] tracking-tight text-balance sm:text-6xl">
+              Know where your money goes.
+            </h1>
+            <p className="mt-6 text-lg leading-relaxed text-pretty text-muted-foreground">
+              Type what you spent the way you&apos;d text a friend. The app sorts it, adds it
+              up and answers your questions, so you can stick to a budget without a spreadsheet.
+            </p>
+            <div className="mt-9 flex flex-col items-start gap-3">
+              <GoogleSignInButton className="h-11 px-5 text-base" />
+              <p className="text-sm text-muted-foreground">Free to start. No card needed.</p>
+            </div>
+          </div>
+
+          <PassbookDemo />
+        </section>
+
+        <section aria-label="What you can do" className="grid gap-x-10 gap-y-8 border-t border-border py-14 md:grid-cols-3">
+          {FEATURES.map((f) => (
+            <div key={f.title}>
+              <h2 className="font-heading text-xl">{f.title}</h2>
+              <p className="mt-2 leading-relaxed text-muted-foreground">{f.body}</p>
+            </div>
+          ))}
+        </section>
       </main>
+
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-6 text-sm text-muted-foreground">
+        <Brand className="text-base" />
+        <p>Your entries are private to your account.</p>
+      </footer>
     </div>
   );
 }
