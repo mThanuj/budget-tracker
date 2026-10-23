@@ -1,0 +1,46 @@
+.gitignore
+  h_bfc075b6e02f74 1-41
+AGENTS.md
+  h_bfc075b6e02f74 1-9
+README.md
+  h_bfc075b6e02f74 1-36
+eslint.config.mjs
+  h_bfc075b6e02f74 1-18
+next.config.ts
+  h_bfc075b6e02f74 1-17
+package.json
+  h_bfc075b6e02f74 1-27
+pnpm-lock.yaml
+  h_bfc075b6e02f74 1-4176
+pnpm-workspace.yaml
+  h_bfc075b6e02f74 1-3
+public/file.svg
+  h_bfc075b6e02f74 1
+public/globe.svg
+  h_bfc075b6e02f74 1
+public/next.svg
+  h_bfc075b6e02f74 1
+public/vercel.svg
+  h_bfc075b6e02f74 1
+public/window.svg
+  h_bfc075b6e02f74 1
+src/app/globals.css
+  h_bfc075b6e02f74 1-26
+src/app/layout.tsx
+  h_bfc075b6e02f74 1-29
+src/app/page.tsx
+  h_bfc075b6e02f74 1-69
+tsconfig.json
+  h_bfc075b6e02f74 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "3eb7a7632b7d71907b2bc4be02508e85d70a2805",
+  "prompts": {},
+  "humans": {
+    "h_bfc075b6e02f74": {
+      "author": "mThanuj <mullagurithanuj0@gmail.com>"
+    }
+  }
+}
