@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { planFromSubscriptions } from "@/server/billing/plan";
-import { razorpayConfig, verifyCheckoutSignature, verifyWebhookSignature } from "@/server/billing/razorpay";
+import { razorpayConfig, razorpayKeys, verifyCheckoutSignature, verifyWebhookSignature } from "@/server/billing/razorpay";
 
 const now = new Date("2026-10-24T12:00:00Z");
 const later = new Date("2026-11-24T12:00:00Z");
@@ -74,10 +74,15 @@ describe("Razorpay signatures", () => {
     expect(verifyWebhookSignature(body, sign(body, ""), "")).toBe(false); // no secret set: never trusted
   });
 
-  it("needs keys and both plan ids before billing switches on", () => {
-    const env = { RAZORPAY_KEY_ID: "rzp_test_1", RAZORPAY_KEY_SECRET: "s", RAZORPAY_PLAN_MONTHLY: "plan_m", RAZORPAY_PLAN_YEARLY: "plan_y" };
+  it("needs the switch, keys and both plan ids before billing switches on", () => {
+    const env = { BILLING_ENABLED: "true", RAZORPAY_KEY_ID: "rzp_test_1", RAZORPAY_KEY_SECRET: "s", RAZORPAY_PLAN_MONTHLY: "plan_m", RAZORPAY_PLAN_YEARLY: "plan_y" };
     expect(razorpayConfig(env)).toMatchObject({ keyId: "rzp_test_1", plans: { monthly: "plan_m", yearly: "plan_y" } });
     expect(razorpayConfig({ ...env, RAZORPAY_PLAN_YEARLY: " " })).toBeNull();
     expect(razorpayConfig({})).toBeNull();
+    // Keys alone aren't enough while payments are switched off...
+    expect(razorpayConfig({ ...env, BILLING_ENABLED: "false" })).toBeNull();
+    expect(razorpayConfig({ ...env, BILLING_ENABLED: undefined })).toBeNull();
+    // ...but they can still cancel renewals when someone deletes their account.
+    expect(razorpayKeys({ ...env, BILLING_ENABLED: undefined })).toMatchObject({ keyId: "rzp_test_1" });
   });
 });

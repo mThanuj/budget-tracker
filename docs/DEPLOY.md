@@ -1,8 +1,89 @@
 # Deploying ClearPaisa
 
-One Hetzner Cloud server running [Coolify](https://coolify.io), which builds the
-`Dockerfile` from GitHub on every push to `main`, serves it over HTTPS and runs
-the hourly job. The database is Neon (Postgres). Do the steps in order.
+There are two ways to run it:
+
+- **Now: Vercel, free, payments off.** Vercel's free Hobby plan is for
+  non-commercial use, so keep `BILLING_ENABLED` off there. Everyone is on Free.
+- **Later, with payments: your own server** (Hetzner + Coolify), or Vercel's paid
+  Pro plan. The Dockerfile is ready for it; see the second half of this guide.
+
+# Part 1: Vercel (free, payments off)
+
+## 1. Database
+
+Create a separate **Neon** project for production (don't reuse the dev database),
+region **AWS Asia Pacific (Singapore)**. Copy both connection strings: pooled
+(`DATABASE_URL`) and direct (`DATABASE_URL_UNPOOLED`).
+
+## 2. Vercel project
+
+1. Sign up at vercel.com with GitHub (Hobby plan).
+2. **Add New → Project**, import the `budget-tracker` repository. Name the project
+   `clearpaisa`, so the site is `https://clearpaisa.vercel.app` (if that's taken,
+   pick another name; the URL follows it).
+3. Before the first deploy, open **Environment Variables** and add everything from
+   `.env.example`, ticking **Production only** (preview builds would otherwise use
+   the production database):
+   - `DATABASE_URL`, `DATABASE_URL_UNPOOLED` from step 1.
+   - `BETTER_AUTH_URL=https://<your-project>.vercel.app` and a **new** `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (step 3).
+   - A **new** `CRON_SECRET` (`openssl rand -hex 32`).
+   - The AI block (`LLM_*`, `AI_GLOBAL_DAILY_LIMIT`).
+   - `BILLING_ENABLED=false`; leave the `RAZORPAY_*` values out.
+   - `NEXT_PUBLIC_APP_NAME`, `ADMIN_EMAILS`, `LEGAL_NAME`, `SUPPORT_EMAIL`, `SUPPORT_PHONE`, `BUSINESS_ADDRESS`, `LEGAL_CITY`.
+   - `ENABLE_EXPERIMENTAL_COREPACK=1`, so Vercel uses the pnpm version in `package.json`.
+4. Deploy. `vercel.json` runs the app in Singapore (next to the database) and
+   applies database migrations during production builds; a failed migration fails
+   the deploy and the previous version keeps serving.
+
+## 3. Google sign-in
+
+In Google Cloud Console → APIs & Services:
+
+- **Credentials**: an OAuth client (Web) for production with the authorized
+  JavaScript origin `https://<your-project>.vercel.app` and the redirect URI
+  `https://<your-project>.vercel.app/api/auth/callback/google`.
+- **OAuth consent screen**: app name ClearPaisa, home page, privacy (`/privacy`)
+  and terms (`/terms`) links, and `<your-project>.vercel.app` as an authorized
+  domain. Then **Publish app** so it's "In production" (only basic scopes are used,
+  so no review is needed).
+
+## 4. Daily job
+
+`vercel.json` calls `/api/cron/recurring` every day at about 6:00 in India (the
+free plan allows one run a day; recurring entries are also recorded whenever
+someone opens the app). Vercel sends the `CRON_SECRET` header automatically.
+Check **Settings → Cron Jobs** after the first deploy.
+
+## 5. Backups
+
+Neon's free plan keeps only 6 hours of history, so a GitHub Action
+(`.github/workflows/backup.yml`) saves an encrypted copy every night and keeps 7.
+
+1. GitHub → the repository → **Settings → Secrets and variables → Actions**: add
+   `DATABASE_URL_UNPOOLED` (production) and `BACKUP_PASSPHRASE` (a long random
+   phrase; keep it in your password manager, without it the backups can't be opened).
+2. **Actions → Nightly database backup → Run workflow** once, and check it succeeds.
+3. Try a restore into a throwaway Neon branch (commands at the top of the workflow file).
+
+## 6. Before you announce it
+
+- [ ] `/admin` setup checks are green (AI chain, CRON_SECRET, legal details, https; payments shown as off).
+- [ ] Sign in with a second Google account (the consent screen says ClearPaisa).
+- [ ] Add an entry by typing a note; ask a question in Ask; open Insights.
+- [ ] The daily job shows a successful run in Vercel.
+- [ ] Last night's backup exists and a restore was tried.
+- [ ] Uptime monitor (any free one) on `https://<your-project>.vercel.app/api/health`.
+- [ ] Check each AI provider's terms allow your use of its free tier.
+- [ ] Have the legal pages reviewed if you can; they're written in plain English, not by a lawyer.
+
+# Part 2: Your own server, with payments
+
+Use this when you switch payments on (`BILLING_ENABLED=true`): Vercel's free
+plan doesn't allow commercial use. One Hetzner Cloud server runs
+[Coolify](https://coolify.io), which builds the `Dockerfile` from GitHub on every
+push to `main`, serves it over HTTPS and runs the hourly job. The privacy policy
+names Vercel as the host; update it when you move.
 
 ## 1. Accounts and a domain
 
@@ -90,7 +171,7 @@ In Google Cloud Console → APIs & Services:
    ₹799 yearly), generate live keys, add the live webhook, and replace all five
    `RAZORPAY_*` values.
 
-## 8. Before you announce it
+## 8. Before you announce it (with payments)
 
 - [ ] `/admin` setup checks are all green (live Razorpay, webhook secret, CRON_SECRET, legal details, https).
 - [ ] Sign in on the live site with a second Google account (consent screen shows ClearPaisa).

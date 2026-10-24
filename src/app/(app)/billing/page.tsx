@@ -1,6 +1,7 @@
 import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 import { TriangleAlertIcon } from "lucide-react";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { Activating } from "@/components/billing/activating";
@@ -9,6 +10,7 @@ import { PlanComparison } from "@/components/billing/plan-comparison";
 import { UpgradePanel } from "@/components/billing/upgrade-panel";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { billingEnabled } from "@/config/features";
 import { type BillingInterval, priceLabel } from "@/config/plans";
 import { getUserPlan } from "@/server/billing/plan";
 import { razorpayConfig } from "@/server/billing/razorpay";
@@ -19,6 +21,7 @@ import { requireUser } from "@/server/session";
 export const metadata = { title: "Plan & billing" };
 
 export default function BillingPage() {
+  if (!billingEnabled()) notFound();
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="Plan & billing" description="Everything you track is free. Pro adds more AI help." />

@@ -1,11 +1,14 @@
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmailLink, LegalPage } from "@/components/legal/legal-page";
 import { APP_NAME } from "@/config/app";
+import { billingEnabled } from "@/config/features";
 import { legalDetails } from "@/config/legal";
 
 export const metadata = { title: "Refunds & cancellation" };
 
 export default function RefundPage() {
+  if (!billingEnabled()) notFound(); // nothing to refund while payments are off
   return (
     <LegalPage title="Refunds & cancellation" intro="Cancel any time. Pro stays until the end of the period you paid for.">
       <RefundBody />

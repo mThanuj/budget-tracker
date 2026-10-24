@@ -31,12 +31,14 @@ export function UserMenuDropdown({
   image,
   compact = false,
   admin = false,
+  billing = false,
 }: {
   name: string;
   email: string;
   image: string | null;
   compact?: boolean;
   admin?: boolean;
+  billing?: boolean;
 }) {
   const router = useRouter();
 
@@ -75,10 +77,12 @@ export function UserMenuDropdown({
           <Settings2Icon aria-hidden />
           Settings
         </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/billing" />}>
-          <CreditCardIcon aria-hidden />
-          Plan & billing
-        </DropdownMenuItem>
+        {billing && (
+          <DropdownMenuItem render={<Link href="/billing" />}>
+            <CreditCardIcon aria-hidden />
+            Plan & billing
+          </DropdownMenuItem>
+        )}
         {admin && (
           <DropdownMenuItem render={<Link href="/admin" />}>
             <ChartNoAxesColumnIcon aria-hidden />

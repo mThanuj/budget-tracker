@@ -93,6 +93,7 @@ describe("Razorpay webhooks", () => {
 
   it("gives Pro users Pro limits and the Pro chain when one is set up", async () => {
     const env = {
+      BILLING_ENABLED: "true",
       LLM_CHAIN_FREE: "groq", LLM_GROQ_BASE_URL: "https://g", LLM_GROQ_API_KEY: "k", LLM_GROQ_MODEL: "m",
       LLM_CHAIN_PRO: "groq_paid,groq", LLM_GROQ_PAID_BASE_URL: "https://g", LLM_GROQ_PAID_API_KEY: "k2", LLM_GROQ_PAID_MODEL: "m",
     };
@@ -103,5 +104,11 @@ describe("Razorpay webhooks", () => {
     const free = await aiAccess(t.db, (await createTestUser(t.db)).id, env);
     expect(free.chain.map((p) => p.name)).toEqual(["groq"]);
     expect(free.limits).toEqual({ userDaily: 50, chatDaily: 10, globalDaily: 1500 });
+
+    // With payments switched off, even a paying subscriber gets Free.
+    const off = await aiAccess(t.db, userId, { ...env, BILLING_ENABLED: "false" });
+    expect(off.plan).toMatchObject({ id: "free", subscription: null });
+    expect(off.chain.map((p) => p.name)).toEqual(["groq"]);
+    expect(off.limits).toEqual({ userDaily: 50, chatDaily: 10, globalDaily: 1500 });
   });
 });

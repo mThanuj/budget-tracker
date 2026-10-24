@@ -2,6 +2,7 @@ import { CircleCheckIcon, TriangleAlertIcon } from "lucide-react";
 import { type ReactNode, Suspense } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { billingEnabled } from "@/config/features";
 import { missingLegalDetails } from "@/config/legal";
 import { formatMoney } from "@/lib/money";
 import { adminEmails, requireAdmin } from "@/server/admin";
@@ -183,16 +184,22 @@ async function AdminContent() {
             <Check ok>
               Pro chain: {proChain.length > 0 ? proChain.map((p) => p.name).join(" → ") : "not set (Pro uses the free chain)"}
             </Check>
-            <Check ok={rzp !== null}>
-              Razorpay:{" "}
-              {rzp ? (rzp.keyId.startsWith("rzp_live_") ? "live mode" : "test mode") : "not set up (Pro shows as coming soon)"}
-            </Check>
-            <Check ok={s.pro.doubleBilled === 0}>
-              {s.pro.doubleBilled === 0
-                ? "No one is paying for two subscriptions"
-                : `${s.pro.doubleBilled} ${s.pro.doubleBilled === 1 ? "user has" : "users have"} two renewing subscriptions: cancel and refund one in Razorpay`}
-            </Check>
-            <Check ok={Boolean(rzp?.webhookSecret)}>Razorpay webhook secret {rzp?.webhookSecret ? "set" : "missing"}</Check>
+            {!billingEnabled() ? (
+              <Check ok>Payments: switched off (BILLING_ENABLED); everyone is on Free</Check>
+            ) : (
+              <>
+                <Check ok={rzp !== null}>
+                  Razorpay:{" "}
+                  {rzp ? (rzp.keyId.startsWith("rzp_live_") ? "live mode" : "test mode") : "keys missing (Pro shows as coming soon)"}
+                </Check>
+                <Check ok={s.pro.doubleBilled === 0}>
+                  {s.pro.doubleBilled === 0
+                    ? "No one is paying for two subscriptions"
+                    : `${s.pro.doubleBilled} ${s.pro.doubleBilled === 1 ? "user has" : "users have"} two renewing subscriptions: cancel and refund one in Razorpay`}
+                </Check>
+                <Check ok={Boolean(rzp?.webhookSecret)}>Razorpay webhook secret {rzp?.webhookSecret ? "set" : "missing"}</Check>
+              </>
+            )}
             <Check ok={Boolean(process.env.CRON_SECRET?.trim())}>
               CRON_SECRET{" "}
               {process.env.CRON_SECRET?.trim() ? "set" : "missing (recurring entries only record when someone opens the app)"}

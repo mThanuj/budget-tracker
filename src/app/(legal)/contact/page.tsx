@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { LegalPage } from "@/components/legal/legal-page";
 import { APP_NAME } from "@/config/app";
+import { billingEnabled } from "@/config/features";
 import { legalDetails } from "@/config/legal";
 
 export const metadata = { title: "Contact" };
@@ -45,7 +46,9 @@ async function ContactBody() {
         </>
       )}
       <dt className="text-muted-foreground">About</dt>
-      <dd>{APP_NAME} is an online money tracker. Payments for Pro are handled by Razorpay.</dd>
+      <dd>
+        {APP_NAME} is an online money tracker.{billingEnabled() && " Payments for Pro are handled by Razorpay."}
+      </dd>
     </dl>
   );
 }

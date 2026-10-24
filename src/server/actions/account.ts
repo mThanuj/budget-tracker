@@ -4,7 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
-import { cancelSubscriptionNow, razorpayConfig } from "@/server/billing/razorpay";
+import { cancelSubscriptionNow, razorpayKeys } from "@/server/billing/razorpay";
 import { db } from "@/server/db";
 import { subscription } from "@/server/db/schema";
 import { deleteAccountData } from "@/server/services/account";
@@ -24,7 +24,7 @@ export async function deleteAccount(confirmation: string): Promise<{ ok: false; 
     .from(subscription)
     .where(and(eq(subscription.userId, user.id), inArray(subscription.status, ["created", "authenticated", "active", "pending", "paused"])));
   if (live.length > 0) {
-    const cfg = razorpayConfig();
+    const cfg = razorpayKeys();
     if (!cfg) return { ok: false, error: "Payments are unavailable right now, so your Pro renewal can't be cancelled. Try again later." };
     for (const s of live) {
       try {

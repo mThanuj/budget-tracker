@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { Skeleton } from "@/components/ui/skeleton";
+import { billingEnabled } from "@/config/features";
 import { currencyOptions, timeZoneOptions } from "@/lib/preferences-options";
 import { aiConfigured } from "@/server/ai";
 import { getUserPlan } from "@/server/billing/plan";
@@ -48,15 +49,17 @@ export default function SettingsPage() {
       <Suspense fallback={<SettingsSkeleton />}>
         <SettingsContent />
       </Suspense>
-      <Section title="Plan" description="Free, or Pro for more AI help.">
-        <Link
-          href="/billing"
-          className="inline-flex items-center gap-1 rounded text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          Plan & billing
-          <ChevronRightIcon className="size-4" aria-hidden />
-        </Link>
-      </Section>
+      {billingEnabled() && (
+        <Section title="Plan" description="Free, or Pro for more AI help.">
+          <Link
+            href="/billing"
+            className="inline-flex items-center gap-1 rounded text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            Plan & billing
+            <ChevronRightIcon className="size-4" aria-hidden />
+          </Link>
+        </Section>
+      )}
       <Section title="Categories" description="Add, rename or archive the groups your entries go into.">
         <Link
           href="/categories"

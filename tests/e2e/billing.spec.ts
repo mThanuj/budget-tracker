@@ -7,8 +7,11 @@ import { createTransaction } from "../../src/server/services/transactions";
 import { listWallets } from "../../src/server/services/wallets";
 import { db, expect, test } from "./support/fixtures";
 
-// Upsells only show once Razorpay test keys and plans are in .env.local.
-const billingOn = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_PLAN_MONTHLY", "RAZORPAY_PLAN_YEARLY"].every((k) => process.env[k]?.trim());
+// Plans and upsells only show with BILLING_ENABLED="true" and Razorpay keys in .env.local.
+const billingOn =
+  process.env.BILLING_ENABLED?.trim() === "true" &&
+  ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_PLAN_MONTHLY", "RAZORPAY_PLAN_YEARLY"].every((k) => process.env[k]?.trim());
+const paymentsOff = process.env.BILLING_ENABLED?.trim() !== "true";
 const aiOn = Boolean(process.env.LLM_GROQ_API_KEY);
 
 function makePro(userId: string) {
@@ -43,7 +46,18 @@ async function seedLastMonth(userId: string) {
   return formatMonth(lastMonth);
 }
 
+test("with payments off, nothing about plans shows", async ({ signedIn: { page } }) => {
+  test.skip(!paymentsOff, "Payments are switched on in .env.local");
+  await page.goto("/billing");
+  await expect(page.getByText("This page could not be found.")).toBeVisible();
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Your data" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Plan & billing" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Refunds & cancellation" })).toHaveCount(0);
+});
+
 test("free users see their plan and what Pro adds", async ({ signedIn: { page } }) => {
+  test.skip(paymentsOff, "Payments are switched off (BILLING_ENABLED)");
   await page.goto("/billing");
   await expect(page.getByRole("heading", { name: "Your plan: Free" })).toBeVisible();
   await expect(page.getByRole("table", { name: "What Free and Pro include" })).toBeVisible();
@@ -52,6 +66,7 @@ test("free users see their plan and what Pro adds", async ({ signedIn: { page } 
 });
 
 test("Pro shows when it renews", async ({ signedIn: { page, userId } }) => {
+  test.skip(paymentsOff, "Payments are switched off (BILLING_ENABLED)");
   await makePro(userId);
   await page.goto("/billing");
   await expect(page.getByRole("heading", { name: "Your plan: Pro" })).toBeVisible();
@@ -85,6 +100,7 @@ test("free users get last month's numbers, without the write-up", async ({ signe
 
 test("Pro users get last month written up, once", async ({ signedIn: { page, userId } }) => {
   test.skip(!aiOn, "No AI provider key in .env.local");
+  test.skip(paymentsOff, "Payments are switched off (BILLING_ENABLED)");
   test.skip(test.info().project.name !== "desktop-chrome", "Server-side AI: checked once");
   await makePro(userId);
   const month = await seedLastMonth(userId);

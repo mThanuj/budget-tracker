@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { EmailLink, LegalPage, operatorName } from "@/components/legal/legal-page";
 import { APP_NAME } from "@/config/app";
+import { billingEnabled } from "@/config/features";
 import { legalDetails } from "@/config/legal";
 
 export const metadata = { title: "Privacy policy" };
@@ -16,6 +17,7 @@ export default function PrivacyPage() {
 async function PrivacyBody() {
   await connection();
   const d = legalDetails();
+  const billing = billingEnabled();
   return (
     <>
       <h2>Who we are</h2>
@@ -41,10 +43,12 @@ async function PrivacyBody() {
         <li>
           <strong>Usage counts:</strong> how many AI requests you&rsquo;ve made each day, so the daily limits work.
         </li>
-        <li>
-          <strong>Payments, if you buy Pro:</strong> Razorpay handles the payment. We receive the subscription&rsquo;s status and
-          billing dates. We never see or store card numbers, UPI IDs or bank details.
-        </li>
+        {billing && (
+          <li>
+            <strong>Payments, if you buy Pro:</strong> Razorpay handles the payment. We receive the subscription&rsquo;s status and
+            billing dates. We never see or store card numbers, UPI IDs or bank details.
+          </li>
+        )}
       </ul>
       <p>
         We don&rsquo;t use advertising, analytics or tracking cookies. The only cookie is the one that keeps you signed in. Your
@@ -72,8 +76,9 @@ async function PrivacyBody() {
       <p>We never sell your data or share it for marketing. It&rsquo;s handled only by the services that run {APP_NAME}:</p>
       <ul>
         <li>Google, for sign-in;</li>
-        <li>Neon (database) and Hetzner (servers), where your data is stored, possibly outside India, for example in Singapore;</li>
-        <li>Razorpay, for payments;</li>
+        <li>Neon (database) and Vercel (app hosting), where your data is stored, possibly outside India, for example in Singapore;</li>
+        <li>GitHub, which keeps our encrypted nightly backups;</li>
+        {billing && <li>Razorpay, for payments;</li>}
         <li>the AI providers above, only while AI features are on.</li>
       </ul>
       <p>We&rsquo;ll share data with authorities only when the law requires it.</p>
@@ -81,7 +86,7 @@ async function PrivacyBody() {
       <h2>How long we keep it</h2>
       <p>
         As long as you have an account. When you delete your account, everything is removed from our database straight away. Copies
-        in our backups are gone within 7 days. Razorpay keeps its own payment records as the law requires.
+        in our backups are gone within 7 days.{billing && " Razorpay keeps its own payment records as the law requires."}
       </p>
 
       <h2>Your choices</h2>

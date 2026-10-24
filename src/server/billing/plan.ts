@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { billingEnabled } from "@/config/features";
 import { PLANS, type PlanId } from "@/config/plans";
 import type { Db } from "../db";
 import { subscription } from "../db/schema";
@@ -40,7 +41,9 @@ export function planFromSubscriptions(subs: SubscriptionRow[], now: Date = new D
   };
 }
 
-export async function getUserPlan(db: Db, userId: string, now: Date = new Date()) {
+export async function getUserPlan(db: Db, userId: string, now: Date = new Date(), env: Record<string, string | undefined> = process.env) {
+  // With payments switched off, everyone is on Free.
+  if (!billingEnabled(env)) return { id: "free" as PlanId, subscription: null, limits: PLANS.free };
   const subs = await db.select().from(subscription).where(eq(subscription.userId, userId));
   const plan = planFromSubscriptions(subs, now);
   return { ...plan, limits: PLANS[plan.id] };

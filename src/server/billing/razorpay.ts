@@ -1,12 +1,18 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { billingEnabled } from "@/config/features";
 import type { BillingInterval } from "@/config/plans";
 
 // A thin client for the few Razorpay endpoints we use (no SDK needed).
 
 export type RazorpayConfig = { keyId: string; keySecret: string; webhookSecret: string; plans: Record<BillingInterval, string> };
 
-/** Null when billing isn't set up yet; the app then shows "Pro is coming soon". */
+/** Null unless payments are switched on (BILLING_ENABLED) and the keys are set. */
 export function razorpayConfig(env: Record<string, string | undefined> = process.env): RazorpayConfig | null {
+  return billingEnabled(env) ? razorpayKeys(env) : null;
+}
+
+/** The keys alone, whether or not payments are on (to cancel renewals when an account is deleted). */
+export function razorpayKeys(env: Record<string, string | undefined> = process.env): RazorpayConfig | null {
   const keyId = env.RAZORPAY_KEY_ID?.trim();
   const keySecret = env.RAZORPAY_KEY_SECRET?.trim();
   const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "";

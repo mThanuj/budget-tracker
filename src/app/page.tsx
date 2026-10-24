@@ -2,6 +2,7 @@ import { Brand } from "@/components/app/brand";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { PlanComparison } from "@/components/billing/plan-comparison";
 import { LegalLinks } from "@/components/legal/legal-links";
+import { billingEnabled } from "@/config/features";
 import { PRICES } from "@/config/plans";
 import { Suspense } from "react";
 import { DeletedNotice } from "./_components/deleted-notice";
@@ -23,6 +24,7 @@ const FEATURES = [
 ];
 
 export default function LandingPage() {
+  const billing = billingEnabled();
   return (
     <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-5 sm:px-8">
       <header className="flex h-16 items-center justify-between">
@@ -40,12 +42,14 @@ export default function LandingPage() {
               Know where your money goes.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-pretty text-muted-foreground">
-              Type what you spent the way you&apos;d text a friend. The app sorts it, adds it
-              up and answers your questions, so you can stick to a budget without a spreadsheet.
+              Type what you spent the way you&apos;d text a friend. The app sorts it, adds it up and answers your questions, so
+              you can stick to a budget without a spreadsheet.
             </p>
             <div className="mt-9 flex flex-col items-start gap-3">
               <GoogleSignInButton className="h-11 px-5 text-base" />
-              <p className="text-sm text-muted-foreground">Free to start. No card needed.</p>
+              <p className="text-sm text-muted-foreground">
+                {billing ? "Free to start. No card needed." : "Free to use. No card needed."}
+              </p>
             </div>
           </div>
 
@@ -61,20 +65,25 @@ export default function LandingPage() {
           ))}
         </section>
 
-        <section aria-labelledby="pricing" className="grid gap-8 border-t border-border py-14 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-16">
-          <div>
-            <h2 id="pricing" className="font-heading text-3xl tracking-tight">
-              Free to use. Pro if you want more AI help.
-            </h2>
-            <p className="mt-4 leading-relaxed text-muted-foreground">
-              Everything for tracking your money is free. Pro is {PRICES.monthly.amount} {PRICES.monthly.per} or{" "}
-              {PRICES.yearly.amount} {PRICES.yearly.per}, paid through Razorpay. Cancel any time.
-            </p>
-          </div>
-          <div className="rounded-2xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6">
-            <PlanComparison />
-          </div>
-        </section>
+        {billing && (
+          <section
+            aria-labelledby="pricing"
+            className="grid gap-8 border-t border-border py-14 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-16"
+          >
+            <div>
+              <h2 id="pricing" className="font-heading text-3xl tracking-tight">
+                Free to use. Pro if you want more AI help.
+              </h2>
+              <p className="mt-4 leading-relaxed text-muted-foreground">
+                Everything for tracking your money is free. Pro is {PRICES.monthly.amount} {PRICES.monthly.per} or{" "}
+                {PRICES.yearly.amount} {PRICES.yearly.per}, paid through Razorpay. Cancel any time.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6">
+              <PlanComparison />
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="grid gap-4 border-t border-border py-6 text-sm text-muted-foreground sm:flex sm:items-center sm:justify-between">

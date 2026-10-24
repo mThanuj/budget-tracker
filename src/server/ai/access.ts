@@ -10,7 +10,7 @@ import type { AiLimits } from "./quota";
  * chain, which is also what the global daily cap protects.
  */
 export async function aiAccess(db: Db, userId: string, env: Record<string, string | undefined> = process.env) {
-  const plan = await getUserPlan(db, userId);
+  const plan = await getUserPlan(db, userId, new Date(), env);
   const proChain = plan.id === "pro" ? providerChain(env, "LLM_CHAIN_PRO") : [];
   const limits: AiLimits = {
     userDaily: plan.limits.aiDaily,

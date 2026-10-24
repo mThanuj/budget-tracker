@@ -94,10 +94,9 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     ["/settings", "settings"],
     ["/ask", "ask"],
     ["/insights", "insights"],
-    ["/billing", "billing"],
+    ...(process.env.BILLING_ENABLED?.trim() === "true" ? ([["/billing", "billing"]] as const) : []),
     ["/setup", "setup"],
     ["/privacy", "privacy"],
-    ["/refund", "refund"],
     ["/contact", "contact"],
   ] as const) {
     await page.goto(path);
@@ -113,7 +112,8 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   await page.getByRole("dialog").getByRole("radio", { name: "Groceries" }).click();
   await shot("new-entry");
 
-  // Pro pages. The written report calls the real AI, so only once (desktop).
+  // Pro pages, while payments are on. The written report calls the real AI, so only once (desktop).
+  if (process.env.BILLING_ENABLED?.trim() !== "true") return;
   await db.insert(schema.subscription).values({
     userId, razorpaySubscriptionId: `sub_tour_${userId}`, planKey: "yearly", status: "active",
     currentStart: new Date(), currentEnd: new Date(Date.now() + 200 * 86_400_000),

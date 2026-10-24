@@ -1,0 +1,38 @@
+# Nightly encrypted database backup, kept for 7 days as a workflow artifact
+# (the privacy policy promises deleted data leaves backups within 7 days).
+# Needs two repository secrets: DATABASE_URL_UNPOOLED and BACKUP_PASSPHRASE.
+# Restore: download the artifact, then
+#   openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in clearpaisa.dump.enc -out clearpaisa.dump -pass pass:'<passphrase>'
+#   docker run --rm -i postgres:18-alpine pg_restore --clean --no-owner -d "$TARGET_URL" < clearpaisa.dump
+name: Nightly database backup
+
+on:
+  schedule:
+    - cron: "30 21 * * *" # 3:00 in India
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Dump and encrypt
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$DATABASE_URL" && test -n "$BACKUP_PASSPHRASE"
+          # pg_dump must be at least the server's major version; 18 reads older ones too.
+          docker run --rm postgres:18-alpine pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL" \
+            | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_PASSPHRASE -out clearpaisa.dump.enc
+          ls -lh clearpaisa.dump.enc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clearpaisa-db-${{ github.run_number }}
+          path: clearpaisa.dump.enc
+          retention-days: 7
+          if-no-files-found: error

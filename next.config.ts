@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker image (Hetzner + Coolify).
-  output: "standalone",
+  // Vercel builds its own way, so not there.
+  ...(!process.env.VERCEL && { output: "standalone" as const }),
   // Keep the dev-tools badge off the sidebar's account menu.
   devIndicators: { position: "bottom-right" },
   cacheComponents: true,

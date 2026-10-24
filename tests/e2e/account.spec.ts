@@ -13,23 +13,28 @@ async function addEntry(userId: string, description: string) {
   });
 }
 
+const paymentsOn = process.env.BILLING_ENABLED?.trim() === "true";
+
 test("the policy pages are public and linked from the home page", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Free to use. Pro if you want more AI help." })).toBeVisible();
+  // Pricing and the refund policy only exist while payments are switched on.
+  await expect(page.getByRole("heading", { name: "Free to use. Pro if you want more AI help." })).toHaveCount(paymentsOn ? 1 : 0);
   const policies = page.getByRole("navigation", { name: "Policies" });
-  for (const [link, heading] of [
+  const pages: [string, string][] = [
     ["Privacy", "Privacy policy"],
     ["Terms", "Terms of use"],
-    ["Refunds & cancellation", "Refunds & cancellation"],
+    ...(paymentsOn ? [["Refunds & cancellation", "Refunds & cancellation"] as [string, string]] : []),
     ["Contact", "Contact"],
-  ] as const) {
+  ];
+  for (const [link, heading] of pages) {
     await page.goto("/");
     await policies.getByRole("link", { name: link, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     await expect(page.getByText(/^Last updated /)).toBeVisible();
   }
   await page.goto("/refund");
-  await expect(page.getByText("Payments for Pro aren’t refunded")).toBeVisible();
+  if (paymentsOn) await expect(page.getByText("Payments for Pro aren’t refunded")).toBeVisible();
+  else await expect(page.getByText("This page could not be found.")).toBeVisible();
 });
 
 test("entries download as CSV", async ({ signedIn: { page, userId } }) => {
