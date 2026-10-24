@@ -7,8 +7,7 @@
 #   install -m 700 deploy/backup.sh /usr/local/bin/clearpaisa-backup
 #   printf 'DATABASE_URL_UNPOOLED="postgresql://..."\n' > /etc/clearpaisa-backup.env && chmod 600 /etc/clearpaisa-backup.env
 #   echo '30 21 * * * root /usr/local/bin/clearpaisa-backup >> /var/log/clearpaisa-backup.log 2>&1' > /etc/cron.d/clearpaisa-backup
-# (21:30 UTC is 3:00 in India.) Restore with:
-#   docker run --rm -i postgres:18-alpine pg_restore --clean --no-owner -d "$TARGET_URL" < clearpaisa-YYYY-MM-DD.dump
+# (21:30 UTC is 3:00 in India.) To restore, see docs/RESTORE.md.
 set -eu
 
 [ -f /etc/clearpaisa-backup.env ] && . /etc/clearpaisa-backup.env

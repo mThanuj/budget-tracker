@@ -1,9 +1,7 @@
 # Nightly encrypted database backup, kept for 7 days as a workflow artifact
 # (the privacy policy promises deleted data leaves backups within 7 days).
 # Needs two repository secrets: DATABASE_URL_UNPOOLED and BACKUP_PASSPHRASE.
-# Restore: download the artifact, then
-#   openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in clearpaisa.dump.enc -out clearpaisa.dump -pass pass:'<passphrase>'
-#   docker run --rm -i postgres:18-alpine pg_restore --clean --no-owner -d "$TARGET_URL" < clearpaisa.dump
+# To test or restore a backup, see docs/RESTORE.md.
 name: Nightly database backup
 
 on:

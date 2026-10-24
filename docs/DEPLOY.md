@@ -64,7 +64,7 @@ Neon's free plan keeps only 6 hours of history, so a GitHub Action
    `DATABASE_URL_UNPOOLED` (production) and `BACKUP_PASSPHRASE` (a long random
    phrase; keep it in your password manager, without it the backups can't be opened).
 2. **Actions → Nightly database backup → Run workflow** once, and check it succeeds.
-3. Try a restore into a throwaway Neon branch (commands at the top of the workflow file).
+3. Try a restore into a throwaway Neon branch once: [RESTORE.md](RESTORE.md) (macOS, Linux and Windows).
 
 ## 6. Before you announce it
 
@@ -156,7 +156,7 @@ In Google Cloud Console → APIs & Services:
 - **Backups** (on the server, as root; see the comments in `deploy/backup.sh`):
   install the script, put `DATABASE_URL_UNPOOLED` in `/etc/clearpaisa-backup.env`,
   and add the cron entry. Run it once by hand, then try a restore into a
-  throwaway Neon branch so you know it works.
+  throwaway Neon branch so you know it works ([RESTORE.md](RESTORE.md)).
 
 ## 7. Razorpay
 
