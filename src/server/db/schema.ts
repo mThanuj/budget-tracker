@@ -9,8 +9,10 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -182,4 +184,86 @@ export const transaction = pgTable(
         OR (${t.type} <> 'transfer' AND ${t.toWalletId} IS NULL)`,
     ),
   ],
+);
+
+// A budget with no category is the overall monthly spending limit (one per user).
+export const budget = pgTable(
+  "budget",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    categoryId: uuid().references(() => category.id, { onDelete: "cascade" }),
+    amountMinor: bigint({ mode: "number" }).notNull(),
+    // Leftovers (or overspending) carry into later months, counted from this month.
+    rollover: boolean().notNull().default(false),
+    rolloverFrom: date({ mode: "string" }),
+    ...timestamps,
+  },
+  (t) => [
+    unique("budget_user_category_key").on(t.userId, t.categoryId).nullsNotDistinct(),
+    check("budget_amount_positive", sql`${t.amountMinor} > 0`),
+    check(
+      "budget_rollover_shape",
+      sql`(${t.rollover} AND ${t.rolloverFrom} IS NOT NULL AND ${t.categoryId} IS NOT NULL) OR (NOT ${t.rollover} AND ${t.rolloverFrom} IS NULL)`,
+    ),
+  ],
+);
+
+export const goal = pgTable(
+  "goal",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    targetMinor: bigint({ mode: "number" }).notNull(),
+    targetDate: date({ mode: "string" }),
+    icon: text().notNull(),
+    color: text().notNull(),
+    archivedAt: timestamp({ withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("goal_user_idx").on(t.userId),
+    check("goal_target_positive", sql`${t.targetMinor} > 0`),
+  ],
+);
+
+// Money set aside for a goal (positive) or taken back out (negative). It's an
+// earmark: wallet balances don't change.
+export const goalContribution = pgTable(
+  "goal_contribution",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    goalId: uuid()
+      .notNull()
+      .references(() => goal.id, { onDelete: "cascade" }),
+    amountMinor: bigint({ mode: "number" }).notNull(),
+    occurredOn: date({ mode: "string" }).notNull(),
+    note: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("goal_contribution_goal_idx").on(t.goalId, t.occurredOn),
+    check("goal_contribution_nonzero", sql`${t.amountMinor} <> 0`),
+  ],
+);
+
+// Alerts are computed on the fly; this only remembers which ones were dismissed.
+export const alertDismissal = pgTable(
+  "alert_dismissal",
+  {
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    alertKey: text().notNull(),
+    dismissedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.alertKey] })],
 );

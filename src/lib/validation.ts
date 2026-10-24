@@ -105,3 +105,65 @@ export function fieldErrors(error: z.ZodError): Record<string, string> {
   }
   return out;
 }
+
+const checkbox = z
+  .string()
+  .optional()
+  .transform((v) => v === "on" || v === "true");
+
+export function budgetSchema(currency: string) {
+  return z.object({
+    // Empty means the overall monthly limit.
+    categoryId: z
+      .string()
+      .optional()
+      .transform((v) => (v ? v : null))
+      .pipe(z.uuid().nullable()),
+    amount: moneyField(currency),
+    rollover: checkbox,
+  });
+}
+
+export type BudgetInput = z.output<ReturnType<typeof budgetSchema>>;
+
+export function goalSchema(currency: string, today: ISODate) {
+  return z.object({
+    name: name("goal"),
+    target: moneyField(currency),
+    targetDate: z
+      .string()
+      .optional()
+      .transform((v) => (v ? v : null))
+      .pipe(
+        z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.")
+          .refine((d) => d >= today, "Pick a date from today onwards.")
+          .refine((d) => d <= addDays(today, 365 * 50), "Pick a date within the next 50 years.")
+          .nullable(),
+      ),
+    icon: z.string().refine(isCategoryIcon, "Pick an icon."),
+    color: hexColor,
+  });
+}
+
+export type GoalInput = z.output<ReturnType<typeof goalSchema>>;
+
+export function contributionSchema(currency: string, today: ISODate) {
+  return z.object({
+    direction: z.enum(["add", "withdraw"]),
+    amount: moneyField(currency),
+    occurredOn: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.")
+      .refine((d) => d <= today && d >= addDays(today, -3650), "Pick a date that isn't in the future."),
+    note: z
+      .string()
+      .trim()
+      .max(200, "Keep the note under 200 characters.")
+      .optional()
+      .transform((v) => (v ? v : null)),
+  });
+}
+
+export type ContributionInput = z.output<ReturnType<typeof contributionSchema>>;

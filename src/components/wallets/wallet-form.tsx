@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { FormField, fieldAria } from "@/components/ui-extra/form-field";
-import { SWATCHES } from "@/lib/category-icons";
+import { ColorPicker } from "@/components/ui-extra/pickers";
 import { minorToInput } from "@/lib/money";
 import { DEFAULT_WALLET_COLOR, WALLET_KINDS, type WalletKind } from "@/lib/wallets";
 import { saveWallet } from "@/server/actions/wallets";
@@ -108,26 +108,7 @@ function WalletForm({ wallet, currency, onDone }: { wallet?: EditableWallet; cur
         />
       </FormField>
 
-      <fieldset className="grid gap-2">
-        <legend className="mb-2 text-sm font-medium">Color</legend>
-        <div role="radiogroup" aria-label="Color" className="flex flex-wrap gap-2">
-          {SWATCHES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="radio"
-              aria-checked={effectiveColor === c}
-              aria-label={c}
-              onClick={() => setColor(c)}
-              className={cn(
-                "size-7 rounded-full outline-none ring-offset-2 ring-offset-popover focus-visible:ring-3 focus-visible:ring-ring/50",
-                effectiveColor === c && "ring-2 ring-foreground",
-              )}
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-      </fieldset>
+      <ColorPicker value={effectiveColor} onChange={setColor} />
 
       {state && !state.ok && state.error && (
         <p role="alert" className="text-sm text-destructive">

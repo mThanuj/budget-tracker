@@ -122,7 +122,7 @@ export function WalletCard({ wallet, currency }: { wallet: WalletCardData; curre
 
       <div>
         <p className="text-sm text-muted-foreground">{balance.label}</p>
-        <p className={cn("tabular mt-0.5 text-2xl", balance.tone === "owed" && "text-warning")}>{balance.amount}</p>
+        <p className={cn("mt-0.5 text-2xl font-semibold", balance.tone === "owed" && "text-warning")}>{balance.amount}</p>
       </div>
 
       <p className="text-sm text-muted-foreground">

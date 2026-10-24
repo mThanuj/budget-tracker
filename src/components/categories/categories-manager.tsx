@@ -18,10 +18,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui-extra/confirm-dialog";
 import { FormField, fieldAria } from "@/components/ui-extra/form-field";
+import { ColorPicker, IconPicker } from "@/components/ui-extra/pickers";
 import { Segmented } from "@/components/ui-extra/segmented";
-import { CATEGORY_ICON_NAMES, SWATCHES } from "@/lib/category-icons";
+import { SWATCHES } from "@/lib/category-icons";
 import { categoryAction, saveCategory } from "@/server/actions/categories";
-import { CATEGORY_ICONS, CategoryIcon } from "./category-icon";
+import { CategoryIcon } from "./category-icon";
 
 type Kind = "expense" | "income";
 
@@ -37,7 +38,7 @@ export type CategoryItem = {
 
 function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kind: Kind; onDone: () => void }) {
   const [icon, setIcon] = useState(category?.icon ?? "tag");
-  const [color, setColor] = useState(category?.color ?? SWATCHES[0]);
+  const [color, setColor] = useState<string>(category?.color ?? SWATCHES[0]);
   const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveCategory>[0], fd: FormData) => {
     const result = await saveCategory(prev, fd);
     if (result?.ok) {
@@ -71,52 +72,9 @@ function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kin
         </FormField>
       </div>
 
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium">Icon</legend>
-        <div role="radiogroup" aria-label="Icon" className="grid grid-cols-7 gap-1.5 sm:grid-cols-9">
-          {CATEGORY_ICON_NAMES.map((name) => {
-            const Icon = CATEGORY_ICONS[name];
-            return (
-              <button
-                key={name}
-                type="button"
-                role="radio"
-                aria-checked={icon === name}
-                aria-label={name.replaceAll("-", " ")}
-                onClick={() => setIcon(name)}
-                className={cn(
-                  "grid aspect-square place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
-                  icon === name && "bg-accent text-accent-foreground ring-1 ring-primary",
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-              </button>
-            );
-          })}
-        </div>
-        {errors.icon && <p role="alert" className="mt-2 text-sm text-destructive">{errors.icon}</p>}
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium">Color</legend>
-        <div role="radiogroup" aria-label="Color" className="flex flex-wrap gap-2">
-          {SWATCHES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="radio"
-              aria-checked={color === c}
-              aria-label={c}
-              onClick={() => setColor(c)}
-              className={cn(
-                "size-7 rounded-full outline-none ring-offset-2 ring-offset-popover focus-visible:ring-3 focus-visible:ring-ring/50",
-                color === c && "ring-2 ring-foreground",
-              )}
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-      </fieldset>
+      <IconPicker value={icon} onChange={setIcon} />
+      {errors.icon && <p role="alert" className="-mt-3 text-sm text-destructive">{errors.icon}</p>}
+      <ColorPicker value={color} onChange={setColor} />
 
       {state && !state.ok && state.error && (
         <p role="alert" className="text-sm text-destructive">{state.error}</p>

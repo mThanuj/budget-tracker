@@ -19,10 +19,8 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
+  --color-chart-grid: var(--chart-grid);
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -74,11 +72,11 @@
   --border: #e1e5e0;
   --input: #d3d9d3;
   --ring: #0f6e66;
-  --chart-1: #0f6e66;
-  --chart-2: #4a7fc1;
-  --chart-3: #cc7a3e;
-  --chart-4: #8a64b8;
-  --chart-5: #7d8f45;
+  /* Chart series, validated with the dataviz palette checks against the card
+     surface (lightness band, chroma floor, CVD separation, contrast). */
+  --chart-1: #0a8f80; /* income / single-series */
+  --chart-2: #eb6834; /* spending */
+  --chart-grid: #e6e9e5;
   --radius: 0.75rem;
   --sidebar: #eff1ed;
   --sidebar-foreground: #18211e;
@@ -110,11 +108,9 @@
   --border: rgb(230 236 233 / 10%);
   --input: rgb(230 236 233 / 16%);
   --ring: #4fb3a6;
-  --chart-1: #4fb3a6;
-  --chart-2: #7fa7dc;
-  --chart-3: #e09a62;
-  --chart-4: #ae8fd6;
-  --chart-5: #a5b86a;
+  --chart-1: #26a896;
+  --chart-2: #d95926;
+  --chart-grid: rgb(230 236 233 / 8%);
   --sidebar: #141917;
   --sidebar-foreground: #e6ece9;
   --sidebar-primary: #4fb3a6;

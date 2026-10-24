@@ -1,14 +1,13 @@
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import Link from "next/link";
 import { Suspense } from "react";
 import { z } from "zod";
 import { cn } from "cn";
+import { MonthSwitcher } from "@/components/app/month-switcher";
 import { PageHeader } from "@/components/app/page-header";
 import { AddEntryButton } from "@/components/transactions/add-entry-button";
 import { type FilterValues, TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionRowButton } from "@/components/transactions/transaction-row";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDay, formatMonth, isISOMonth, monthNeighbors } from "@/lib/date-format";
+import { formatDay, formatMonth, isISOMonth } from "@/lib/date-format";
 import { monthOf, monthRange, todayInTz } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
@@ -85,7 +84,6 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
 
   const values: FilterValues = { wallet: params.wallet, category: params.category, type: params.type, q: params.q };
   const filtered = Boolean(values.wallet || values.category || values.type || values.q);
-  const { prev, next } = monthNeighbors(month);
   const keep = new URLSearchParams(
     Object.entries(values).filter((e): e is [string, string] => Boolean(e[1])),
   );
@@ -94,22 +92,7 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
 
   return (
     <div className="grid gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-1">
-          <Link href={monthHref(prev)} aria-label={`Previous month, ${formatMonth(prev)}`} className="grid size-8 place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50">
-            <ChevronLeftIcon className="size-5" />
-          </Link>
-          <h2 className="min-w-36 text-center font-heading text-xl">{formatMonth(month)}</h2>
-          <Link href={monthHref(next)} aria-label={`Next month, ${formatMonth(next)}`} className="grid size-8 place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50">
-            <ChevronRightIcon className="size-5" />
-          </Link>
-        </div>
-        {month !== monthOf(today) && (
-          <Link href={monthHref(monthOf(today))} className="text-sm text-primary underline-offset-4 hover:underline">
-            This month
-          </Link>
-        )}
-      </div>
+      <MonthSwitcher month={month} currentMonth={monthOf(today)} href={monthHref} />
 
       <dl className="grid grid-cols-3 divide-x divide-border rounded-2xl bg-card ring-1 ring-foreground/10">
         {[
@@ -123,7 +106,7 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
         ].map((s) => (
           <div key={s.label} className="px-3 py-3.5 sm:px-5">
             <dt className="text-xs text-muted-foreground sm:text-sm">{s.label}</dt>
-            <dd className={cn("tabular mt-1 truncate text-sm font-medium sm:text-lg", s.tone)}>{s.value}</dd>
+            <dd className={cn("mt-1 truncate text-sm font-semibold sm:text-lg", s.tone)}>{s.value}</dd>
           </div>
         ))}
       </dl>

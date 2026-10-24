@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AddWalletButton, MoveMoneyButton, WalletCard } from "@/components/wallets/wallet-card";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
+import { totalSetAside } from "@/server/services/goals";
 import { listWallets } from "@/server/services/wallets";
 import { requireUser } from "@/server/session";
 
@@ -24,7 +25,10 @@ async function WalletsContent() {
   const user = await requireUser();
   const currency = user.currency ?? "INR";
   const defaultWalletId = (user.defaultWalletId as string | null | undefined) ?? null;
-  const wallets = await listWallets(db, user.id, { includeArchived: true });
+  const [wallets, setAside] = await Promise.all([
+    listWallets(db, user.id, { includeArchived: true }),
+    totalSetAside(db, user.id),
+  ]);
   const active = wallets.filter((w) => !w.archivedAt);
   const archived = wallets.filter((w) => w.archivedAt);
 
@@ -51,10 +55,16 @@ async function WalletsContent() {
       <div className="flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-card p-5 ring-1 ring-foreground/10">
         <div>
           <p className="text-sm text-muted-foreground">Total across wallets</p>
-          <p className="tabular mt-1 text-3xl">{formatMoney(total, currency)}</p>
+          <p className="mt-1 text-4xl font-semibold tracking-tight">{formatMoney(total, currency)}</p>
           {owedOnCards > 0 && (
             <p className="mt-1 text-sm text-muted-foreground">
-              After subtracting <span className="tabular">{formatMoney(owedOnCards, currency)}</span> owed on cards
+              After subtracting {formatMoney(owedOnCards, currency)} owed on cards
+            </p>
+          )}
+          {setAside > 0 && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatMoney(setAside, currency)} of it is set aside for goals, so{" "}
+              {formatMoney(total - setAside, currency)} is free to use
             </p>
           )}
         </div>

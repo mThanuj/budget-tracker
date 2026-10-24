@@ -22,6 +22,13 @@
       "when": 1792762863084,
       "tag": "0002_category_position",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792815685972,
+      "tag": "0003_budgets_goals",
+      "breakpoints": true
     }
   ]
 }
