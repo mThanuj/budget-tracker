@@ -43,3 +43,14 @@ describe("date arithmetic", () => {
     expect(monthRange("2026-12")).toEqual({ start: "2026-12-01", end: "2027-01-01" });
   });
 });
+
+describe("relativeDay", () => {
+  it("reads naturally mid-sentence", async () => {
+    const { relativeDay } = await import("@/lib/date-format");
+    expect(relativeDay("2026-10-24", "2026-10-24")).toBe("today");
+    expect(relativeDay("2026-10-25", "2026-10-24")).toBe("tomorrow");
+    expect(relativeDay("2026-10-23", "2026-10-24")).toBe("yesterday");
+    expect(relativeDay("2026-10-26", "2026-10-24")).toBe("Mon, 26 Oct");
+    expect(relativeDay("2027-01-05", "2026-10-24")).toBe("Tue, 5 Jan 2027");
+  });
+});

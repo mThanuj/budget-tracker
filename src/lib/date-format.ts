@@ -27,3 +27,17 @@ export function isISOMonth(v: string | undefined): v is ISOMonth {
 export function monthNeighbors(month: ISOMonth) {
   return { prev: addMonths(month, -1), next: addMonths(month, 1) };
 }
+
+/**
+ * A date as it reads mid-sentence: "today", "tomorrow", "yesterday", or
+ * "Mon, 26 Oct" (with the year if it isn't this year).
+ */
+export function relativeDay(date: ISODate, today: ISODate): string {
+  if (date === today) return "today";
+  if (date === addDays(today, 1)) return "tomorrow";
+  if (date === addDays(today, -1)) return "yesterday";
+  const label = format(asDate(date), "EEE, d MMM", { in: utc });
+  return date.slice(0, 4) === today.slice(0, 4) ? label : `${label} ${date.slice(0, 4)}`;
+}
+
+export const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

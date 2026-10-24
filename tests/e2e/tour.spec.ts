@@ -2,6 +2,7 @@ import { addDays, todayInTz } from "../../src/lib/dates";
 import { createBudget } from "../../src/server/services/budgets";
 import { listCategories } from "../../src/server/services/categories";
 import { addContribution, createGoal } from "../../src/server/services/goals";
+import { createRule, trackSubscription } from "../../src/server/services/recurring";
 import { createTransaction } from "../../src/server/services/transactions";
 import { createWallet, listWallets } from "../../src/server/services/wallets";
 import { db, expect, test } from "./support/fixtures";
@@ -22,7 +23,7 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   await add("income", 42_000_00, sbi.id, day(6), "October salary", { categoryId: cat.Salary });
   await add("expense", 15_000_00, sbi.id, day(6), "Rent", { categoryId: cat["Rent & Housing"] });
   await add("expense", 2_380_00, sbi.id, day(4), "Big Bazaar", { categoryId: cat.Groceries });
-  await add("expense", 649_00, card.id, day(3), "Netflix", { categoryId: cat.Subscriptions });
+  await add("expense", 299_00, card.id, day(3), "Hotstar", { categoryId: cat.Subscriptions });
   await add("expense", 1_150_00, card.id, day(2), "Petrol", { categoryId: cat.Fuel });
   await add("transfer", 5_000_00, sbi.id, day(1), "ATM withdrawal", { toWalletId: cash.id });
   await add("expense", 240_00, cash.id, day(0), "Chai and samosa", { categoryId: cat["Dining Out"] });
@@ -46,6 +47,25 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   const trip = await createGoal(db, userId, { name: "Goa trip", target: 25_000_00, targetDate: null, icon: "plane", color: "#2f8f9d" });
   await addContribution(db, userId, trip.id, { direction: "add", amount: 13_000_00, occurredOn: today, note: null });
 
+  // Recurring items: an ask-first bill due today, rent and salary coming up, and
+  // a tracked subscription whose price went up.
+  const rule = (over: Partial<Parameters<typeof createRule>[2]>) =>
+    createRule(db, userId, {
+      type: "expense", amount: 15_000_00, description: "Rent", walletId: sbi.id, toWalletId: null,
+      categoryId: cat["Rent & Housing"], frequency: "monthly", interval: 1, anchorDate: addDays(today, 2),
+      endDate: null, mode: "auto", isSubscription: false, ...over,
+    }, today);
+  await rule({});
+  await rule({ type: "income", description: "Salary", amount: 42_000_00, categoryId: cat.Salary, anchorDate: addDays(today, 8) });
+  await rule({ description: "Electricity", amount: 1_200_00, categoryId: cat["Bills & Utilities"], anchorDate: today, mode: "confirm" });
+  for (const [back, amount] of [[90, 649_00], [60, 649_00], [30, 649_00], [0, 799_00]] as const) {
+    await add("expense", amount, card.id, addDays(today, -back), "Netflix", { categoryId: cat.Subscriptions });
+  }
+  for (const back of [56, 28, 0]) {
+    await add("expense", 119_00, cash.id, addDays(today, -back), "Spotify", { categoryId: cat.Subscriptions });
+  }
+  await trackSubscription(db, userId, "netflix", today);
+
   const shot = async (name: string) => {
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: `tests/e2e/.tour/${info.project.name}-${name}.png`, fullPage: true });
@@ -64,6 +84,8 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     ["/transactions", "transactions"],
     ["/budgets", "budgets"],
     ["/goals", "goals"],
+    ["/recurring", "recurring"],
+    ["/recurring?view=subscriptions", "subscriptions"],
     ["/wallets", "wallets"],
     ["/categories", "categories"],
     ["/settings", "settings"],

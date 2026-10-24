@@ -1,15 +1,17 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { type ISODate, type ISOMonth, monthOf } from "@/lib/dates";
+import { relativeDay } from "@/lib/date-format";
+import { addDays, type ISODate, type ISOMonth, monthOf } from "@/lib/dates";
 import { goalProgress, highestMilestone } from "@/lib/goals";
 import { formatMoney } from "@/lib/money";
 import type { Db } from "../db";
 import { alertDismissal } from "../db/schema";
 import type { getBudgetOverview } from "./budgets";
 import type { GoalWithSaved } from "./goals";
+import type { listUpcoming, RuleRow } from "./recurring";
 
 export type Alert = {
   key: string;
-  tone: "warning" | "over" | "success";
+  tone: "info" | "warning" | "over" | "success";
   title: string;
   body: string;
   href: string;
@@ -74,6 +76,56 @@ export function buildAlerts({
           ? `${formatMoney(g.savedMinor, currency)} set aside. Nicely done.`
           : `${formatMoney(p.remainingMinor, currency)} to go.`,
       href: "/goals",
+    });
+  }
+  return alerts;
+}
+
+/** How far ahead to remind users about bills. */
+export const REMINDER_DAYS = 3;
+
+/**
+ * Reminders for spending due in the next few days, and price changes on
+ * subscriptions (the last two recorded amounts differ).
+ */
+export function buildRecurringAlerts({
+  upcoming,
+  rules,
+  today,
+  currency,
+}: {
+  upcoming: Awaited<ReturnType<typeof listUpcoming>>;
+  rules: RuleRow[];
+  today: ISODate;
+  currency: string;
+}): Alert[] {
+  const alerts: Alert[] = [];
+  const until = addDays(today, REMINDER_DAYS);
+  const seen = new Set<string>();
+  for (const u of upcoming) {
+    if (u.rule.type !== "expense" || u.date > until || seen.has(u.rule.id)) continue;
+    seen.add(u.rule.id); // only the next date per item
+    // Upcoming dates are always after today.
+    const when = u.date === addDays(today, 1) ? "tomorrow" : `on ${relativeDay(u.date, today)}`;
+    alerts.push({
+      key: `bill:${u.rule.id}:${u.date}`,
+      tone: "info",
+      title: `${u.rule.description} is due ${when}`,
+      body: `${formatMoney(u.rule.amountMinor, currency)} from ${u.walletName}${u.rule.mode === "auto" ? ", added automatically" : ""}.`,
+      href: "/recurring",
+    });
+  }
+  for (const r of rules) {
+    const { latestAmountMinor: now, previousAmountMinor: before, latestTransactionId, latestOn } = r;
+    if (r.rule.type !== "expense" || !r.rule.isSubscription || !now || !before || now === before || !latestOn) continue;
+    if (latestOn < addDays(today, -45)) continue; // old news
+    const up = now > before;
+    alerts.push({
+      key: `price:${r.rule.id}:${latestTransactionId}`,
+      tone: up ? "warning" : "success",
+      title: `${r.rule.description} went ${up ? "up" : "down"} to ${formatMoney(now, currency)}`,
+      body: `It was ${formatMoney(before, currency)}. ${up ? "Worth checking if you still use it." : "Nice, a little saved every time."}`,
+      href: "/recurring?view=subscriptions",
     });
   }
   return alerts;

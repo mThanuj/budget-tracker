@@ -10,24 +10,30 @@ import { CategoryBars } from "@/components/charts/category-bars";
 import { IncomeSpendingChart } from "@/components/charts/income-spending-chart";
 import { BudgetStatus, Meter } from "@/components/charts/meter";
 import { AlertList } from "@/components/dashboard/alert-list";
+import { WaitingList } from "@/components/recurring/waiting-list";
 import { AddEntryButton } from "@/components/transactions/add-entry-button";
 import { TransactionRowButton } from "@/components/transactions/transaction-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { daysLeftInMonth } from "@/lib/budgets";
+import { capitalize, relativeDay } from "@/lib/date-format";
 import { addDays, addMonths, monthOf, monthRange, todayInTz } from "@/lib/dates";
 import { goalProgress } from "@/lib/goals";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
-import { buildAlerts, withoutDismissed } from "@/server/services/alerts";
+import { type Alert, buildAlerts, buildRecurringAlerts, withoutDismissed } from "@/server/services/alerts";
 import { getBudgetOverview } from "@/server/services/budgets";
 import { listGoals } from "@/server/services/goals";
+import { listAwaitingConfirmation, listRules, listUpcoming } from "@/server/services/recurring";
 import { monthlyTotals, spendingByCategory } from "@/server/services/reports";
 import { listTransactions, summarizeTransactions } from "@/server/services/transactions";
 import { listWallets } from "@/server/services/wallets";
+import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 
 export const metadata = { title: "Home" };
+
+const ALERT_ORDER: Record<Alert["tone"], number> = { over: 0, warning: 1, info: 2, success: 3 };
 
 function greeting(timeZone: string) {
   const hour = Number(format(new Date(), "H", { in: tz(timeZone) }));
@@ -87,6 +93,7 @@ function StatTile({ label, value, children }: { label: string; value: string; ch
 async function DashboardContent() {
   const user = await requireUser();
   if (!user.onboardedAt) redirect("/welcome");
+  await syncRecurring(user);
   const currency = user.currency ?? "INR";
   const timeZone = user.timezone ?? "Asia/Kolkata";
   const today = todayInTz(timeZone);
@@ -96,7 +103,7 @@ async function DashboardContent() {
   // Compare with the same stretch of last month, not all of it.
   const prevSameDay = [addDays(`${prevMonth}-01`, Number(today.slice(8, 10))), monthRange(prevMonth).end].sort()[0];
 
-  const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar] = await Promise.all([
+  const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar, rules, upcoming, waiting] = await Promise.all([
     getBudgetOverview(db, user.id, month),
     listGoals(db, user.id),
     listWallets(db, user.id),
@@ -105,8 +112,16 @@ async function DashboardContent() {
     listTransactions(db, user.id, {}, 5),
     summarizeTransactions(db, user.id, { from: start, to: end }),
     summarizeTransactions(db, user.id, { from: `${prevMonth}-01`, to: prevSameDay }),
+    listRules(db, user.id),
+    listUpcoming(db, user.id, today, 14),
+    listAwaitingConfirmation(db, user.id, today),
   ]);
-  const alerts = await withoutDismissed(db, user.id, buildAlerts({ overview, goals, month, today, currency }));
+  const alerts = (
+    await withoutDismissed(db, user.id, [
+      ...buildAlerts({ overview, goals, month, today, currency }),
+      ...buildRecurringAlerts({ upcoming, rules, today, currency }),
+    ])
+  ).sort((a, b) => ALERT_ORDER[a.tone] - ALERT_ORDER[b.tone]);
 
   const firstName = user.name.split(" ")[0];
   const totalBalance = wallets.reduce((s, w) => s + w.balanceMinor, 0);
@@ -200,6 +215,22 @@ async function DashboardContent() {
         )}
       </section>
 
+      <WaitingList
+        currency={currency}
+        today={today}
+        items={waiting.map((w) => ({
+          ruleId: w.rule.id,
+          description: w.rule.description,
+          type: w.rule.type,
+          amountMinor: w.rule.amountMinor,
+          dueOn: w.dueOn,
+          pendingCount: w.pendingCount,
+          walletName: w.walletName,
+          categoryIcon: w.categoryIcon,
+          categoryColor: w.categoryColor,
+        }))}
+      />
+
       <AlertList alerts={alerts} />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -280,6 +311,33 @@ async function DashboardContent() {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="Coming up" href="/recurring" linkLabel="Recurring">
+          {upcoming.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nothing scheduled in the next two weeks. Add rent, salary or subscriptions once and they&apos;ll be
+              recorded on their dates.
+            </p>
+          ) : (
+            <ul className="grid gap-3">
+              {upcoming.slice(0, 5).map((u) => (
+                <li key={`${u.rule.id}-${u.date}`} className="flex items-center gap-3 text-sm">
+                  <CategoryIcon icon={u.categoryIcon ?? (u.rule.type === "transfer" ? "repeat" : "receipt")} color={u.categoryColor} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{u.rule.description}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {capitalize(relativeDay(u.date, today))} · {u.rule.mode === "auto" ? "added automatically" : "asks first"}
+                    </span>
+                  </span>
+                  <span className={cn("tabular shrink-0 text-right", u.rule.type === "income" && "text-primary")}>
+                    {u.rule.type === "income" ? "+" : u.rule.type === "expense" ? "−" : ""}
+                    {formatMoney(u.rule.amountMinor, currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
         <Card title="Goals" href="/goals" linkLabel="All goals">
           {goals.length === 0 ? (
             <p className="text-sm text-muted-foreground">Saving for something? Add a goal to track it.</p>
@@ -308,7 +366,9 @@ async function DashboardContent() {
             </ul>
           )}
         </Card>
+      </div>
 
+      <div className="grid gap-4">
         <Card title="Recent entries" href="/transactions" linkLabel="All entries">
           {recent.length === 0 ? (
             <div className="grid justify-items-start gap-3">

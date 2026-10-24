@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isCategoryIcon } from "./category-icons";
 import { addDays, type ISODate } from "./dates";
 import { parseMoney } from "./money";
+import { REPEAT_OPTIONS } from "./recurring";
 
 // Form schemas shared by client forms and server actions. They accept raw
 // FormData strings and produce clean values; ownership checks live in services.
@@ -167,3 +168,51 @@ export function contributionSchema(currency: string, today: ISODate) {
 }
 
 export type ContributionInput = z.output<ReturnType<typeof contributionSchema>>;
+
+export function recurringSchema(currency: string, today: ISODate) {
+  const dateField = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.")
+    .refine((d) => d >= addDays(today, -3650) && d <= addDays(today, 3650), "Pick a date within 10 years.");
+  return z
+    .object({
+      type: z.enum(["income", "expense", "transfer"]),
+      amount: moneyField(currency),
+      description: z.string().trim().min(1, "Give it a name, like Rent or Netflix.").max(60, "Keep the name under 60 characters."),
+      walletId: z.uuid("Choose a wallet."),
+      toWalletId: optionalId,
+      categoryId: optionalId,
+      repeat: z.enum(REPEAT_OPTIONS.map((o) => o.value) as [string, ...string[]], "Choose how often it repeats."),
+      anchorDate: dateField,
+      endDate: z
+        .string()
+        .optional()
+        .transform((v) => (v ? v : null))
+        .pipe(dateField.nullable()),
+      mode: z.enum(["auto", "confirm"]),
+      isSubscription: checkbox,
+    })
+    .superRefine((v, ctx) => {
+      if (v.type === "transfer") {
+        if (!v.toWalletId) ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Choose where the money goes." });
+        else if (v.toWalletId === v.walletId)
+          ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Pick two different wallets." });
+      }
+      if (v.endDate && v.endDate < v.anchorDate) {
+        ctx.addIssue({ code: "custom", path: ["endDate"], message: "The end date must be after the start date." });
+      }
+    })
+    .transform(({ repeat, ...v }) => {
+      const option = REPEAT_OPTIONS.find((o) => o.value === repeat)!;
+      return {
+        ...v,
+        frequency: option.frequency,
+        interval: option.interval,
+        toWalletId: v.type === "transfer" ? v.toWalletId : null,
+        categoryId: v.type === "transfer" ? null : v.categoryId,
+        isSubscription: v.type === "expense" && v.isSubscription,
+      };
+    });
+}
+
+export type RecurringInput = z.output<ReturnType<typeof recurringSchema>>;

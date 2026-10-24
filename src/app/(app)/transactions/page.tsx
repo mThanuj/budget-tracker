@@ -19,6 +19,7 @@ import {
   type TransactionRow,
 } from "@/server/services/transactions";
 import { listWallets } from "@/server/services/wallets";
+import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 
 export const metadata = { title: "Transactions" };
@@ -58,6 +59,7 @@ function groupByDay(rows: TransactionRow[]) {
 
 async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactions">, "searchParams">) {
   const user = await requireUser();
+  await syncRecurring(user);
   const currency = user.currency ?? "INR";
   const today = todayInTz(user.timezone ?? "Asia/Kolkata");
   const raw = await searchParams;

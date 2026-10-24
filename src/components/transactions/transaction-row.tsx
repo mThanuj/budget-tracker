@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRightIcon } from "lucide-react";
+import { ArrowLeftRightIcon, RepeatIcon } from "lucide-react";
 import { cn } from "cn";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { formatMoney } from "@/lib/money";
@@ -51,7 +51,10 @@ export function TransactionRowButton({ row, currency }: { row: TransactionRow; c
       )}
       <span className="min-w-0 flex-1">
         <span className="block truncate">{title}</span>
-        <span className="block truncate text-xs text-muted-foreground">{detail}</span>
+        <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+          {row.source === "recurring" && <RepeatIcon className="size-3 shrink-0" aria-label="Recurring" />}
+          <span className="truncate">{detail}</span>
+        </span>
       </span>
       <span
         className={cn(

@@ -29,6 +29,13 @@
       "when": 1792815685972,
       "tag": "0003_budgets_goals",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792819118766,
+      "tag": "0004_recurring",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@ import { and, asc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import type { WalletInput } from "@/lib/validation";
 import { DEFAULT_WALLET_COLOR } from "@/lib/wallets";
 import type { Db } from "../db";
-import { transaction, user, wallet } from "../db/schema";
+import { recurringRule, transaction, user, wallet } from "../db/schema";
 import { UserError } from "./errors";
 
 export type WalletWithBalance = Awaited<ReturnType<typeof listWallets>>[number];
@@ -86,10 +86,20 @@ export async function setDefaultWallet(db: Db, userId: string, walletId: string)
   await db.update(user).set({ defaultWalletId: walletId }).where(eq(user.id, userId));
 }
 
-/** Hides a wallet from pickers but keeps its history and balance. */
+const usesWallet = (walletId: string) =>
+  sql`(${recurringRule.walletId} = ${walletId} or ${recurringRule.toWalletId} = ${walletId})`;
+
+/**
+ * Hides a wallet from pickers but keeps its history and balance. Recurring
+ * items using it are paused so nothing lands in a closed account.
+ */
 export async function archiveWallet(db: Db, userId: string, walletId: string) {
   await getOwnedWallet(db, userId, walletId);
   await db.update(wallet).set({ archivedAt: new Date() }).where(eq(wallet.id, walletId));
+  await db
+    .update(recurringRule)
+    .set({ active: false })
+    .where(and(eq(recurringRule.userId, userId), usesWallet(walletId)));
   await db
     .update(user)
     .set({ defaultWalletId: null })
@@ -110,6 +120,13 @@ export async function deleteWallet(db: Db, userId: string, walletId: string) {
     .where(sql`${transaction.walletId} = ${walletId} or ${transaction.toWalletId} = ${walletId}`);
   if (count > 0) {
     throw new UserError("This wallet has entries, so it can only be archived.");
+  }
+  const [{ rules }] = await db
+    .select({ rules: sql<number>`count(*)`.mapWith(Number) })
+    .from(recurringRule)
+    .where(usesWallet(walletId));
+  if (rules > 0) {
+    throw new UserError("A recurring item uses this wallet. Change or delete that item first.");
   }
   await db.delete(wallet).where(and(eq(wallet.id, walletId), eq(wallet.userId, userId)));
 }

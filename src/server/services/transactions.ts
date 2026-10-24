@@ -86,15 +86,23 @@ async function getOwnedTransaction(db: Db, userId: string, id: string) {
   return row;
 }
 
+export type EntryReferences = {
+  type: "income" | "expense" | "transfer";
+  walletId: string;
+  toWalletId: string | null;
+  categoryId: string | null;
+};
+
 /**
  * Wallets and category must belong to the user. Archived ones can't receive
- * new entries, but an existing entry may keep the one it already has.
+ * new entries, but an existing entry (or recurring item) may keep the one it has.
+ * Shared by transactions and recurring items.
  */
-async function checkReferences(
+export async function assertEntryReferences(
   db: Db,
   userId: string,
-  input: TransactionInput,
-  existing?: typeof transaction.$inferSelect,
+  input: EntryReferences,
+  existing?: Partial<EntryReferences>,
 ) {
   const from = await getOwnedWallet(db, userId, input.walletId);
   if (from.archivedAt && from.id !== existing?.walletId) {
@@ -141,7 +149,7 @@ export async function createTransaction(
   input: TransactionInput,
   source: "manual" | "nl" | "onboarding" = "manual",
 ) {
-  await checkReferences(db, userId, input);
+  await assertEntryReferences(db, userId, input);
   const [row] = await db
     .insert(transaction)
     .values({ ...toRow(input), userId, source })
@@ -151,7 +159,7 @@ export async function createTransaction(
 
 export async function updateTransaction(db: Db, userId: string, id: string, input: TransactionInput) {
   const existing = await getOwnedTransaction(db, userId, id);
-  await checkReferences(db, userId, input, existing);
+  await assertEntryReferences(db, userId, input, existing);
   const [row] = await db
     .update(transaction)
     .set(toRow(input))

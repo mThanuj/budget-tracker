@@ -7,6 +7,8 @@ const schema = z.object({
   BETTER_AUTH_URL: z.url(),
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
+  // Bearer token for /api/cron/* (set on the server; optional in development).
+  CRON_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(24).optional()),
 });
 
 export type Env = z.infer<typeof schema>;

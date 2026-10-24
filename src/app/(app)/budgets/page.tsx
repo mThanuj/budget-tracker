@@ -9,6 +9,7 @@ import { isISOMonth } from "@/lib/date-format";
 import { monthOf, todayInTz } from "@/lib/dates";
 import { db } from "@/server/db";
 import { averageMonthlySpending, getBudgetOverview, unbudgetedCategories } from "@/server/services/budgets";
+import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 
 export const metadata = { title: "Budgets" };
@@ -26,6 +27,7 @@ export default function BudgetsPage({ searchParams }: PageProps<"/budgets">) {
 
 async function BudgetsContent({ searchParams }: Pick<PageProps<"/budgets">, "searchParams">) {
   const user = await requireUser();
+  await syncRecurring(user);
   const currency = user.currency ?? "INR";
   const today = todayInTz(user.timezone ?? "Asia/Kolkata");
   const currentMonth = monthOf(today);

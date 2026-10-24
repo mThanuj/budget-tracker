@@ -1,6 +1,6 @@
 "use client";
 
-import { OctagonAlertIcon, PartyPopperIcon, TriangleAlertIcon, XIcon } from "lucide-react";
+import { CalendarClockIcon, OctagonAlertIcon, PartyPopperIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { dismissAlert } from "@/server/actions/alerts";
 import type { Alert } from "@/server/services/alerts";
 
 const TONE = {
+  info: { Icon: CalendarClockIcon, className: "text-muted-foreground", ring: "ring-foreground/10" },
   warning: { Icon: TriangleAlertIcon, className: "text-warning", ring: "ring-[color-mix(in_oklab,var(--warning)_35%,transparent)]" },
   over: { Icon: OctagonAlertIcon, className: "text-destructive", ring: "ring-[color-mix(in_oklab,var(--destructive)_35%,transparent)]" },
   success: { Icon: PartyPopperIcon, className: "text-primary", ring: "ring-[color-mix(in_oklab,var(--primary)_30%,transparent)]" },

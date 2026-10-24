@@ -168,6 +168,9 @@ export const transaction = pgTable(
       .notNull()
       .references(() => wallet.id, { onDelete: "no action" }),
     toWalletId: uuid().references(() => wallet.id, { onDelete: "no action" }),
+    recurringRuleId: uuid().references((): AnyPgColumn => recurringRule.id, { onDelete: "set null" }),
+    // The scheduled date this entry was created for (stays put if the entry's date is edited).
+    recurrenceOn: date({ mode: "string" }),
     source: transactionSource().notNull().default("manual"),
     ...timestamps,
   },
@@ -176,6 +179,8 @@ export const transaction = pgTable(
     index("transaction_user_wallet_idx").on(t.userId, t.walletId),
     index("transaction_user_to_wallet_idx").on(t.userId, t.toWalletId),
     index("transaction_user_category_date_idx").on(t.userId, t.categoryId, t.occurredOn),
+    // Makes recording each scheduled occurrence idempotent.
+    uniqueIndex("transaction_rule_occurrence_key").on(t.recurringRuleId, t.recurrenceOn),
     check("transaction_amount_positive", sql`${t.amountMinor} > 0`),
     // Transfers move money between two different wallets and have no category.
     check(
@@ -266,4 +271,48 @@ export const alertDismissal = pgTable(
     dismissedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.alertKey] })],
+);
+
+export const recurrenceFrequency = pgEnum("recurrence_frequency", ["weekly", "monthly", "yearly"]);
+export const recurrenceMode = pgEnum("recurrence_mode", ["auto", "confirm"]);
+
+export const recurringRule = pgTable(
+  "recurring_rule",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: transactionType().notNull(),
+    amountMinor: bigint({ mode: "number" }).notNull(),
+    description: text().notNull(),
+    categoryId: uuid().references(() => category.id, { onDelete: "set null" }),
+    walletId: uuid()
+      .notNull()
+      .references(() => wallet.id, { onDelete: "no action" }),
+    toWalletId: uuid().references(() => wallet.id, { onDelete: "no action" }),
+    frequency: recurrenceFrequency().notNull(),
+    // Every N weeks/months/years.
+    interval: integer().notNull().default(1),
+    // The schedule is computed from this date (so Jan 31 → Feb 28 → Mar 31).
+    anchorDate: date({ mode: "string" }).notNull(),
+    endDate: date({ mode: "string" }),
+    // The next occurrence not yet recorded or skipped. Null once the schedule ends.
+    nextDueOn: date({ mode: "string" }),
+    mode: recurrenceMode().notNull().default("auto"),
+    isSubscription: boolean().notNull().default(false),
+    active: boolean().notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [
+    index("recurring_rule_due_idx").on(t.nextDueOn).where(sql`${t.active}`),
+    index("recurring_rule_user_idx").on(t.userId),
+    check("recurring_rule_amount_positive", sql`${t.amountMinor} > 0`),
+    check("recurring_rule_interval", sql`${t.interval} between 1 and 52`),
+    check(
+      "recurring_rule_transfer_shape",
+      sql`(${t.type} = 'transfer' AND ${t.toWalletId} IS NOT NULL AND ${t.toWalletId} <> ${t.walletId} AND ${t.categoryId} IS NULL)
+        OR (${t.type} <> 'transfer' AND ${t.toWalletId} IS NULL)`,
+    ),
+  ],
 );

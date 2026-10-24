@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
-import { CategoryIcon } from "@/components/categories/category-icon";
+import { CategoryChips } from "@/components/categories/category-chips";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -145,39 +145,7 @@ export function TransactionForm({
       </FormField>
 
       {!isTransfer && (
-        <fieldset className="grid gap-2">
-          <legend className="mb-2 text-sm font-medium">
-            Category <span className="font-normal text-muted-foreground">(optional)</span>
-          </legend>
-          <div role="radiogroup" aria-label="Category" className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto p-0.5">
-            {categories.map((c) => {
-              const selected = c.id === categoryId;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setCategoryId(selected ? null : c.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border py-1 pr-3 pl-1 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                    selected
-                      ? "border-primary bg-accent text-accent-foreground"
-                      : "border-border hover:bg-muted",
-                  )}
-                >
-                  <CategoryIcon icon={c.icon} color={c.color} size="sm" />
-                  {c.name}
-                </button>
-              );
-            })}
-          </div>
-          {errors.categoryId && (
-            <p role="alert" className="text-sm text-destructive">
-              {errors.categoryId}
-            </p>
-          )}
-        </fieldset>
+        <CategoryChips categories={categories} value={categoryId} onChange={setCategoryId} error={errors.categoryId} />
       )}
 
       <div className={cn("grid gap-4", isTransfer && "sm:grid-cols-2")}>
