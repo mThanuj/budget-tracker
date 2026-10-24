@@ -1,6 +1,7 @@
 "use server";
 
 import { todayInTz } from "@/lib/dates";
+import { aiAvailableFor } from "@/server/ai";
 import { listCategories } from "@/server/services/categories";
 import { listWallets } from "@/server/services/wallets";
 import { db } from "@/server/db";
@@ -22,6 +23,7 @@ export async function getEntryFormData() {
     currency: user.currency ?? "INR",
     today: todayInTz(user.timezone ?? "Asia/Kolkata"),
     defaultWalletId: (user.defaultWalletId as string | null | undefined) ?? null,
+    ai: aiAvailableFor(user),
     wallets: wallets.map((w) => ({ id: w.id, name: w.name, kind: w.kind, archived: w.archivedAt !== null })),
     categories: categories.map((c) => ({
       id: c.id,

@@ -1,0 +1,48 @@
+import type { ProviderConfig } from "./config";
+import { classifyError, type ProviderFailure } from "./errors";
+import { lanesFor, type ModelChoice } from "./providers";
+
+export type AiOutcome = "ok" | ProviderFailure;
+
+// Providers that recently rate-limited or failed are skipped until this time.
+// In memory per server process, which is enough for a single app server.
+const coolingDown = new Map<string, number>();
+
+export function resetCooldowns() {
+  coolingDown.clear();
+}
+
+/**
+ * Runs `task` on the first provider/model that works. Any failure moves on to
+ * the next model, then the next provider; the user only sees an error when
+ * everything failed.
+ */
+export async function runWithFallback<T>(
+  chain: ProviderConfig[],
+  task: (m: ModelChoice) => Promise<T>,
+  record?: (provider: string, outcome: AiOutcome) => Promise<void>,
+  now: () => number = Date.now,
+  prefer: "fast" | "chat" = "fast",
+): Promise<{ ok: true; value: T; provider: string } | { ok: false; reason: "busy" | "unreadable" }> {
+  let sawBadOutput = false;
+  for (const p of chain) {
+    for (const lane of lanesFor(p, prefer)) {
+      const key = `${lane.provider}/${lane.modelId}`;
+      if ((coolingDown.get(key) ?? 0) > now()) continue;
+      try {
+        const value = await task(lane);
+        await record?.(p.name, "ok");
+        return { ok: true, value, provider: p.name };
+      } catch (err) {
+        const { kind, cooldownMs } = classifyError(err);
+        if (cooldownMs > 0) coolingDown.set(key, now() + cooldownMs);
+        if (kind === "bad_output") sawBadOutput = true;
+        console.warn(`[ai] ${key} failed (${kind}):`, err instanceof Error ? err.message : err);
+        await record?.(p.name, kind);
+        // A bad key won't work for the provider's other model either.
+        if (kind === "auth") break;
+      }
+    }
+  }
+  return { ok: false, reason: sawBadOutput ? "unreadable" : "busy" };
+}

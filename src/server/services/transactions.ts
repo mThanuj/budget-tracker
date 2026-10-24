@@ -1,10 +1,12 @@
 import { and, desc, eq, gte, ilike, isNull, lt, or, type SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { ISODate } from "@/lib/dates";
+import { normalizeMerchant } from "@/lib/merchant";
 import type { TransactionInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { category, transaction, wallet } from "../db/schema";
 import { getOwnedCategory } from "./categories";
+import { learnFromEntry } from "./merchant-rules";
 import { UserError } from "./errors";
 import { getOwnedWallet } from "./wallets";
 
@@ -132,6 +134,7 @@ export async function assertEntryReferences(
 
 function toRow(input: TransactionInput) {
   return {
+    merchantKey: normalizeMerchant(input.description) || null,
     type: input.type,
     amountMinor: input.amount,
     occurredOn: input.occurredOn,
@@ -154,6 +157,7 @@ export async function createTransaction(
     .insert(transaction)
     .values({ ...toRow(input), userId, source })
     .returning();
+  await learnFromEntry(db, userId, input.description, input.categoryId);
   return row;
 }
 
@@ -165,6 +169,8 @@ export async function updateTransaction(db: Db, userId: string, id: string, inpu
     .set(toRow(input))
     .where(and(eq(transaction.id, id), eq(transaction.userId, userId)))
     .returning();
+  // Re-categorizing an entry is a correction worth learning from.
+  await learnFromEntry(db, userId, input.description, input.categoryId);
   return row;
 }
 

@@ -316,3 +316,34 @@ export const recurringRule = pgTable(
     ),
   ],
 );
+
+// "Who was paid" → category, learned from the user's own entries so known
+// merchants are categorized instantly without asking the AI.
+export const merchantRule = pgTable(
+  "merchant_rule",
+  {
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    merchantKey: text().notNull(),
+    categoryId: uuid()
+      .notNull()
+      .references(() => category.id, { onDelete: "cascade" }),
+    hits: integer().notNull().default(1),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.merchantKey] })],
+);
+
+// Daily AI request counters: per user (scope "user:<id>"), across everyone
+// ("global"), and per provider outcome ("provider:<name>").
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    scope: text().notNull(),
+    day: date({ mode: "string" }).notNull(),
+    feature: text().notNull(),
+    count: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.scope, t.day, t.feature] })],
+);

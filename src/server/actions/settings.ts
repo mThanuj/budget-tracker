@@ -57,3 +57,10 @@ export async function completeWelcome(
   await seedNewUser(db, user.id);
   redirect("/dashboard");
 }
+
+export async function setAiEnabled(enabled: boolean): Promise<PreferencesState> {
+  const user = await requireUser();
+  await db.update(userTable).set({ aiEnabled: enabled === true }).where(eq(userTable.id, user.id));
+  refresh();
+  return { ok: true };
+}

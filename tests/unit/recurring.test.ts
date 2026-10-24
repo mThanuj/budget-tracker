@@ -131,3 +131,14 @@ describe("detectSubscriptions", () => {
     ).toBe("yearly");
   });
 });
+
+describe("matchScore", () => {
+  it("prefers exact, then the most specific learned name", async () => {
+    const { matchScore } = await import("@/server/services/merchant-rules");
+    expect(matchScore("swiggy", "swiggy")).toBeGreaterThan(matchScore("swiggy", "swiggy order"));
+    expect(matchScore("swiggy", "swiggy order")).toBeGreaterThan(0);
+    expect(matchScore("amazon prime", "amazon prime video")).toBeGreaterThan(matchScore("amazon", "amazon prime video"));
+    expect(matchScore("swiggy", "swiggyx")).toBe(0);
+    expect(matchScore("uber", "auto to office")).toBe(0);
+  });
+});

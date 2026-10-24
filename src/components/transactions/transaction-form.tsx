@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { SparklesIcon } from "lucide-react";
+import Link from "next/link";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { CategoryChips } from "@/components/categories/category-chips";
@@ -13,7 +15,9 @@ import { FormField, fieldAria } from "@/components/ui-extra/form-field";
 import { Segmented } from "@/components/ui-extra/segmented";
 import { addDays } from "@/lib/dates";
 import { minorToInput } from "@/lib/money";
+import { type ParseResult, parseEntryText, suggestCategoryFor } from "@/server/actions/ai";
 import type { EntryFormData } from "@/server/actions/entry-form";
+import type { EntryPrefill } from "@/server/ai/parse-entry";
 import { removeTransaction, saveTransaction } from "@/server/actions/transactions";
 
 export type EntryType = "expense" | "income" | "transfer";
@@ -40,6 +44,70 @@ function currencySymbol(currency: string) {
   );
 }
 
+const PARSE_MESSAGES: Record<Exclude<ParseResult, { ok: true }>["reason"], string> = {
+  too_short: "Type a little more, like “spent 240 on chai”.",
+  disabled: "AI is switched off. Turn it on in Settings, or fill in the form below.",
+  limit: "You've used today's AI entries. The form below works just the same.",
+  busy: "The AI is busy right now. Fill in the form below, or try again in a minute.",
+  unreadable: "Couldn't make sense of that. Try rephrasing, or fill in the form below.",
+  no_amount: "Couldn't find an amount. Include it, like “spent 240 on chai”.",
+};
+
+/** "Type it in words": a sentence in, a filled-in form out. Nothing is saved here. */
+function TypeItBox({ onFilled }: { onFilled: (prefill: EntryPrefill) => void }) {
+  const [text, setText] = useState("");
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        startTransition(async () => {
+          const result = await parseEntryText(text);
+          if (result.ok) {
+            onFilled(result.prefill);
+            setMessage({ tone: "ok", text: "Filled in from your note. Check it, then save." });
+          } else {
+            setMessage({ tone: "error", text: PARSE_MESSAGES[result.reason] });
+          }
+        });
+      }}
+      className="grid gap-2 rounded-xl bg-muted/60 p-3"
+    >
+      <label htmlFor="type-it" className="text-sm font-medium">
+        Type it in words
+      </label>
+      <div className="flex gap-2">
+        <Input
+          id="type-it"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          autoComplete="off"
+          autoFocus
+          maxLength={300}
+          placeholder="spent 240 on chai yesterday, paid cash"
+          className="h-10 bg-background"
+        />
+        <Button type="submit" disabled={pending || text.trim().length === 0} className="h-10 shrink-0">
+          <SparklesIcon aria-hidden />
+          {pending ? "Reading…" : "Fill in"}
+        </Button>
+      </div>
+      <p aria-live="polite" className={cn("text-xs", message?.tone === "error" ? "text-destructive" : "text-muted-foreground")}>
+        {message?.text ?? (
+          <>
+            Uses AI: what you type here is sent to our AI provider to fill in the form.{" "}
+            <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">
+              Settings
+            </Link>
+          </>
+        )}
+      </p>
+    </form>
+  );
+}
+
 export function TransactionForm({
   data,
   entry,
@@ -51,9 +119,43 @@ export function TransactionForm({
   preset?: EntryPreset;
   onDone: () => void;
 }) {
-  const [type, setType] = useState<EntryType>(entry?.type ?? preset?.type ?? "expense");
-  const [categoryId, setCategoryId] = useState<string | null>(entry?.categoryId ?? null);
-  const [date, setDate] = useState(entry?.occurredOn ?? data.today);
+  const [prefill, setPrefill] = useState<EntryPrefill | null>(null);
+  const [version, setVersion] = useState(0);
+  return (
+    <div className="grid gap-5">
+      {!entry && data.ai && (
+        <TypeItBox
+          onFilled={(p) => {
+            setPrefill(p);
+            setVersion((v) => v + 1); // re-create the fields with the new values
+          }}
+        />
+      )}
+      <EntryFields key={version} data={data} entry={entry} preset={preset} prefill={prefill} onDone={onDone} />
+    </div>
+  );
+}
+
+function EntryFields({
+  data,
+  entry,
+  preset,
+  prefill,
+  onDone,
+}: {
+  data: EntryFormData;
+  entry?: EditableEntry;
+  preset?: EntryPreset;
+  prefill: EntryPrefill | null;
+  onDone: () => void;
+}) {
+  const [type, setType] = useState<EntryType>(entry?.type ?? prefill?.type ?? preset?.type ?? "expense");
+  const [categoryId, setCategoryId] = useState<string | null>(entry?.categoryId ?? prefill?.categoryId ?? null);
+  // A category the app chose (from the note, past entries or AI) until the user picks one.
+  const [suggestedId, setSuggestedId] = useState<string | null>(prefill?.categoryId ?? null);
+  const userPicked = useRef(Boolean(entry));
+  const descriptionRef = useRef(entry?.description ?? prefill?.description ?? "");
+  const [date, setDate] = useState(entry?.occurredOn ?? prefill?.occurredOn ?? data.today);
   const [showNotes, setShowNotes] = useState(Boolean(entry?.notes));
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -77,8 +179,28 @@ export function TransactionForm({
 
   function changeType(next: EntryType) {
     // A category only makes sense for its own kind.
-    if ((next === "income") !== (type === "income") || next === "transfer") setCategoryId(null);
+    if ((next === "income") !== (type === "income") || next === "transfer") {
+      setCategoryId(null);
+      setSuggestedId(null);
+    }
     setType(next);
+  }
+
+  function pickCategory(id: string | null) {
+    userPicked.current = true;
+    setSuggestedId(null);
+    setCategoryId(id);
+  }
+
+  // When the description is done, pre-select a likely category (unless the user chose one).
+  async function suggestFor(description: string) {
+    const text = description.trim();
+    if (userPicked.current || type === "transfer" || text.length < 2) return;
+    const result = await suggestCategoryFor(text, type);
+    if (result && !userPicked.current && descriptionRef.current.trim() === text) {
+      setCategoryId(result.categoryId);
+      setSuggestedId(result.categoryId);
+    }
   }
 
   if (wallets.length === 0) {
@@ -120,9 +242,15 @@ export function TransactionForm({
             name="amount"
             inputMode="decimal"
             autoComplete="off"
-            autoFocus
+            autoFocus={!data.ai || Boolean(entry)}
             placeholder="0"
-            defaultValue={entry ? minorToInput(entry.amountMinor, data.currency) : ""}
+            defaultValue={
+              entry
+                ? minorToInput(entry.amountMinor, data.currency)
+                : prefill
+                  ? minorToInput(prefill.amountMinor, data.currency)
+                  : ""
+            }
             className="tabular h-12 pl-9 text-xl md:text-xl"
           />
         </div>
@@ -139,13 +267,21 @@ export function TransactionForm({
           autoComplete="off"
           maxLength={200}
           placeholder={isTransfer ? "Credit card bill" : type === "income" ? "October salary" : "Chai and samosa"}
-          defaultValue={entry?.description ?? ""}
+          defaultValue={entry?.description ?? prefill?.description ?? ""}
+          onChange={(e) => (descriptionRef.current = e.target.value)}
+          onBlur={(e) => void suggestFor(e.target.value)}
           className="h-10"
         />
       </FormField>
 
       {!isTransfer && (
-        <CategoryChips categories={categories} value={categoryId} onChange={setCategoryId} error={errors.categoryId} />
+        <CategoryChips
+          categories={categories}
+          value={categoryId}
+          onChange={pickCategory}
+          suggestedId={suggestedId}
+          error={errors.categoryId}
+        />
       )}
 
       <div className={cn("grid gap-4", isTransfer && "sm:grid-cols-2")}>
@@ -157,7 +293,7 @@ export function TransactionForm({
           <NativeSelect
             {...fieldAria("walletId", errors.walletId)}
             name="walletId"
-            defaultValue={entry?.walletId ?? firstWallet}
+            defaultValue={entry?.walletId ?? prefill?.walletId ?? firstWallet}
             className="w-full"
           >
             {wallets.map((w) => (
@@ -172,7 +308,7 @@ export function TransactionForm({
             <NativeSelect
               {...fieldAria("toWalletId", errors.toWalletId)}
               name="toWalletId"
-              defaultValue={entry?.toWalletId ?? otherWallet}
+              defaultValue={entry?.toWalletId ?? prefill?.toWalletId ?? otherWallet}
               className="w-full"
             >
               {wallets.map((w) => (

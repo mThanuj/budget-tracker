@@ -2,12 +2,14 @@ import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/app/page-header";
+import { AiToggle } from "@/components/settings/ai-toggle";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SignOutButton } from "@/components/settings/sign-out-button";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { currencyOptions, timeZoneOptions } from "@/lib/preferences-options";
+import { aiConfigured } from "@/server/ai";
 import { requireUser } from "@/server/session";
 
 export const metadata = { title: "Settings" };
@@ -75,6 +77,11 @@ async function SettingsContent() {
           <SignOutButton />
         </div>
       </Section>
+      {aiConfigured() && (
+        <Section title="AI features" description="Fill in entries from a sentence and get category suggestions.">
+          <AiToggle enabled={user.aiEnabled !== false} />
+        </Section>
+      )}
       <Section title="Money" description="How amounts and dates work for you.">
         <PreferencesForm
           mode="settings"
