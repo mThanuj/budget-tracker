@@ -5,9 +5,10 @@ import { z } from "zod";
 import { todayInTz } from "@/lib/dates";
 import { aiAvailableFor } from "@/server/ai";
 import { answerWithModel, chatInstructions, moneyTools } from "@/server/ai/chat";
-import { providerChain } from "@/server/ai/config";
+import { aiAccess } from "@/server/ai/access";
 import { runWithFallback } from "@/server/ai/fallback";
 import { chatQuestionsLeft, recordProviderOutcome, takeChatQuota } from "@/server/ai/quota";
+import { razorpayConfig } from "@/server/billing/razorpay";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/session";
 
@@ -19,7 +20,7 @@ const history = z
 
 export type ChatReply =
   | { ok: true; text: string; lookedUp: string[]; left: number }
-  | { ok: false; reason: "disabled" | "limit" | "busy" | "invalid"; left: number };
+  | { ok: false; reason: "disabled" | "limit" | "busy" | "invalid"; left: number; upgrade?: boolean };
 
 /**
  * Answers the latest question from the user's own data. The conversation lives
@@ -27,28 +28,39 @@ export type ChatReply =
  */
 export async function askMoney(messages: { role: "user" | "assistant"; content: string }[]): Promise<ChatReply> {
   const user = await requireUser();
+  const access = await aiAccess(db, user.id);
   const parsed = history.safeParse(messages);
-  if (!parsed.success) return { ok: false, reason: "invalid", left: await chatQuestionsLeft(db, user.id) };
+  if (!parsed.success) return { ok: false, reason: "invalid", left: await chatQuestionsLeft(db, user.id, access.limits) };
   if (!aiAvailableFor(user)) return { ok: false, reason: "disabled", left: 0 };
-  if (!(await takeChatQuota(db, user.id))) return { ok: false, reason: "limit", left: 0 };
+  if (!(await takeChatQuota(db, user.id, access.limits))) {
+    return { ok: false, reason: "limit", left: 0, upgrade: canUpgrade(access.plan.id) };
+  }
 
   const u = { id: user.id, currency: user.currency ?? "INR", today: todayInTz(user.timezone ?? "Asia/Kolkata") };
   const tools = moneyTools(db, u);
   const instructions = chatInstructions(u);
   const recent = parsed.data.slice(-10) as ModelMessage[];
   const result = await runWithFallback(
-    providerChain(),
+    access.chain,
     (m) => answerWithModel(m, { tools, instructions, messages: recent }),
     (provider, outcome) => recordProviderOutcome(db, provider, outcome),
     Date.now,
     "chat",
   );
-  const left = await chatQuestionsLeft(db, user.id);
+  const left = await chatQuestionsLeft(db, user.id, access.limits);
   if (!result.ok) return { ok: false, reason: "busy", left };
   return { ok: true, ...result.value, left };
 }
 
+/** Free users who run out are pointed at Pro, but only once payments are set up. */
+const canUpgrade = (plan: "free" | "pro") => plan === "free" && razorpayConfig() !== null;
+
 export async function chatStatus() {
   const user = await requireUser();
-  return { available: aiAvailableFor(user), left: await chatQuestionsLeft(db, user.id) };
+  const access = await aiAccess(db, user.id);
+  return {
+    available: aiAvailableFor(user),
+    left: await chatQuestionsLeft(db, user.id, access.limits),
+    upgrade: canUpgrade(access.plan.id),
+  };
 }

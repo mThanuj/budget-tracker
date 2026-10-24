@@ -1,6 +1,7 @@
 import {
   GaugeIcon,
   HouseIcon,
+  LightbulbIcon,
   ListIcon,
   type LucideIcon,
   MessageCircleQuestionIcon,
@@ -20,6 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/ask", label: "Ask", icon: MessageCircleQuestionIcon, mobile: "bar" },
   { href: "/transactions", label: "Entries", icon: ListIcon, mobile: "bar" },
   { href: "/budgets", label: "Budgets", icon: GaugeIcon, mobile: "bar" },
+  { href: "/insights", label: "Insights", icon: LightbulbIcon, mobile: "menu" },
   { href: "/goals", label: "Goals", icon: TargetIcon, mobile: "menu" },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon, mobile: "menu" },
   { href: "/wallets", label: "Wallets", icon: WalletIcon, mobile: "menu" },

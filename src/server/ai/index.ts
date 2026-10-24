@@ -5,6 +5,7 @@ import type { Db } from "../db";
 import { listCategories } from "../services/categories";
 import { learnedCategory } from "../services/merchant-rules";
 import { listWallets } from "../services/wallets";
+import { aiAccess } from "./access";
 import { chooseCategoryWithModel } from "./categorize";
 import { providerChain } from "./config";
 import { runWithFallback } from "./fallback";
@@ -34,7 +35,7 @@ async function entryContext(db: Db, user: CurrentUser): Promise<EntryContext> {
   };
 }
 
-const record = (db: Db) => (provider: string, outcome: Parameters<typeof recordProviderOutcome>[2]) =>
+export const record = (db: Db) => (provider: string, outcome: Parameters<typeof recordProviderOutcome>[2]) =>
   recordProviderOutcome(db, provider, outcome);
 
 /** Turns a sentence into a filled-in entry. Nothing is saved; the user reviews it. */
@@ -44,10 +45,11 @@ export async function parseEntry(
   text: string,
 ): Promise<{ ok: true; prefill: EntryPrefill } | { ok: false; reason: AiFailure }> {
   if (!aiAvailableFor(user)) return { ok: false, reason: "disabled" };
-  if (!(await takeAiQuota(db, user.id))) return { ok: false, reason: "limit" };
+  const access = await aiAccess(db, user.id);
+  if (!(await takeAiQuota(db, user.id, access.limits))) return { ok: false, reason: "limit" };
 
   const ctx = await entryContext(db, user);
-  const result = await runWithFallback(providerChain(), (m) => extractEntryWithModel(m, ctx, text), record(db));
+  const result = await runWithFallback(access.chain, (m) => extractEntryWithModel(m, ctx, text), record(db));
   if (!result.ok) return { ok: false, reason: result.reason };
 
   const prefill = toPrefill(ctx, result.value);
@@ -70,11 +72,13 @@ export async function suggestCategory(
 ): Promise<{ categoryId: string; source: "learned" | "ai" } | null> {
   const learned = await learnedCategory(db, user.id, input.description, input.type);
   if (learned) return { categoryId: learned, source: "learned" };
-  if (!aiAvailableFor(user) || !(await takeAiQuota(db, user.id))) return null;
+  if (!aiAvailableFor(user)) return null;
+  const access = await aiAccess(db, user.id);
+  if (!(await takeAiQuota(db, user.id, access.limits))) return null;
 
   const categories = (await listCategories(db, user.id)).filter((c) => c.kind === input.type);
   const result = await runWithFallback(
-    providerChain(),
+    access.chain,
     (m) => chooseCategoryWithModel(m, { ...input, categories: categories.map((c) => ({ id: c.id, name: c.name })) }),
     record(db),
   );

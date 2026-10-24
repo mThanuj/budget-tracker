@@ -15,7 +15,8 @@
     "db:studio": "drizzle-kit studio",
     "test:e2e": "playwright test",
     "ai:eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-eval.ts",
-    "ai:chat-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-chat-eval.ts"
+    "ai:chat-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-chat-eval.ts",
+    "ai:insights-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-insights-eval.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.77",

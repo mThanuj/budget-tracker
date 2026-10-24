@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { askMoney, type ChatReply } from "@/server/actions/chat";
 import { SimpleMarkdown } from "./simple-markdown";
 
-type Message = { role: "user" | "assistant"; content: string; lookedUp?: string[]; failed?: boolean };
+type Message = { role: "user" | "assistant"; content: string; lookedUp?: string[]; failed?: boolean; upgrade?: boolean };
 
 export const SUGGESTED_QUESTIONS = [
   "How much did I spend on food last month?",
@@ -27,14 +27,29 @@ const FAILURES: Record<Exclude<ChatReply, { ok: true }>["reason"], string> = {
   invalid: "Something went wrong with that question. Try asking it again.",
 };
 
+/** Shown only to Free users when they run out, and only once payments are set up. */
+function UpgradeNote({ proDaily }: { proDaily: number }) {
+  return (
+    <p className="text-sm">
+      Pro gives you {proDaily} questions a day.{" "}
+      <Link href="/billing" className="font-medium text-primary underline-offset-4 hover:underline">
+        See Pro
+      </Link>
+    </p>
+  );
+}
+
 export function ChatPanel({
   available,
   initialLeft,
   initialQuestion,
+  proDaily,
 }: {
   available: boolean;
   initialLeft: number;
   initialQuestion: string | null;
+  /** Pro's daily questions, when this user could upgrade; null otherwise. */
+  proDaily: number | null;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -56,7 +71,7 @@ export function ChatPanel({
         ...m,
         reply.ok
           ? { role: "assistant", content: reply.text, lookedUp: reply.lookedUp }
-          : { role: "assistant", content: FAILURES[reply.reason], failed: true },
+          : { role: "assistant", content: FAILURES[reply.reason], failed: true, upgrade: reply.upgrade },
       ]);
     });
   }
@@ -91,7 +106,12 @@ export function ChatPanel({
 
   return (
     <div className="grid gap-5">
-      {messages.length === 0 ? (
+      {messages.length === 0 && left === 0 ? (
+        <div className="grid gap-2 rounded-2xl bg-card px-5 py-4 ring-1 ring-foreground/10">
+          <p>{FAILURES.limit}</p>
+          {proDaily !== null && <UpgradeNote proDaily={proDaily} />}
+        </div>
+      ) : messages.length === 0 ? (
         <div className="grid gap-3">
           <p className="text-muted-foreground">Try one of these, or ask your own:</p>
           <div className="flex flex-wrap gap-2">
@@ -124,6 +144,7 @@ export function ChatPanel({
                   )}
                 >
                   <SimpleMarkdown text={m.content} />
+                  {m.upgrade && proDaily !== null && <UpgradeNote proDaily={proDaily} />}
                   {m.lookedUp && m.lookedUp.length > 0 && (
                     <p className="text-xs text-muted-foreground">Looked up: {m.lookedUp.join(", ")}</p>
                   )}

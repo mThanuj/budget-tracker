@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOutIcon, Settings2Icon } from "lucide-react";
+import { CreditCardIcon, LogOutIcon, Settings2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "cn";
@@ -72,6 +72,10 @@ export function UserMenuDropdown({
         <DropdownMenuItem render={<Link href="/settings" />}>
           <Settings2Icon aria-hidden />
           Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/billing" />}>
+          <CreditCardIcon aria-hidden />
+          Plan & billing
         </DropdownMenuItem>
         <DropdownMenuItem onClick={signOut}>
           <LogOutIcon aria-hidden />

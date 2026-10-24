@@ -5,6 +5,7 @@ import { addContribution, createGoal } from "../../src/server/services/goals";
 import { createRule, trackSubscription } from "../../src/server/services/recurring";
 import { createTransaction } from "../../src/server/services/transactions";
 import { createWallet, listWallets } from "../../src/server/services/wallets";
+import * as schema from "../../src/server/db/schema";
 import { db, expect, test } from "./support/fixtures";
 
 // Not a behavior test: fills an account with realistic data and saves
@@ -90,6 +91,8 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     ["/categories", "categories"],
     ["/settings", "settings"],
     ["/ask", "ask"],
+    ["/insights", "insights"],
+    ["/billing", "billing"],
     ["/setup", "setup"],
   ] as const) {
     await page.goto(path);
@@ -104,4 +107,18 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   }).toPass();
   await page.getByRole("dialog").getByRole("radio", { name: "Groceries" }).click();
   await shot("new-entry");
+
+  // Pro pages. The written report calls the real AI, so only once (desktop).
+  await db.insert(schema.subscription).values({
+    userId, razorpaySubscriptionId: `sub_tour_${userId}`, planKey: "yearly", status: "active",
+    currentStart: new Date(), currentEnd: new Date(Date.now() + 200 * 86_400_000),
+  });
+  await page.goto("/billing");
+  await expect(page.getByRole("heading", { name: "Your plan: Pro" })).toBeVisible();
+  await shot("billing-pro");
+  if (process.env.LLM_GROQ_API_KEY && info.project.name === "desktop-chrome") {
+    await page.goto("/insights");
+    await expect(page.getByText("Written by AI from the numbers below.")).toBeVisible({ timeout: 60_000 });
+    await shot("insights-pro");
+  }
 });

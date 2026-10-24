@@ -1,5 +1,8 @@
 import { APICallError, NoObjectGeneratedError, NoOutputGeneratedError, TypeValidationError } from "ai";
 
+/** Output that parsed fine but failed our own checks (e.g. made-up numbers). */
+export class BadOutputError extends Error {}
+
 export type ProviderFailure = "rate_limited" | "unavailable" | "bad_output" | "auth";
 
 /** Why a provider call failed, and how long to leave that provider alone. */
@@ -15,6 +18,7 @@ export function classifyError(err: unknown): { kind: ProviderFailure; cooldownMs
     if (status >= 400 && status < 500) return { kind: "bad_output", cooldownMs: 0 };
     return { kind: "unavailable", cooldownMs: 30_000 };
   }
+  if (err instanceof BadOutputError) return { kind: "bad_output", cooldownMs: 0 };
   if (NoObjectGeneratedError.isInstance(err) || NoOutputGeneratedError.isInstance(err) || TypeValidationError.isInstance(err)) {
     return { kind: "bad_output", cooldownMs: 0 };
   }

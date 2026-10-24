@@ -147,7 +147,7 @@ export function moneyTools(db: Db, u: ChatUser) {
     }),
 
     getBudgets: tool({
-      description: "Monthly limit and category budgets: spent, left, status.",
+      description: "The limits the user has set (monthly limit, category budgets): spent, left, status. Empty if none are set; not for general spending questions.",
       inputSchema: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).nullable().describe("YYYY-MM; null for this month") }),
       execute: async ({ month }) => {
         const m = month ?? monthOf(u.today);
@@ -246,7 +246,8 @@ export function chatInstructions(u: ChatUser): string {
   return [
     "You answer questions about the user's own money in a budgeting app used in India. Be neutral, concise and plain-spoken: one to four short sentences, or a short list. No emojis.",
     `Today is ${weekday}, ${u.today}. This month runs ${thisMonth.start} to ${addDays(thisMonth.end, -1)}; last month ran ${lastMonth.start} to ${addDays(lastMonth.end, -1)}. Currency: ${u.currency}.`,
-    "- Use the tools for every number. Never guess or calculate amounts yourself; if no tool gives it, say you don't have that information.",
+    "- Use the tools for every number. Never guess or calculate amounts yourself. If a tool comes back empty, try a better-suited one before saying you don't have that information.",
+    "- For spending questions (biggest expenses, where the money went, spending this month), use getSpending; for the largest single entries, findEntries.",
     "- Quote amounts exactly as the tools format them.",
     '- For "can I afford" questions only: use checkAffordability, explain the verdict in a sentence or two, and end with "This isn\'t financial advice."',
     "- For a group of categories (food = Groceries and Dining Out), pass them to getSpending to get one total; don't add amounts up yourself.",

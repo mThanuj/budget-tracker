@@ -56,17 +56,8 @@ export function providerChain(env: Env = process.env, chainVar = "LLM_CHAIN_FREE
   });
 }
 
-export function aiLimits(env: Env = process.env) {
-  const num = (key: string, fallback: number) => {
-    const n = Number(env[key]);
-    return Number.isFinite(n) && n >= 0 ? n : fallback;
-  };
-  return {
-    // Entry parsing + category suggestions per user per day.
-    userDaily: num("AI_USER_DAILY_LIMIT", 50),
-    // Everyone together, to stay inside the free providers' daily quotas.
-    globalDaily: num("AI_GLOBAL_DAILY_LIMIT", 1500),
-    // Money-chat questions per user per day.
-    chatDaily: num("AI_CHAT_DAILY_LIMIT", 10),
-  };
+/** Requests per day for everyone together on the free chain, to stay inside the free providers' quotas. */
+export function globalAiLimit(env: Env = process.env) {
+  const n = Number(env.AI_GLOBAL_DAILY_LIMIT);
+  return Number.isFinite(n) && n >= 0 && env.AI_GLOBAL_DAILY_LIMIT?.trim() ? n : 1500;
 }

@@ -7,7 +7,7 @@ import type { SetupRows, SetupStep } from "@/lib/setup-types";
 import { setupSchema } from "@/lib/validation";
 import { runAction } from "@/server/action-utils";
 import { aiAvailableFor } from "@/server/ai";
-import { providerChain } from "@/server/ai/config";
+import { aiAccess } from "@/server/ai/access";
 import { runWithFallback } from "@/server/ai/fallback";
 import { recordProviderOutcome, takeAiQuota } from "@/server/ai/quota";
 import { extractSetupWithModel, toSetupRows } from "@/server/ai/setup";
@@ -28,7 +28,8 @@ export async function parseSetupAnswer(step: SetupStep, text: string): Promise<S
     .safeParse({ step, text });
   if (!input.success) return { ok: false, reason: "too_short" };
   if (!aiAvailableFor(user)) return { ok: false, reason: "disabled" };
-  if (!(await takeAiQuota(db, user.id))) return { ok: false, reason: "limit" };
+  const access = await aiAccess(db, user.id);
+  if (!(await takeAiQuota(db, user.id, access.limits))) return { ok: false, reason: "limit" };
 
   const ctx = {
     today: todayInTz(user.timezone ?? "Asia/Kolkata"),
@@ -36,7 +37,7 @@ export async function parseSetupAnswer(step: SetupStep, text: string): Promise<S
     expenseCategories: (await listCategories(db, user.id)).filter((c) => c.kind === "expense").map((c) => ({ id: c.id, name: c.name })),
   };
   const result = await runWithFallback(
-    providerChain(),
+    access.chain,
     (m) => extractSetupWithModel(m, input.data.step, ctx, input.data.text),
     (provider, outcome) => recordProviderOutcome(db, provider, outcome),
   );

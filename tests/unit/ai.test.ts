@@ -2,7 +2,7 @@ import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it } from "vitest";
 import { chooseCategoryWithModel } from "@/server/ai/categorize";
-import { aiLimits, type ProviderConfig, providerChain } from "@/server/ai/config";
+import { globalAiLimit, type ProviderConfig, providerChain } from "@/server/ai/config";
 import { classifyError } from "@/server/ai/errors";
 import { resetCooldowns, runWithFallback } from "@/server/ai/fallback";
 import { type EntryContext, entryInstructions, entrySchema, extractEntryWithModel, type RawEntry, toPrefill } from "@/server/ai/parse-entry";
@@ -81,9 +81,10 @@ describe("providerChain", () => {
     expect(() => providerChain({ ...env, LLM_GROQ_OPTIONS: "{oops" })).toThrow(/LLM_GROQ_OPTIONS must be a JSON object/);
   });
 
-  it("reads limits with safe defaults", () => {
-    expect(aiLimits({})).toEqual({ userDaily: 50, globalDaily: 1500, chatDaily: 10 });
-    expect(aiLimits({ AI_USER_DAILY_LIMIT: "5", AI_GLOBAL_DAILY_LIMIT: "nope" })).toMatchObject({ userDaily: 5, globalDaily: 1500 });
+  it("reads the global limit with a safe default", () => {
+    expect(globalAiLimit({})).toBe(1500);
+    expect(globalAiLimit({ AI_GLOBAL_DAILY_LIMIT: "nope" })).toBe(1500);
+    expect(globalAiLimit({ AI_GLOBAL_DAILY_LIMIT: "200" })).toBe(200);
   });
 });
 

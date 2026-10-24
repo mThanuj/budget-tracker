@@ -7,6 +7,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -346,4 +347,49 @@ export const aiUsage = pgTable(
     count: integer().notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.scope, t.day, t.feature] })],
+);
+
+// One row per Razorpay subscription (a user may have several over time).
+export const subscription = pgTable(
+  "subscription",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    razorpaySubscriptionId: text().notNull().unique(),
+    planKey: text().notNull(), // "monthly" | "yearly"
+    // Razorpay's status: created, authenticated, active, pending, halted, cancelled, completed, expired, paused.
+    status: text().notNull(),
+    currentStart: timestamp({ withTimezone: true }),
+    currentEnd: timestamp({ withTimezone: true }),
+    endedAt: timestamp({ withTimezone: true }),
+    cancelAtCycleEnd: boolean().notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [index("subscription_user_idx").on(t.userId)],
+);
+
+// Razorpay may deliver the same webhook more than once; each event id is processed once.
+export const paymentEvent = pgTable("payment_event", {
+  eventId: text().primaryKey(),
+  eventType: text().notNull(),
+  receivedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+// Cached insight reports: "2026-09" for a finished month, "2026-10:so-far" for a check-in.
+export const insight = pgTable(
+  "insight",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    period: text().notNull(),
+    factsHash: text().notNull(),
+    report: jsonb().notNull(),
+    model: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("insight_user_period_key").on(t.userId, t.period)],
 );

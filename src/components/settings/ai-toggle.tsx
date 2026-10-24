@@ -36,9 +36,10 @@ export function AiToggle({ enabled }: { enabled: boolean }) {
         {on ? "On" : "Off"}
       </button>
       <p className="text-sm text-muted-foreground">
-        When on, the note you type in &ldquo;Type it in words&rdquo; and the descriptions of new entries are sent to our AI
-        provider (Groq, Cerebras or OpenRouter) to fill in the form and suggest categories. Your name, email and balances
-        are never sent. When off, everything still works; you just fill in forms yourself.
+        When on, what you type into the AI boxes and the descriptions of new entries are sent to our AI provider (Groq,
+        Cerebras or OpenRouter). When you ask a question or read Insights, the amounts needed to answer are sent too:
+        totals, category and entry names, budgets and goals. Your name and email are never sent. When off, everything
+        else still works; you just fill in forms yourself.
       </p>
     </div>
   );
