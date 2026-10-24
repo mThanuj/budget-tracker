@@ -216,3 +216,43 @@ export function recurringSchema(currency: string, today: ISODate) {
 }
 
 export type RecurringInput = z.output<ReturnType<typeof recurringSchema>>;
+
+/** The reviewed setup the user applies at the end of the setup flow (sent as JSON). */
+export function setupSchema(currency: string, today: ISODate) {
+  const amount = moneyField(currency);
+  const optionalAmount = z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v : "0"))
+    .pipe(moneyField(currency, { allowZero: true }));
+  const day = z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? Number(v) : null))
+    .pipe(z.number().int().min(1, "Pick a day from 1 to 31.").max(31, "Pick a day from 1 to 31.").nullable());
+  const label = z.string().trim().min(1, "Every row needs a name.").max(40, "Keep names under 40 characters.");
+  return z.object({
+    wallets: z.array(z.object({ name: label, kind: z.enum(["cash", "bank", "credit_card", "other"]), balance: optionalAmount })).max(12),
+    incomes: z.array(z.object({ name: label, amount, day })).max(12),
+    bills: z.array(z.object({ name: label, amount, day, subscription: z.boolean(), categoryId: z.uuid().nullable() })).max(20),
+    goals: z
+      .array(
+        z.object({
+          name: label,
+          target: amount,
+          by: z
+            .string()
+            .optional()
+            .transform((v) => (v ? v : null))
+            .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d > today, "Goal dates must be in the future.").nullable()),
+        }),
+      )
+      .max(12),
+    incomeWallet: z.string().trim().max(40),
+    billsWallet: z.string().trim().max(40),
+    limit: optionalAmount, // 0 means no overall limit
+    categoryBudgets: z.array(z.object({ categoryId: z.uuid(), amount })).max(20),
+  });
+}
+
+export type SetupInput = z.output<ReturnType<typeof setupSchema>>;

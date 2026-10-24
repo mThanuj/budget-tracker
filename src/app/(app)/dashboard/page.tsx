@@ -9,6 +9,7 @@ import { CategoryIcon } from "@/components/categories/category-icon";
 import { CategoryBars } from "@/components/charts/category-bars";
 import { IncomeSpendingChart } from "@/components/charts/income-spending-chart";
 import { BudgetStatus, Meter } from "@/components/charts/meter";
+import { AskBox } from "@/components/ask/ask-box";
 import { AlertList } from "@/components/dashboard/alert-list";
 import { WaitingList } from "@/components/recurring/waiting-list";
 import { AddEntryButton } from "@/components/transactions/add-entry-button";
@@ -21,6 +22,7 @@ import { addDays, addMonths, monthOf, monthRange, todayInTz } from "@/lib/dates"
 import { goalProgress } from "@/lib/goals";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
+import { aiAvailableFor } from "@/server/ai";
 import { type Alert, buildAlerts, buildRecurringAlerts, withoutDismissed } from "@/server/services/alerts";
 import { getBudgetOverview } from "@/server/services/budgets";
 import { listGoals } from "@/server/services/goals";
@@ -133,7 +135,7 @@ async function DashboardContent() {
   const steps = [
     { done: wallets.length > 1, label: "Add your bank accounts and cards", href: "/wallets" },
     { done: recent.length > 0, label: "Record what you spend", href: "/transactions" },
-    { done: overall !== null, label: "Set a monthly spending limit", href: "/budgets" },
+    { done: overall !== null, label: "Plan your budget (a few questions)", href: "/setup" },
     { done: goals.length > 0, label: "Start a savings goal", href: "/goals" },
   ];
   const doneCount = steps.filter((s) => s.done).length;
@@ -264,6 +266,8 @@ async function DashboardContent() {
           )}
         </StatTile>
       </div>
+
+      {aiAvailableFor(user) && <AskBox />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Budgets" href="/budgets" linkLabel="All budgets">

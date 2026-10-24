@@ -89,6 +89,8 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     ["/wallets", "wallets"],
     ["/categories", "categories"],
     ["/settings", "settings"],
+    ["/ask", "ask"],
+    ["/setup", "setup"],
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

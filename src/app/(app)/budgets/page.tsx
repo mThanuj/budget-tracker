@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { z } from "zod";
 import { MonthSwitcher } from "@/components/app/month-switcher";
@@ -17,7 +18,15 @@ export const metadata = { title: "Budgets" };
 export default function BudgetsPage({ searchParams }: PageProps<"/budgets">) {
   return (
     <>
-      <PageHeader title="Budgets" description="Plan how much to spend each month, and see how you're doing." />
+      <PageHeader
+        title="Budgets"
+        description="Plan how much to spend each month, and see how you're doing."
+        actions={
+          <Link href="/setup" className="text-sm text-primary underline-offset-4 hover:underline">
+            Plan with a few questions
+          </Link>
+        }
+      />
       <Suspense fallback={<BudgetsSkeleton />}>
         <BudgetsContent searchParams={searchParams} />
       </Suspense>

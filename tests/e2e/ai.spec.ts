@@ -1,4 +1,8 @@
-import { expect, test } from "./support/fixtures";
+import { todayInTz } from "../../src/lib/dates";
+import { listCategories } from "../../src/server/services/categories";
+import { createTransaction } from "../../src/server/services/transactions";
+import { listWallets } from "../../src/server/services/wallets";
+import { db, expect, test } from "./support/fixtures";
 
 // These use the real AI provider from .env.local, so they're skipped without a key.
 test.skip(!process.env.LLM_GROQ_API_KEY, "No AI provider key in .env.local");
@@ -37,4 +41,39 @@ test("switching AI off hides the typing box", async ({ signedIn: { page } }) => 
     await expect(dialog.getByLabel("Amount")).toBeVisible({ timeout: 1_500 });
   }).toPass();
   await expect(dialog.getByLabel("Type it in words")).toHaveCount(0);
+});
+
+// The AI work happens on the server, so the heavier AI tests run in one browser
+// only; running both at once just doubles traffic against free rate limits.
+const desktopOnly = () => test.skip(test.info().project.name !== "desktop-chrome", "Server-side AI: checked once");
+
+test("the money chat answers from the user's own entries", async ({ signedIn: { page, userId } }) => {
+  desktopOnly();
+  const [cash] = await listWallets(db, userId);
+  const groceries = (await listCategories(db, userId)).find((c) => c.name === "Groceries")!;
+  await createTransaction(db, userId, {
+    type: "expense", amount: 2_380_00, occurredOn: todayInTz("Asia/Kolkata"), description: "Big Bazaar", notes: null,
+    walletId: cash.id, toWalletId: null, categoryId: groceries.id,
+  });
+
+  await page.goto("/ask");
+  await page.getByRole("button", { name: "What are my biggest expenses this month?" }).click();
+  const answer = page.getByRole("list", { name: "Conversation" }).getByRole("listitem").nth(1);
+  await expect(answer).toContainText("2,380", { timeout: 45_000 });
+  await expect(answer).toContainText("Looked up:");
+  await expect(page.getByText(/questions? left today/)).toContainText("9 questions left today");
+});
+
+test("the setup answer box turns words into rows", async ({ newUser: { page } }) => {
+  desktopOnly();
+  await page.goto("/setup");
+  const read = page.getByRole("button", { name: "Read my answer" });
+  // Typing before the page has hydrated gets reset; retry until it sticks.
+  await expect(async () => {
+    await page.getByLabel("Your answer").fill("SBI savings with about 20k, and 2000 cash");
+    await expect(read).toBeEnabled({ timeout: 1_000 });
+  }).toPass();
+  await read.click();
+  await expect(page.getByText("Added below. Check the rows, then continue.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByLabel("Name").first()).toHaveValue(/sbi/i);
 });

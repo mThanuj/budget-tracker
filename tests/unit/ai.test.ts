@@ -82,8 +82,8 @@ describe("providerChain", () => {
   });
 
   it("reads limits with safe defaults", () => {
-    expect(aiLimits({})).toEqual({ userDaily: 50, globalDaily: 1500 });
-    expect(aiLimits({ AI_USER_DAILY_LIMIT: "5", AI_GLOBAL_DAILY_LIMIT: "nope" })).toEqual({ userDaily: 5, globalDaily: 1500 });
+    expect(aiLimits({})).toEqual({ userDaily: 50, globalDaily: 1500, chatDaily: 10 });
+    expect(aiLimits({ AI_USER_DAILY_LIMIT: "5", AI_GLOBAL_DAILY_LIMIT: "nope" })).toMatchObject({ userDaily: 5, globalDaily: 1500 });
   });
 });
 

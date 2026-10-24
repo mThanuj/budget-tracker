@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { suggestCategory } from "@/server/ai";
-import { takeAiQuota } from "@/server/ai/quota";
+import { chatQuestionsLeft, takeAiQuota, takeChatQuota } from "@/server/ai/quota";
 import { transaction } from "@/server/db/schema";
 import { seedNewUser } from "@/server/db/seed-defaults";
 import { archiveCategory, listCategories } from "@/server/services/categories";
@@ -77,7 +77,7 @@ describe("AI quota", () => {
     const t = await createTestDb();
     const a = await createTestUser(t.db);
     const b = await createTestUser(t.db);
-    const limits = { userDaily: 2, globalDaily: 3 };
+    const limits = { userDaily: 2, globalDaily: 3, chatDaily: 10 };
     const day1 = new Date("2026-10-24T10:00:00Z");
 
     expect(await takeAiQuota(t.db, a.id, limits, day1)).toBe(true);
@@ -87,6 +87,20 @@ describe("AI quota", () => {
     expect(await takeAiQuota(t.db, b.id, limits, day1)).toBe(false); // global used up
 
     expect(await takeAiQuota(t.db, a.id, limits, new Date("2026-10-25T10:00:00Z"))).toBe(true);
+    await t.close();
+  });
+
+  it("limits chat questions separately and reports what's left", async () => {
+    const t = await createTestDb();
+    const a = await createTestUser(t.db);
+    const limits = { userDaily: 50, globalDaily: 100, chatDaily: 2 };
+    const now = new Date("2026-10-24T10:00:00Z");
+    expect(await chatQuestionsLeft(t.db, a.id, limits, now)).toBe(2);
+    expect(await takeChatQuota(t.db, a.id, limits, now)).toBe(true);
+    expect(await takeChatQuota(t.db, a.id, limits, now)).toBe(true);
+    expect(await takeChatQuota(t.db, a.id, limits, now)).toBe(false);
+    expect(await chatQuestionsLeft(t.db, a.id, limits, now)).toBe(0);
+    expect(await takeAiQuota(t.db, a.id, limits, now)).toBe(true); // entry filling still works
     await t.close();
   });
 });

@@ -39,6 +39,23 @@ export function lanesFor(p: ProviderConfig, prefer: "fast" | "chat"): ModelChoic
   return prefer === "fast" ? [fast, chat] : [chat];
 }
 
+/**
+ * After a tool call the SDK echoes the model's earlier reasoning back as
+ * `reasoning_content` on assistant messages; Groq rejects that field (400),
+ * and no provider needs it to continue, so it's always removed.
+ */
+export function withoutEchoedReasoning(body: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(body.messages)) return body;
+  return {
+    ...body,
+    messages: body.messages.map((m: unknown) =>
+      m && typeof m === "object" && "reasoning_content" in m
+        ? Object.fromEntries(Object.entries(m).filter(([key]) => key !== "reasoning_content"))
+        : m,
+    ),
+  };
+}
+
 const cache = new Map<string, ProviderModels>();
 
 export function modelsFor(p: ProviderConfig): ProviderModels {
@@ -50,7 +67,10 @@ export function modelsFor(p: ProviderConfig): ProviderModels {
     baseURL: p.baseURL,
     apiKey: p.apiKey,
     supportsStructuredOutputs: p.structured,
-    ...(p.body && { transformRequestBody: (args: Record<string, unknown>) => merge(args, p.body!) }),
+    transformRequestBody: (args: Record<string, unknown>) => {
+      const body = withoutEchoedReasoning(args);
+      return p.body ? merge(body, p.body) : body;
+    },
   });
   const models: ProviderModels = {
     name: p.name,

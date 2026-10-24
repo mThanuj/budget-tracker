@@ -1,6 +1,6 @@
 "use client";
 
-import { EllipsisIcon } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NAV_ITEMS, type NavItem } from "./nav-config";
+import { BAR_ORDER, NAV_ITEMS, type NavItem } from "./nav-config";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -64,37 +64,37 @@ function BottomLink({ item, pathname }: { item: NavItem; pathname: string }) {
   );
 }
 
-function MoreMenu({ pathname }: { pathname: string }) {
-  const items = NAV_ITEMS.filter((i) => i.mobile === "more");
+/** Mobile header menu with everything that isn't in the bottom bar. */
+export function MobileMenu() {
+  const pathname = usePathname();
+  const items = NAV_ITEMS.filter((i) => i.mobile === "menu");
   const active = items.some((i) => isActive(pathname, i.href));
   return (
-    <li className="flex-1">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(
-            "flex w-full flex-col items-center gap-1 py-2.5 text-[0.7rem] outline-none focus-visible:bg-muted",
-            active ? "font-medium text-primary" : "text-muted-foreground",
-          )}
-        >
-          <EllipsisIcon className="size-5" aria-hidden />
-          More
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="end" sideOffset={8} className="w-48">
-          {items.map(({ href, label, icon: Icon }) => (
-            <DropdownMenuItem key={href} render={<Link href={href} />} aria-current={isActive(pathname, href) ? "page" : undefined}>
-              <Icon aria-hidden />
-              {label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </li>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="More pages"
+        className={cn(
+          "grid size-9 place-items-center rounded-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+          active ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        <MenuIcon className="size-5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {items.map(({ href, label, icon: Icon }) => (
+          <DropdownMenuItem key={href} render={<Link href={href} />} aria-current={isActive(pathname, href) ? "page" : undefined}>
+            <Icon aria-hidden />
+            {label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
 export function BottomNav() {
   const pathname = usePathname();
-  const bar = NAV_ITEMS.filter((i) => i.mobile === "bar");
+  const bar = BAR_ORDER.map((href) => NAV_ITEMS.find((i) => i.href === href)!);
   return (
     <nav
       aria-label="Main"
@@ -110,7 +110,6 @@ export function BottomNav() {
         {bar.slice(2).map((item) => (
           <BottomLink key={item.href} item={item} pathname={pathname} />
         ))}
-        <MoreMenu pathname={pathname} />
       </ul>
     </nav>
   );

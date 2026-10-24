@@ -66,5 +66,7 @@ export function aiLimits(env: Env = process.env) {
     userDaily: num("AI_USER_DAILY_LIMIT", 50),
     // Everyone together, to stay inside the free providers' daily quotas.
     globalDaily: num("AI_GLOBAL_DAILY_LIMIT", 1500),
+    // Money-chat questions per user per day.
+    chatDaily: num("AI_CHAT_DAILY_LIMIT", 10),
   };
 }

@@ -28,6 +28,9 @@ test("new users choose currency and time zone before reaching home", async ({ ne
   await expect(page.getByRole("heading", { name: "Welcome, Asha." })).toBeVisible();
   await page.getByLabel("Currency").selectOption("USD");
   await page.getByRole("button", { name: "Save and continue" }).click();
+  // Next comes the optional setup questions.
+  await expect(page).toHaveURL(/\/setup$/);
+  await page.getByRole("link", { name: "Skip for now" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { name: /, Asha\.$/ })).toBeVisible();
 });

@@ -55,7 +55,8 @@ export async function completeWelcome(
     .where(eq(userTable.id, user.id));
   // Safety net in case the signup hook failed: seeding is idempotent.
   await seedNewUser(db, user.id);
-  redirect("/dashboard");
+  // Next: a few questions to set up wallets, bills and a starter budget (skippable).
+  redirect("/setup");
 }
 
 export async function setAiEnabled(enabled: boolean): Promise<PreferencesState> {

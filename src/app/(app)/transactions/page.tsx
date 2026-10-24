@@ -22,12 +22,12 @@ import { listWallets } from "@/server/services/wallets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 
-export const metadata = { title: "Transactions" };
+export const metadata = { title: "Entries" };
 
 export default function TransactionsPage({ searchParams }: PageProps<"/transactions">) {
   return (
     <>
-      <PageHeader title="Transactions" actions={<AddEntryButton className="hidden md:inline-flex" />} />
+      <PageHeader title="Entries" actions={<AddEntryButton className="hidden md:inline-flex" />} />
       <Suspense fallback={<TransactionsSkeleton />}>
         <TransactionsContent searchParams={searchParams} />
       </Suspense>
