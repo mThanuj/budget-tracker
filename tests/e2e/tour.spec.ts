@@ -12,6 +12,8 @@ import { db, expect, test } from "./support/fixtures";
 // screenshots of every page (tests/e2e/.tour/) for design review.
 
 test("visual tour", async ({ signedIn: { page, userId } }, info) => {
+  // ~20 pages (each compiled on first visit by a fresh dev server) plus a real AI report.
+  test.setTimeout(150_000);
   const today = todayInTz("Asia/Kolkata");
   const day = (n: number) => addDays(today, -n);
   const [cash] = await listWallets(db, userId);
@@ -94,6 +96,9 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     ["/insights", "insights"],
     ["/billing", "billing"],
     ["/setup", "setup"],
+    ["/privacy", "privacy"],
+    ["/refund", "refund"],
+    ["/contact", "contact"],
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -121,4 +126,11 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     await expect(page.getByText("Written by AI from the numbers below.")).toBeVisible({ timeout: 60_000 });
     await shot("insights-pro");
   }
+});
+
+test("visual tour: landing page", async ({ page }, info) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Know where your money goes." })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.screenshot({ path: `tests/e2e/.tour/${info.project.name}-landing.png`, fullPage: true });
 });

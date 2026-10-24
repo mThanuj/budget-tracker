@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { isAdmin } from "@/server/admin";
 import { getSession } from "@/server/session";
 import { UserMenuDropdown } from "./user-menu-dropdown";
 
@@ -6,7 +7,7 @@ export async function UserMenu({ compact = false }: { compact?: boolean }) {
   const session = await getSession();
   if (!session) return null;
   const { name, email, image } = session.user;
-  return <UserMenuDropdown name={name} email={email} image={image ?? null} compact={compact} />;
+  return <UserMenuDropdown name={name} email={email} image={image ?? null} compact={compact} admin={isAdmin(session.user)} />;
 }
 
 export function UserMenuSkeleton({ compact = false }: { compact?: boolean }) {

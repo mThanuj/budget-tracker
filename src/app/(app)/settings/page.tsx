@@ -2,14 +2,20 @@ import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/app/page-header";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { AiToggle } from "@/components/settings/ai-toggle";
+import { DeleteAccount } from "@/components/settings/delete-account";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SignOutButton } from "@/components/settings/sign-out-button";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 import { Skeleton } from "@/components/ui/skeleton";
 import { currencyOptions, timeZoneOptions } from "@/lib/preferences-options";
 import { aiConfigured } from "@/server/ai";
+import { getUserPlan } from "@/server/billing/plan";
+import { db } from "@/server/db";
 import { requireUser } from "@/server/session";
 
 export const metadata = { title: "Settings" };
@@ -24,12 +30,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-6 border-t border-border py-8 md:grid-cols-[14rem_1fr] md:gap-10">
+    // minmax(0, …): a long email truncates instead of widening the column.
+    <section className="grid grid-cols-1 gap-6 border-t border-border py-8 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-10">
       <div>
         <h2 className="font-medium">{title}</h2>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
-      <div className="max-w-md">{children}</div>
+      <div className="min-w-0 max-w-md">{children}</div>
     </section>
   );
 }
@@ -62,7 +69,35 @@ export default function SettingsPage() {
       <Section title="Appearance" description="Applies on this device.">
         <ThemeSwitcher />
       </Section>
+      <Suspense>
+        <YourData />
+      </Suspense>
+      <LegalLinks className="border-t border-border pt-6 text-sm text-muted-foreground" />
     </>
+  );
+}
+
+async function YourData() {
+  const user = await requireUser();
+  const plan = await getUserPlan(db, user.id);
+  return (
+    <Section title="Your data" description="Take a copy whenever you like, or delete everything.">
+      <div className="grid gap-6">
+        <div className="grid gap-2">
+          {/* A plain link: the browser downloads the file. */}
+          <a href="/api/export" download className={cn(buttonVariants({ variant: "outline" }), "justify-self-start")}>
+            Download entries (CSV)
+          </a>
+          <p className="text-sm text-muted-foreground">Every entry, for Excel, Google Sheets or anything else.</p>
+        </div>
+        <div className="grid gap-2">
+          <div>
+            <DeleteAccount pro={plan.id === "pro" && plan.subscription?.renewsAt != null} />
+          </div>
+          <p className="text-sm text-muted-foreground">Removes your account and everything in it.</p>
+        </div>
+      </div>
+    </Section>
   );
 }
 

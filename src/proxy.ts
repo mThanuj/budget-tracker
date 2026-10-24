@@ -10,7 +10,9 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = getSessionCookie(request) !== null;
 
-  if (pathname === "/" && hasSession) {
+  // "?signed-out" means the server found no valid session behind the cookie;
+  // sending that visitor to the dashboard again would loop.
+  if (pathname === "/" && hasSession && !request.nextUrl.searchParams.has("signed-out")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
   if (!PUBLIC_PATHS.has(pathname) && !hasSession) {

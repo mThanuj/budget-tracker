@@ -28,7 +28,7 @@ export function AiToggle({ enabled }: { enabled: boolean }) {
         <span className={cn("relative h-6 w-11 rounded-full transition-colors", on ? "bg-primary" : "bg-input")}>
           <span
             className={cn(
-              "absolute top-0.5 size-5 rounded-full bg-background shadow-sm transition-transform",
+              "absolute top-0.5 left-0 size-5 rounded-full bg-background shadow-sm transition-transform",
               on ? "translate-x-5.5" : "translate-x-0.5",
             )}
           />

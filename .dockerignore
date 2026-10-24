@@ -8,3 +8,5 @@ tests
 Dockerfile
 .dockerignore
 README.md
+deploy
+docs

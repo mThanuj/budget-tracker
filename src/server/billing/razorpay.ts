@@ -80,3 +80,8 @@ export function fetchSubscription(cfg: RazorpayConfig, id: string) {
 export function cancelSubscriptionAtCycleEnd(cfg: RazorpayConfig, id: string) {
   return call<RazorpaySubscription>(cfg, "POST", `/subscriptions/${encodeURIComponent(id)}/cancel`, { cancel_at_cycle_end: 1 });
 }
+
+/** Cancels straight away (used when an account is deleted). */
+export function cancelSubscriptionNow(cfg: RazorpayConfig, id: string) {
+  return call<RazorpaySubscription>(cfg, "POST", `/subscriptions/${encodeURIComponent(id)}/cancel`, { cancel_at_cycle_end: 0 });
+}

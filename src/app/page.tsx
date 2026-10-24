@@ -1,5 +1,10 @@
 import { Brand } from "@/components/app/brand";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { PlanComparison } from "@/components/billing/plan-comparison";
+import { LegalLinks } from "@/components/legal/legal-links";
+import { PRICES } from "@/config/plans";
+import { Suspense } from "react";
+import { DeletedNotice } from "./_components/deleted-notice";
 import { PassbookDemo } from "./_components/passbook-demo";
 
 const FEATURES = [
@@ -24,6 +29,9 @@ export default function LandingPage() {
         <Brand />
         <GoogleSignInButton label="Sign in" variant="ghost" size="default" />
       </header>
+      <Suspense>
+        <DeletedNotice />
+      </Suspense>
 
       <main className="flex-1">
         <section className="grid items-center gap-12 py-12 md:py-20 lg:grid-cols-[1fr_minmax(0,32rem)] lg:gap-16">
@@ -52,11 +60,29 @@ export default function LandingPage() {
             </div>
           ))}
         </section>
+
+        <section aria-labelledby="pricing" className="grid gap-8 border-t border-border py-14 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-16">
+          <div>
+            <h2 id="pricing" className="font-heading text-3xl tracking-tight">
+              Free to use. Pro if you want more AI help.
+            </h2>
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              Everything for tracking your money is free. Pro is {PRICES.monthly.amount} {PRICES.monthly.per} or{" "}
+              {PRICES.yearly.amount} {PRICES.yearly.per}, paid through Razorpay. Cancel any time.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6">
+            <PlanComparison />
+          </div>
+        </section>
       </main>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-6 text-sm text-muted-foreground">
-        <Brand className="text-base" />
-        <p>Your entries are private to your account.</p>
+      <footer className="grid gap-4 border-t border-border py-6 text-sm text-muted-foreground sm:flex sm:items-center sm:justify-between">
+        <div className="grid gap-1">
+          <Brand className="text-base" />
+          <p>Your entries are private to your account.</p>
+        </div>
+        <LegalLinks />
       </footer>
     </div>
   );

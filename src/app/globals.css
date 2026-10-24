@@ -140,3 +140,26 @@
     font-variant-numeric: tabular-nums;
   }
 }
+/* Policy pages: readable long-form text. */
+@layer components {
+  .legal h2 {
+    @apply mt-10 font-heading text-xl;
+  }
+  .legal p,
+  .legal li {
+    @apply leading-relaxed text-pretty;
+  }
+  .legal p {
+    @apply mt-3;
+  }
+  .legal ul {
+    @apply mt-3 list-disc pl-5;
+  }
+  /* Plain CSS: @apply space-y-* here compiles to an invalid selector. */
+  .legal li + li {
+    margin-top: calc(var(--spacing) * 1.5);
+  }
+  .legal a {
+    @apply text-primary underline-offset-4 hover:underline;
+  }
+}

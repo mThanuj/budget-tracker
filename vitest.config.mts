@@ -11,5 +11,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/unit/**/*.test.ts", "tests/db/**/*.test.ts"],
+    setupFiles: ["./tests/stubs/clean-env.ts"],
   },
 });

@@ -15,6 +15,6 @@ export const getSession = cache(async () =>
  */
 export async function requireUser(): Promise<CurrentUser> {
   const session = await getSession();
-  if (!session) redirect("/");
+  if (!session) redirect("/?signed-out=1");
   return session.user;
 }

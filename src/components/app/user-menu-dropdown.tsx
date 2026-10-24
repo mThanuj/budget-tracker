@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCardIcon, LogOutIcon, Settings2Icon } from "lucide-react";
+import { ChartNoAxesColumnIcon, CreditCardIcon, LogOutIcon, Settings2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "cn";
@@ -30,11 +30,13 @@ export function UserMenuDropdown({
   email,
   image,
   compact = false,
+  admin = false,
 }: {
   name: string;
   email: string;
   image: string | null;
   compact?: boolean;
+  admin?: boolean;
 }) {
   const router = useRouter();
 
@@ -77,6 +79,12 @@ export function UserMenuDropdown({
           <CreditCardIcon aria-hidden />
           Plan & billing
         </DropdownMenuItem>
+        {admin && (
+          <DropdownMenuItem render={<Link href="/admin" />}>
+            <ChartNoAxesColumnIcon aria-hidden />
+            Admin
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={signOut}>
           <LogOutIcon aria-hidden />
           Sign out
