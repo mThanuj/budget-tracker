@@ -6,7 +6,7 @@ import { APP_NAME } from "@/config/app";
 import { env } from "@/env";
 import { db } from "./db";
 import * as schema from "./db/schema";
-import { seedDefaultCategories } from "./db/seed-defaults";
+import { seedNewUser } from "./db/seed-defaults";
 
 export const auth = betterAuth({
   appName: APP_NAME,
@@ -27,13 +27,14 @@ export const auth = betterAuth({
       timezone: { type: "string", required: false, defaultValue: "Asia/Kolkata", input: false },
       onboardedAt: { type: "date", required: false, input: false },
       aiEnabled: { type: "boolean", required: false, defaultValue: true, input: false },
+      defaultWalletId: { type: "string", required: false, input: false },
     },
   },
   databaseHooks: {
     user: {
       create: {
         after: async (newUser) => {
-          await seedDefaultCategories(db, newUser.id);
+          await seedNewUser(db, newUser.id);
         },
       },
     },

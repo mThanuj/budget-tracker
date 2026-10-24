@@ -2,6 +2,9 @@ import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
+import { AddEntryButton } from "@/components/transactions/add-entry-button";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/server/session";
 
@@ -34,11 +37,17 @@ async function DashboardContent() {
         {greeting(user.timezone ?? "Asia/Kolkata")}, {firstName}.
       </h1>
       <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-        <h2 className="font-heading text-xl">Nothing to show yet</h2>
+        <h2 className="font-heading text-xl">Your overview is coming together</h2>
         <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-          Once you add wallets and entries, this page shows your balance, this month&apos;s
-          spending and how your budgets are doing.
+          Add your bank accounts and cards as wallets, then record what you spend. Soon this page
+          will show your balance, this month&apos;s spending and your budgets.
         </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <AddEntryButton />
+          <Button variant="outline" nativeButton={false} render={<Link href="/wallets" />}>
+            Set up wallets
+          </Button>
+        </div>
       </div>
     </>
   );

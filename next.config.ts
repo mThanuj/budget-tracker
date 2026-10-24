@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker image (Hetzner + Coolify).
   output: "standalone",
+  // Keep the dev-tools badge off the sidebar's account menu.
+  devIndicators: { position: "bottom-right" },
   cacheComponents: true,
   partialPrefetching: true,
   // Sandboxed environments (e.g. the coding agent's) can't open local sockets,

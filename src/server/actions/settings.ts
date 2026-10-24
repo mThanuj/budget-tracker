@@ -9,7 +9,7 @@ import { isValidCurrency } from "@/lib/money";
 import { normalizeTimeZone } from "@/lib/preferences-options";
 import { db } from "@/server/db";
 import { user as userTable } from "@/server/db/schema";
-import { seedDefaultCategories } from "@/server/db/seed-defaults";
+import { seedNewUser } from "@/server/db/seed-defaults";
 import { requireUser } from "@/server/session";
 
 export type PreferencesState = { ok: true } | { error: string } | undefined;
@@ -54,6 +54,6 @@ export async function completeWelcome(
     .set({ ...parsed.data, onboardedAt: sql`coalesce(${userTable.onboardedAt}, now())` })
     .where(eq(userTable.id, user.id));
   // Safety net in case the signup hook failed: seeding is idempotent.
-  await seedDefaultCategories(db, user.id);
+  await seedNewUser(db, user.id);
   redirect("/dashboard");
 }
