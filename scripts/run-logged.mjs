@@ -1,6 +1,10 @@
-// Runs a command, streams its output to the terminal AND writes a clean
-// (color-free) copy to a log file, then exits with the command's real code.
-// Usage: node scripts/run-logged.mjs <logfile> <command...>
+// Runs a command, streams its output to the terminal AND writes a clean copy
+// to a log file, then exits with the command's real code (a plain `| tee`
+// would hide failures). Usage: node scripts/run-logged.mjs <logfile> <command...>
+//
+// Colour codes are stripped from the log rather than switched off with
+// NO_COLOR: Playwright forces FORCE_COLOR=1 in its workers, and Node warns
+// whenever both are set.
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 
@@ -13,10 +17,35 @@ if (!logFile || cmd.length === 0) {
 const log = createWriteStream(logFile); // truncates any previous run
 log.write(`$ ${cmd.join(" ")}  (${new Date().toISOString()})\n`);
 
-// NO_COLOR keeps ANSI escapes out of the log so it is easy to read back. (Not
-// FORCE_COLOR too: setting both makes Node warn that they conflict.)
-const child = spawn(cmd.join(" "), { shell: true, env: { ...process.env, NO_COLOR: "1" } });
-const pipe = (from, to) => from.on("data", (d) => { to.write(d); log.write(d); });
-pipe(child.stdout, process.stdout);
-pipe(child.stderr, process.stderr);
-child.on("close", (code) => log.end(`\n[exit ${code ?? 0}]\n`, () => process.exit(code ?? 0)));
+// CSI (colours, cursor moves) and OSC (links, titles) escape sequences.
+const ANSI = /\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
+// A sequence cut off at the end of a chunk is held back until the next one.
+const PARTIAL = /\x1b(?:\[[0-9;?]*[ -/]*|\][^\x07\x1b]*)?$/;
+
+function logWriter() {
+  let carry = "";
+  return {
+    write(chunk) {
+      let text = carry + chunk.toString("utf8");
+      const cut = text.match(PARTIAL);
+      carry = cut ? cut[0] : "";
+      if (cut) text = text.slice(0, -cut[0].length);
+      log.write(text.replace(ANSI, ""));
+    },
+    flush() {
+      if (carry) log.write(carry.replace(ANSI, ""));
+      carry = "";
+    },
+  };
+}
+
+const child = spawn(cmd.join(" "), { shell: true, env: process.env });
+const out = logWriter();
+const err = logWriter();
+child.stdout.on("data", (d) => { process.stdout.write(d); out.write(d); });
+child.stderr.on("data", (d) => { process.stderr.write(d); err.write(d); });
+child.on("close", (code) => {
+  out.flush();
+  err.flush();
+  log.end(`\n[exit ${code ?? 0}]\n`, () => process.exit(code ?? 0));
+});

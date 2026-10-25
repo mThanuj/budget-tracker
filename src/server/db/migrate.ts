@@ -12,7 +12,8 @@ export async function runMigrations() {
   // Neon needs a direct (unpooled) connection for migrations.
   const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
-  const pool = new Pool({ connectionString: url, max: 1 });
+  // No query timeout here: a migration on a big table can legitimately take a while.
+  const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 15_000, keepAlive: true });
   try {
     const started = Date.now();
     await migrate(drizzle({ client: pool }), { migrationsFolder: path.join(process.cwd(), "drizzle") });
