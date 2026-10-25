@@ -6,7 +6,7 @@ import type { Reporter, SerializedError, TestModule, TestRunEndReason } from "vi
 // (pnpm test) writes test-unit.log; a run of one folder writes its own, e.g.
 // pnpm test:integration → test-integration.log, so it never overwrites the full run's.
 
-const folders = new Set(process.argv.slice(2).flatMap((a) => /^(?:\.\/)?tests\/(unit|db|integration|component)\b/.exec(a)?.[1] ?? []));
+const folders = new Set(process.argv.slice(2).flatMap((a) => /^(?:\.\/)?tests\/(unit|db|integration|component|security)\b/.exec(a)?.[1] ?? []));
 const LOG = `test-${folders.size === 1 ? [...folders][0] : "unit"}.log`;
 const time = (ms: number) => (ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(2)}s`);
 const counts = (c: { passed: number; failed: number; skipped: number }, total: number) =>

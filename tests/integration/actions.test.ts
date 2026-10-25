@@ -83,28 +83,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("every server action requires a session", () => {
-  const modules = import.meta.glob<Record<string, unknown>>("../../src/server/actions/*.ts");
-
-  it("refuses, with a redirect to the landing page, before touching any data", async () => {
-    signInAs(null);
-    const before = await db.$count(schema.transaction);
-    const checked: string[] = [];
-    for (const [path, load] of Object.entries(modules)) {
-      for (const [name, fn] of Object.entries(await load())) {
-        if (typeof fn !== "function") continue;
-        const result = Reflect.apply(fn, null, [undefined, new FormData()]).then(
-          () => "resolved",
-          (err: unknown) => (isRedirect(err) ? "redirected" : `threw ${String(err)}`),
-        );
-        expect(await result, `${path} › ${name}`).toBe("redirected");
-        checked.push(name);
-      }
-    }
-    expect(checked.length).toBeGreaterThanOrEqual(30); // every exported action was tried
-    expect(await db.$count(schema.transaction)).toBe(before);
-  });
-});
+// The "every action needs a session" sweep lives in tests/security/access-control.test.ts.
 
 describe("entries (saveTransaction / removeTransaction)", async () => {
   const { removeTransaction, saveTransaction } = await import("@/server/actions/transactions");
@@ -324,6 +303,21 @@ describe("entry form data (getEntryFormData)", async () => {
     expect(data.wallets.map((w) => w.id)).toContain(alice.cashId);
     expect(data.wallets.map((w) => w.id)).not.toContain(bob.cashId);
     expect(data.categories.map((c) => c.id)).not.toContain(bob.groceriesId);
+  });
+});
+
+describe("signing out (signOut)", async () => {
+  const { signOut } = await import("@/server/actions/account");
+  const { auth } = await import("@/server/auth");
+
+  it("ends the session through Better Auth and goes to the landing page", async () => {
+    const outcome = await signOut().then(
+      () => "returned",
+      (err: unknown) => (isRedirect(err) && String((err as { digest: string }).digest).includes(";/;") ? "redirected home" : String(err)),
+    );
+    expect(outcome).toBe("redirected home");
+    expect(auth.api.signOut).toHaveBeenCalledTimes(1);
+    expect(await db.$count(schema.user, eq(schema.user.id, alice.user.id))).toBe(1); // the account stays
   });
 });
 

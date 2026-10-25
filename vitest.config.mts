@@ -12,12 +12,14 @@ export default defineConfig({
     environment: "node",
     // unit: pure logic · db: services on in-memory Postgres (PGlite) ·
     // integration: server actions and route handlers on PGlite ·
-    // component: React components in jsdom (set per file with @vitest-environment)
+    // component: React components in jsdom (set per file with @vitest-environment) ·
+    // security: app-wide sweeps of the security rules (see docs/TESTING.md)
     include: [
       "tests/unit/**/*.test.ts",
       "tests/db/**/*.test.ts",
       "tests/integration/**/*.test.ts",
       "tests/component/**/*.test.tsx",
+      "tests/security/**/*.test.{ts,tsx}",
     ],
     setupFiles: ["./tests/stubs/clean-env.ts"],
     coverage: {
