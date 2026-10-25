@@ -3,6 +3,7 @@ import type { ContributionInput, GoalInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { goal, goalContribution } from "../db/schema";
 import { UserError } from "./errors";
+import { assertDailyRoomFor, assertRoomFor } from "./limits";
 
 export type GoalWithSaved = Awaited<ReturnType<typeof listGoals>>[number];
 
@@ -32,6 +33,7 @@ async function savedFor(db: Db, goalId: string) {
 }
 
 export async function createGoal(db: Db, userId: string, input: GoalInput) {
+  await assertRoomFor(db, userId, "goals");
   const [row] = await db
     .insert(goal)
     .values({ userId, name: input.name, targetMinor: input.target, targetDate: input.targetDate, icon: input.icon, color: input.color })
@@ -69,6 +71,7 @@ export async function deleteGoal(db: Db, userId: string, id: string) {
 export async function addContribution(db: Db, userId: string, goalId: string, input: ContributionInput) {
   const g = await getOwnedGoal(db, userId, goalId);
   if (g.archivedAt) throw new UserError("Restore this goal before adding to it.");
+  await assertDailyRoomFor(db, userId, "goalContributionsPerDay");
   const amount = input.direction === "withdraw" ? -input.amount : input.amount;
   if (amount < 0 && -amount > (await savedFor(db, goalId))) {
     throw new UserError("You can't take out more than is saved for this goal.", "amount");

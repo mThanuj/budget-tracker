@@ -51,7 +51,7 @@ export function AlertList({ alerts }: { alerts: Alert[] }) {
                   startTransition(async () => {
                     hide(a.key);
                     const result = await callAction(() => dismissAlert(a.key));
-                    if (result !== NOT_SENT && !result?.ok) toast.error("Couldn't dismiss that. Try again.");
+                    if (result !== NOT_SENT && !result?.ok) toast.error(result?.error ?? "Couldn't dismiss that. Try again.");
                   })
                 }
                 className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"

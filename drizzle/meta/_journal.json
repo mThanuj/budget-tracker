@@ -50,6 +50,13 @@
       "when": 1792831199318,
       "tag": "0006_billing_insights",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792910291686,
+      "tag": "0007_entry_created_index",
+      "breakpoints": true
     }
   ]
 }

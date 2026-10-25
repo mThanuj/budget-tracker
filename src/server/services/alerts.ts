@@ -8,6 +8,7 @@ import { alertDismissal } from "../db/schema";
 import type { getBudgetOverview } from "./budgets";
 import type { GoalWithSaved } from "./goals";
 import type { listUpcoming, RuleRow } from "./recurring";
+import { assertDailyRoomFor } from "./limits";
 
 export type Alert = {
   key: string;
@@ -142,5 +143,6 @@ export async function withoutDismissed(db: Db, userId: string, alerts: Alert[]) 
 }
 
 export async function dismissAlert(db: Db, userId: string, key: string) {
+  await assertDailyRoomFor(db, userId, "alertDismissalsPerDay");
   await db.insert(alertDismissal).values({ userId, alertKey: key }).onConflictDoNothing();
 }

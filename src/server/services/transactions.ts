@@ -8,6 +8,7 @@ import { category, transaction, wallet } from "../db/schema";
 import { getOwnedCategory } from "./categories";
 import { learnFromEntry } from "./merchant-rules";
 import { UserError } from "./errors";
+import { assertDailyRoomFor } from "./limits";
 import { getOwnedWallet } from "./wallets";
 
 export type TransactionFilters = {
@@ -153,6 +154,7 @@ export async function createTransaction(
   source: "manual" | "nl" | "onboarding" = "manual",
 ) {
   await assertEntryReferences(db, userId, input);
+  await assertDailyRoomFor(db, userId, "entriesPerDay");
   const [row] = await db
     .insert(transaction)
     .values({ ...toRow(input), userId, source })

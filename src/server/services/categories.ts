@@ -3,6 +3,7 @@ import type { CategoryInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { category, transaction } from "../db/schema";
 import { UserError } from "./errors";
+import { assertRoomFor } from "./limits";
 
 
 export async function listCategories(db: Db, userId: string, { includeArchived = false } = {}) {
@@ -34,6 +35,7 @@ function rethrowDuplicate(err: unknown): never {
 }
 
 export async function createCategory(db: Db, userId: string, input: CategoryInput) {
+  await assertRoomFor(db, userId, "categories");
   const [row] = await db
     .insert(category)
     .values({

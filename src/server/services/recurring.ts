@@ -7,6 +7,7 @@ import type { RecurringInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { alertDismissal, category, recurringRule, transaction, user, wallet } from "../db/schema";
 import { UserError } from "./errors";
+import { assertRoomFor } from "./limits";
 import { assertEntryReferences } from "./transactions";
 
 type Rule = typeof recurringRule.$inferSelect;
@@ -77,6 +78,7 @@ function ruleValues(input: RecurringInput) {
 
 export async function createRule(db: Db, userId: string, input: RecurringInput, today: ISODate) {
   await assertEntryReferences(db, userId, input);
+  await assertRoomFor(db, userId, "recurringItems");
   const [row] = await db
     .insert(recurringRule)
     .values({ ...ruleValues(input), userId, nextDueOn: firstDue(scheduleOf(input), today) })
@@ -317,6 +319,7 @@ export async function trackSubscription(db: Db, userId: string, merchantKey: str
     .from(wallet)
     .where(and(eq(wallet.id, candidate.walletId), eq(wallet.userId, userId)));
   if (!w[0] || w[0].archivedAt) throw new UserError("The wallet these charges came from is archived. Restore it first.");
+  await assertRoomFor(db, userId, "recurringItems");
 
   return db.transaction(async (tx) => {
     const schedule: Schedule = { frequency: candidate.frequency, interval: 1, anchorDate: candidate.nextExpectedOn, endDate: null };

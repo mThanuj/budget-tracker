@@ -182,6 +182,8 @@ export const transaction = pgTable(
     index("transaction_user_wallet_idx").on(t.userId, t.walletId),
     index("transaction_user_to_wallet_idx").on(t.userId, t.toWalletId),
     index("transaction_user_category_date_idx").on(t.userId, t.categoryId, t.occurredOn),
+    // The daily limit on new entries counts by when they were added (src/config/limits.ts).
+    index("transaction_user_created_idx").on(t.userId, t.createdAt),
     // Makes recording each scheduled occurrence idempotent.
     uniqueIndex("transaction_rule_occurrence_key").on(t.recurringRuleId, t.recurrenceOn),
     check("transaction_amount_positive", sql`${t.amountMinor} > 0`),

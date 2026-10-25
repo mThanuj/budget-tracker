@@ -7,6 +7,7 @@ import { budget, user, wallet } from "../db/schema";
 import { createBudget, updateBudget } from "./budgets";
 import { listCategories } from "./categories";
 import { UserError } from "./errors";
+import { assertRoomFor } from "./limits";
 import { createGoal } from "./goals";
 import { createRule } from "./recurring";
 import { listWallets } from "./wallets";
@@ -36,6 +37,9 @@ export async function applySetup(db: Db, userId: string, input: SetupInput, toda
     const existing = await listWallets(tx, userId, { includeArchived: true });
     const byName = new Map(existing.map((w) => [w.name.toLowerCase(), { id: w.id, archived: w.archivedAt !== null }]));
     const counts = { wallets: 0, recurring: 0, budgets: 0, goals: 0 };
+    // Recurring items and goals go through createRule/createGoal, which check their own limits.
+    const newWallets = new Set(input.wallets.map((w) => w.name.toLowerCase()).filter((name) => !byName.has(name))).size;
+    if (newWallets > 0) await assertRoomFor(tx, userId, "wallets", newWallets);
 
     for (const w of input.wallets) {
       const opening = w.kind === "credit_card" ? -w.balance : w.balance;

@@ -4,6 +4,7 @@ import { DEFAULT_WALLET_COLOR } from "@/lib/wallets";
 import type { Db } from "../db";
 import { recurringRule, transaction, user, wallet } from "../db/schema";
 import { UserError } from "./errors";
+import { assertRoomFor } from "./limits";
 
 
 // Drizzle leaves single-table columns unqualified, which a correlated subquery
@@ -55,6 +56,7 @@ function rethrowDuplicate(err: unknown): never {
 }
 
 export async function createWallet(db: Db, userId: string, input: WalletInput) {
+  await assertRoomFor(db, userId, "wallets");
   const [row] = await db
     .insert(wallet)
     .values({ ...input, userId })
