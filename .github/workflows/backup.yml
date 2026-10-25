@@ -28,7 +28,7 @@ jobs:
           docker run --rm postgres:18-alpine pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL" \
             | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_PASSPHRASE -out clearpaisa.dump.enc
           ls -lh clearpaisa.dump.enc
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: clearpaisa-db-${{ github.run_number }}
           path: clearpaisa.dump.enc
