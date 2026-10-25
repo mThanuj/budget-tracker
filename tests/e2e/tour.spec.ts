@@ -20,11 +20,37 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   const today = todayInTz("Asia/Kolkata");
   const day = (n: number) => addDays(today, -n);
   const [cash] = await listWallets(db, userId);
-  const sbi = await createWallet(db, userId, { name: "SBI Debit", kind: "bank", color: "#4a7fc1", openingBalanceMinor: 25_000_00 });
-  const card = await createWallet(db, userId, { name: "ICICI Credit Card", kind: "credit_card", color: "#8a64b8", openingBalanceMinor: -3_200_00 });
+  const sbi = await createWallet(db, userId, {
+    name: "SBI Debit",
+    kind: "bank",
+    color: "#4a7fc1",
+    openingBalanceMinor: 25_000_00,
+  });
+  const card = await createWallet(db, userId, {
+    name: "ICICI Credit Card",
+    kind: "credit_card",
+    color: "#8a64b8",
+    openingBalanceMinor: -3_200_00,
+  });
   const cat = Object.fromEntries((await listCategories(db, userId)).map((c) => [c.name, c.id]));
-  const add = (type: "income" | "expense" | "transfer", amount: number, walletId: string, occurredOn: string, description: string, extra: { categoryId?: string; toWalletId?: string } = {}) =>
-    createTransaction(db, userId, { type, amount, walletId, occurredOn, description, notes: null, categoryId: extra.categoryId ?? null, toWalletId: extra.toWalletId ?? null });
+  const add = (
+    type: "income" | "expense" | "transfer",
+    amount: number,
+    walletId: string,
+    occurredOn: string,
+    description: string,
+    extra: { categoryId?: string; toWalletId?: string } = {},
+  ) =>
+    createTransaction(db, userId, {
+      type,
+      amount,
+      walletId,
+      occurredOn,
+      description,
+      notes: null,
+      categoryId: extra.categoryId ?? null,
+      toWalletId: extra.toWalletId ?? null,
+    });
 
   await add("income", 42_000_00, sbi.id, day(6), "October salary", { categoryId: cat.Salary });
   await add("expense", 15_000_00, sbi.id, day(6), "Rent", { categoryId: cat["Rent & Housing"] });
@@ -48,23 +74,67 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   await createBudget(db, userId, { categoryId: cat["Dining Out"], amount: 300_00, rollover: false }, month);
   await createBudget(db, userId, { categoryId: cat.Groceries, amount: 6_000_00, rollover: true }, month);
   await createBudget(db, userId, { categoryId: cat.Fuel, amount: 1_200_00, rollover: false }, month);
-  const phone = await createGoal(db, userId, { name: "New phone", target: 60_000_00, targetDate: addDays(today, 200), icon: "smartphone", color: "#4a7fc1" });
+  const phone = await createGoal(db, userId, {
+    name: "New phone",
+    target: 60_000_00,
+    targetDate: addDays(today, 200),
+    icon: "smartphone",
+    color: "#4a7fc1",
+  });
   await addContribution(db, userId, phone.id, { direction: "add", amount: 16_000_00, occurredOn: today, note: null });
-  const trip = await createGoal(db, userId, { name: "Goa trip", target: 25_000_00, targetDate: null, icon: "plane", color: "#2f8f9d" });
+  const trip = await createGoal(db, userId, {
+    name: "Goa trip",
+    target: 25_000_00,
+    targetDate: null,
+    icon: "plane",
+    color: "#2f8f9d",
+  });
   await addContribution(db, userId, trip.id, { direction: "add", amount: 13_000_00, occurredOn: today, note: null });
 
   // Recurring items: an ask-first bill due today, rent and salary coming up, and
   // a tracked subscription whose price went up.
   const rule = (over: Partial<Parameters<typeof createRule>[2]>) =>
-    createRule(db, userId, {
-      type: "expense", amount: 15_000_00, description: "Rent", walletId: sbi.id, toWalletId: null,
-      categoryId: cat["Rent & Housing"], frequency: "monthly", interval: 1, anchorDate: addDays(today, 2),
-      endDate: null, mode: "auto", isSubscription: false, ...over,
-    }, today);
+    createRule(
+      db,
+      userId,
+      {
+        type: "expense",
+        amount: 15_000_00,
+        description: "Rent",
+        walletId: sbi.id,
+        toWalletId: null,
+        categoryId: cat["Rent & Housing"],
+        frequency: "monthly",
+        interval: 1,
+        anchorDate: addDays(today, 2),
+        endDate: null,
+        mode: "auto",
+        isSubscription: false,
+        ...over,
+      },
+      today,
+    );
   await rule({});
-  await rule({ type: "income", description: "Salary", amount: 42_000_00, categoryId: cat.Salary, anchorDate: addDays(today, 8) });
-  await rule({ description: "Electricity", amount: 1_200_00, categoryId: cat["Bills & Utilities"], anchorDate: today, mode: "confirm" });
-  for (const [back, amount] of [[90, 649_00], [60, 649_00], [30, 649_00], [0, 799_00]] as const) {
+  await rule({
+    type: "income",
+    description: "Salary",
+    amount: 42_000_00,
+    categoryId: cat.Salary,
+    anchorDate: addDays(today, 8),
+  });
+  await rule({
+    description: "Electricity",
+    amount: 1_200_00,
+    categoryId: cat["Bills & Utilities"],
+    anchorDate: today,
+    mode: "confirm",
+  });
+  for (const [back, amount] of [
+    [90, 649_00],
+    [60, 649_00],
+    [30, 649_00],
+    [0, 799_00],
+  ] as const) {
     await add("expense", amount, card.id, addDays(today, -back), "Netflix", { categoryId: cat.Subscriptions });
   }
   for (const back of [56, 28, 0]) {
@@ -123,8 +193,12 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   // Pro pages, while payments are on. The written report calls the real AI, so only once (desktop) and only with LIVE_AI=1.
   if (process.env.BILLING_ENABLED?.trim() !== "true") return;
   await db.insert(schema.subscription).values({
-    userId, razorpaySubscriptionId: `sub_tour_${userId}`, planKey: "yearly", status: "active",
-    currentStart: new Date(), currentEnd: new Date(Date.now() + 200 * 86_400_000),
+    userId,
+    razorpaySubscriptionId: `sub_tour_${userId}`,
+    planKey: "yearly",
+    status: "active",
+    currentStart: new Date(),
+    currentEnd: new Date(Date.now() + 200 * 86_400_000),
   });
   await page.goto("/billing");
   await expect(page.getByRole("heading", { name: "Your plan: Pro" })).toBeVisible();

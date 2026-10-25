@@ -7,18 +7,18 @@ git), while the terminal output stays live.
 
 ## Running the tests
 
-| Command | What runs | Needs | Log |
-|---|---|---|---|
-| `pnpm test` | All Vitest suites below | nothing | `test-unit.log` |
-| `pnpm test:unit` | `tests/unit`: pure logic (money, dates, plans, AI fallback…) | nothing | `test-unit.log` |
-| `pnpm test:db` | `tests/db`: services on an in-memory Postgres (PGlite) | nothing | `test-db.log` |
-| `pnpm test:integration` | `tests/integration`: server actions and route handlers on PGlite | nothing | `test-integration.log` |
-| `pnpm test:component` | `tests/component`: React components in jsdom | nothing | `test-component.log` |
-| `pnpm test:security` | `tests/security`: app-wide sweeps of the security rules (below) | nothing | `test-security.log` |
-| `pnpm test:coverage` | All Vitest suites with coverage (`coverage/index.html`) | nothing | `test-unit.log` |
-| `pnpm test:watch` | Vitest in watch mode | nothing | `test-unit.log` |
-| `pnpm test:e2e` | `tests/e2e`: Playwright on desktop Chrome, iPhone, iPad | `.env.local`, a dev database | `test-e2e.log` |
-| `pnpm test:e2e:live` | Only the e2e tests that call the real AI provider (`@live-ai`) | the same, plus an AI key | `test-e2e.log` |
+| Command                 | What runs                                                        | Needs                        | Log                    |
+| ----------------------- | ---------------------------------------------------------------- | ---------------------------- | ---------------------- |
+| `pnpm test`             | All Vitest suites below                                          | nothing                      | `test-unit.log`        |
+| `pnpm test:unit`        | `tests/unit`: pure logic (money, dates, plans, AI fallback…)     | nothing                      | `test-unit.log`        |
+| `pnpm test:db`          | `tests/db`: services on an in-memory Postgres (PGlite)           | nothing                      | `test-db.log`          |
+| `pnpm test:integration` | `tests/integration`: server actions and route handlers on PGlite | nothing                      | `test-integration.log` |
+| `pnpm test:component`   | `tests/component`: React components in jsdom                     | nothing                      | `test-component.log`   |
+| `pnpm test:security`    | `tests/security`: app-wide sweeps of the security rules (below)  | nothing                      | `test-security.log`    |
+| `pnpm test:coverage`    | All Vitest suites with coverage (`coverage/index.html`)          | nothing                      | `test-unit.log`        |
+| `pnpm test:watch`       | Vitest in watch mode                                             | nothing                      | `test-unit.log`        |
+| `pnpm test:e2e`         | `tests/e2e`: Playwright on desktop Chrome, iPhone, iPad          | `.env.local`, a dev database | `test-e2e.log`         |
+| `pnpm test:e2e:live`    | Only the e2e tests that call the real AI provider (`@live-ai`)   | the same, plus an AI key     | `test-e2e.log`         |
 
 A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "export"`,
 `pnpm test:e2e smoke.spec.ts --project desktop-chrome`.
@@ -94,9 +94,9 @@ used.
   - `output`: AI text (chat answers, insights) renders as text, never as HTML,
     links or scripts.
   - `headers`: the CSP and other security headers.
-  The browser side (headers on real responses, the app working under the CSP)
-  is `tests/e2e/security.spec.ts`; secrets in the built bundle are checked by
-  `pnpm check:bundle` after a build.
+    The browser side (headers on real responses, the app working under the CSP)
+    is `tests/e2e/security.spec.ts`; secrets in the built bundle are checked by
+    `pnpm check:bundle` after a build.
 - **E2E:** the main journeys in a real browser, on desktop and mobile: sign-in
   redirect, onboarding, entries, wallets and transfers, budgets and alerts,
   goals, recurring items, export, account deletion, security headers and CSP,

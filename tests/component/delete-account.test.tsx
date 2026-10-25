@@ -28,11 +28,16 @@ describe("deleting the account", () => {
   });
 
   it("shows the server's reason when it refuses", async () => {
-    deleteAccount.mockResolvedValue({ ok: false, error: "We couldn't cancel your Pro renewal, so nothing was deleted." });
+    deleteAccount.mockResolvedValue({
+      ok: false,
+      error: "We couldn't cancel your Pro renewal, so nothing was deleted.",
+    });
     const { confirm, user } = await openAndType("DELETE");
     await user.click(confirm);
     expect(deleteAccount).toHaveBeenCalledWith("DELETE");
-    expect((await screen.findByRole("alert")).textContent).toBe("We couldn't cancel your Pro renewal, so nothing was deleted.");
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "We couldn't cancel your Pro renewal, so nothing was deleted.",
+    );
   });
 
   it("says the request didn't go through, and stays open", async () => {
@@ -40,7 +45,9 @@ describe("deleting the account", () => {
     deleteAccount.mockRejectedValue(new TypeError("Failed to fetch"));
     const { confirm, user } = await openAndType("DELETE");
     await user.click(confirm);
-    expect((await screen.findByRole("alert")).textContent).toBe("That didn't go through. Check your connection and try again.");
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "That didn't go through. Check your connection and try again.",
+    );
     expect(screen.getByRole("alertdialog", { name: "Delete your account?" })).toBeTruthy();
   });
 });

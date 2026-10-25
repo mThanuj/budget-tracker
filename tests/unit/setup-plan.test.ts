@@ -31,14 +31,24 @@ describe("buildPlan", () => {
   });
 
   it("adapts when bills are bigger than the usual limit", () => {
-    const plan = buildPlan({ monthlyIncomeMinor: 20_000_00, monthlyBillsMinor: 18_000_00, watchCategories: [], currency: "INR" });
+    const plan = buildPlan({
+      monthlyIncomeMinor: 20_000_00,
+      monthlyBillsMinor: 18_000_00,
+      watchCategories: [],
+      currency: "INR",
+    });
     expect(plan.limitMinor).toBe(19_500_00); // bills + ~10% cushion, within income
     expect(plan.saveMinor).toBe(500_00);
     expect(plan.notes[0]).toMatch(/fixed bills take most/);
   });
 
   it("asks for income before suggesting a limit", () => {
-    const plan = buildPlan({ monthlyIncomeMinor: 0, monthlyBillsMinor: 5_000_00, watchCategories: ["Groceries"], currency: "INR" });
+    const plan = buildPlan({
+      monthlyIncomeMinor: 0,
+      monthlyBillsMinor: 5_000_00,
+      watchCategories: ["Groceries"],
+      currency: "INR",
+    });
     expect(plan.limitMinor).toBeNull();
     expect(plan.categories).toEqual([]);
   });

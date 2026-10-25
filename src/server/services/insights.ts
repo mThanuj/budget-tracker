@@ -17,7 +17,13 @@ export async function getInsight(db: Db, userId: string, kind: InsightKind, mont
 export async function saveInsight(
   db: Db,
   userId: string,
-  { kind, month, factsHash, report, model }: { kind: InsightKind; month: ISOMonth; factsHash: string; report: InsightReport; model: string },
+  {
+    kind,
+    month,
+    factsHash,
+    report,
+    model,
+  }: { kind: InsightKind; month: ISOMonth; factsHash: string; report: InsightReport; model: string },
 ) {
   const values = { factsHash, report, model, createdAt: new Date() };
   await db
@@ -28,7 +34,11 @@ export async function saveInsight(
 
 // Rewrites (check-ins and updates after edits) are counted per calendar month,
 // on that month's first day in the usage table.
-const refreshRow = (userId: string, month: ISOMonth) => ({ scope: `user:${userId}`, day: `${month}-01`, feature: "insight_refresh" });
+const refreshRow = (userId: string, month: ISOMonth) => ({
+  scope: `user:${userId}`,
+  day: `${month}-01`,
+  feature: "insight_refresh",
+});
 
 export async function refreshesUsed(db: Db, userId: string, month: ISOMonth) {
   const k = refreshRow(userId, month);
@@ -44,7 +54,10 @@ export async function takeRefresh(db: Db, userId: string, month: ISOMonth, limit
   const [row] = await db
     .insert(aiUsage)
     .values({ ...refreshRow(userId, month), count: 1 })
-    .onConflictDoUpdate({ target: [aiUsage.scope, aiUsage.day, aiUsage.feature], set: { count: sql`${aiUsage.count} + 1` } })
+    .onConflictDoUpdate({
+      target: [aiUsage.scope, aiUsage.day, aiUsage.feature],
+      set: { count: sql`${aiUsage.count} + 1` },
+    })
     .returning({ count: aiUsage.count });
   if (row.count <= limit) return true;
   await giveBackRefresh(db, userId, month);

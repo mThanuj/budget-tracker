@@ -30,7 +30,8 @@ const PATTERNS: { frequency: Frequency; min: number; max: number; minCount: numb
   { frequency: "yearly", min: 350, max: 380, minCount: 2 },
 ];
 
-const days = (a: ISODate, b: ISODate) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+const days = (a: ISODate, b: ISODate) =>
+  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
 /**
  * Finds spending that repeats at a steady rhythm for the same amount, e.g. the
@@ -57,9 +58,7 @@ export function detectSubscriptions(records: SpendRecord[], ignoreKeys: Set<stri
     const sameAsMost = Math.max(...amounts.map((a) => amounts.filter((b) => Math.abs(a - b) <= a * 0.01).length));
     if (sameAsMost < Math.max(2, amounts.length - 1) || gaps.length === 0) continue;
 
-    const pattern = PATTERNS.find(
-      (p) => byDay.length >= p.minCount && gaps.every((g) => g >= p.min && g <= p.max),
-    );
+    const pattern = PATTERNS.find((p) => byDay.length >= p.minCount && gaps.every((g) => g >= p.min && g <= p.max));
     if (!pattern) continue;
 
     const last = byDay.at(-1)!;
@@ -70,7 +69,10 @@ export function detectSubscriptions(records: SpendRecord[], ignoreKeys: Set<stri
       frequency: pattern.frequency,
       lastOn: last.occurredOn,
       // Same weekday / day of month as the last charge.
-      nextExpectedOn: occurrence({ frequency: pattern.frequency, interval: 1, anchorDate: last.occurredOn, endDate: null }, 1),
+      nextExpectedOn: occurrence(
+        { frequency: pattern.frequency, interval: 1, anchorDate: last.occurredOn, endDate: null },
+        1,
+      ),
       occurrences: byDay.length,
       categoryId: last.categoryId,
       walletId: last.walletId,

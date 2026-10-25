@@ -24,12 +24,19 @@ function daysInMonth(month: string) {
 export function firstMonthlyDate(day: number | null, today: ISODate): ISODate {
   const todayDay = Number(today.slice(8, 10));
   const wanted = day ?? todayDay;
-  const month = wanted > todayDay && wanted <= daysInMonth(today.slice(0, 7)) ? today.slice(0, 7) : addMonths(today.slice(0, 7), 1);
+  const month =
+    wanted > todayDay && wanted <= daysInMonth(today.slice(0, 7)) ? today.slice(0, 7) : addMonths(today.slice(0, 7), 1);
   return `${month}-${String(Math.min(wanted, daysInMonth(month))).padStart(2, "0")}`;
 }
 
 const incomeCategoryName = (name: string) =>
-  /salary|stipend|wage/i.test(name) ? "Salary" : /freelanc|client|project/i.test(name) ? "Freelance" : /rent/i.test(name) ? "Other Income" : null;
+  /salary|stipend|wage/i.test(name)
+    ? "Salary"
+    : /freelanc|client|project/i.test(name)
+      ? "Freelance"
+      : /rent/i.test(name)
+        ? "Other Income"
+        : null;
 
 /** Creates everything the user reviewed, in one transaction: all of it or none of it. */
 export async function applySetup(db: Db, userId: string, input: SetupInput, today: ISODate) {
@@ -53,7 +60,13 @@ export async function applySetup(db: Db, userId: string, input: SetupInput, toda
       }
       const created = await tx
         .insert(wallet)
-        .values({ userId, name: w.name, kind: w.kind, color: DEFAULT_WALLET_COLOR[w.kind], openingBalanceMinor: opening })
+        .values({
+          userId,
+          name: w.name,
+          kind: w.kind,
+          color: DEFAULT_WALLET_COLOR[w.kind],
+          openingBalanceMinor: opening,
+        })
         .onConflictDoNothing()
         .returning({ id: wallet.id });
       if (created[0]) {
@@ -62,9 +75,13 @@ export async function applySetup(db: Db, userId: string, input: SetupInput, toda
       }
     }
     // The first wallet becomes the default if the user had none.
-    const [{ defaultWalletId }] = await tx.select({ defaultWalletId: user.defaultWalletId }).from(user).where(eq(user.id, userId));
+    const [{ defaultWalletId }] = await tx
+      .select({ defaultWalletId: user.defaultWalletId })
+      .from(user)
+      .where(eq(user.id, userId));
     const active = [...byName.values()].filter((w) => !w.archived);
-    if (!defaultWalletId && active[0]) await tx.update(user).set({ defaultWalletId: active[0].id }).where(eq(user.id, userId));
+    if (!defaultWalletId && active[0])
+      await tx.update(user).set({ defaultWalletId: active[0].id }).where(eq(user.id, userId));
 
     const walletFor = (name: string) => {
       const found = byName.get(name.toLowerCase());
@@ -84,10 +101,18 @@ export async function applySetup(db: Db, userId: string, input: SetupInput, toda
         tx,
         userId,
         {
-          type: "income", amount: i.amount, description: i.name, walletId: walletFor(input.incomeWallet), toWalletId: null,
+          type: "income",
+          amount: i.amount,
+          description: i.name,
+          walletId: walletFor(input.incomeWallet),
+          toWalletId: null,
           categoryId: categoryName ? categoryNamed(categoryName, "income") : null,
-          frequency: "monthly", interval: 1, anchorDate: firstMonthlyDate(i.day, today), endDate: null,
-          mode: "auto", isSubscription: false,
+          frequency: "monthly",
+          interval: 1,
+          anchorDate: firstMonthlyDate(i.day, today),
+          endDate: null,
+          mode: "auto",
+          isSubscription: false,
         },
         today,
       );
@@ -98,10 +123,18 @@ export async function applySetup(db: Db, userId: string, input: SetupInput, toda
         tx,
         userId,
         {
-          type: "expense", amount: b.amount, description: b.name, walletId: walletFor(input.billsWallet), toWalletId: null,
+          type: "expense",
+          amount: b.amount,
+          description: b.name,
+          walletId: walletFor(input.billsWallet),
+          toWalletId: null,
           categoryId: b.categoryId ?? (b.subscription ? categoryNamed("Subscriptions", "expense") : null),
-          frequency: "monthly", interval: 1, anchorDate: firstMonthlyDate(b.day, today), endDate: null,
-          mode: "auto", isSubscription: b.subscription,
+          frequency: "monthly",
+          interval: 1,
+          anchorDate: firstMonthlyDate(b.day, today),
+          endDate: null,
+          mode: "auto",
+          isSubscription: b.subscription,
         },
         today,
       );
@@ -129,7 +162,13 @@ export async function applySetup(db: Db, userId: string, input: SetupInput, toda
     }
 
     for (const g of input.goals) {
-      await createGoal(tx, userId, { name: g.name, target: g.target, targetDate: g.by, icon: "piggy-bank", color: "#4a7fc1" });
+      await createGoal(tx, userId, {
+        name: g.name,
+        target: g.target,
+        targetDate: g.by,
+        icon: "piggy-bank",
+        color: "#4a7fc1",
+      });
       counts.goals++;
     }
 

@@ -13,7 +13,13 @@ import { SimpleMarkdown } from "./simple-markdown";
 import { EmptyState } from "@/components/app/empty-state";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
-type Message = { role: "user" | "assistant"; content: string; lookedUp?: string[]; failed?: boolean; upgrade?: boolean };
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+  lookedUp?: string[];
+  failed?: boolean;
+  upgrade?: boolean;
+};
 
 export const SUGGESTED_QUESTIONS = [
   "How much did I spend on food last month?",
@@ -70,7 +76,9 @@ export function ChatPanel({
     setMessages((m) => [...m, { role: "user", content: text }]);
     setInput("");
     startTransition(async () => {
-      const reply = await callAction(() => askMoney(history.map(({ role, content }) => ({ role, content }))), { notify: false });
+      const reply = await callAction(() => askMoney(history.map(({ role, content }) => ({ role, content }))), {
+        notify: false,
+      });
       if (reply === NOT_SENT) {
         setMessages((m) => [...m, { role: "assistant", content: NOT_SENT_MESSAGE, failed: true }]);
         return;
@@ -142,7 +150,10 @@ export function ChatPanel({
         <ol aria-label="Conversation" aria-live="polite" className="grid gap-4">
           {messages.map((m, i) =>
             m.role === "user" ? (
-              <li key={i} className="max-w-[85%] justify-self-end rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-primary-foreground">
+              <li
+                key={i}
+                className="max-w-[85%] justify-self-end rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-primary-foreground"
+              >
                 {m.content}
               </li>
             ) : (

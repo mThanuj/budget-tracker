@@ -22,22 +22,29 @@ const TOTALS = {
 export async function assertRoomFor(db: Db, userId: string, kind: keyof typeof TOTALS, adding = 1) {
   const { table, userId: owner, what } = TOTALS[kind];
   if ((await db.$count(table, eq(owner, userId))) + adding > LIMITS[kind]) {
-    throw new UserError(`You can have up to ${n(LIMITS[kind])} ${what}, and archived ones count too. Delete some you no longer need first.`);
+    throw new UserError(
+      `You can have up to ${n(LIMITS[kind])} ${what}, and archived ones count too. Delete some you no longer need first.`,
+    );
   }
 }
 
 const DAILY = {
   entriesPerDay: {
     count: (db: Db, userId: string) =>
-      db.$count(transaction, and(eq(transaction.userId, userId), gte(transaction.createdAt, lastDay), ne(transaction.source, "recurring"))),
+      db.$count(
+        transaction,
+        and(eq(transaction.userId, userId), gte(transaction.createdAt, lastDay), ne(transaction.source, "recurring")),
+      ),
     what: "entries",
   },
   goalContributionsPerDay: {
-    count: (db: Db, userId: string) => db.$count(goalContribution, and(eq(goalContribution.userId, userId), gte(goalContribution.createdAt, lastDay))),
+    count: (db: Db, userId: string) =>
+      db.$count(goalContribution, and(eq(goalContribution.userId, userId), gte(goalContribution.createdAt, lastDay))),
     what: "goal savings and withdrawals",
   },
   alertDismissalsPerDay: {
-    count: (db: Db, userId: string) => db.$count(alertDismissal, and(eq(alertDismissal.userId, userId), gte(alertDismissal.dismissedAt, lastDay))),
+    count: (db: Db, userId: string) =>
+      db.$count(alertDismissal, and(eq(alertDismissal.userId, userId), gte(alertDismissal.dismissedAt, lastDay))),
     what: "dismissed alerts",
   },
 } as const;
@@ -45,6 +52,8 @@ const DAILY = {
 /** Throws a UserError once the account has added its daily limit of something. */
 export async function assertDailyRoomFor(db: Db, userId: string, kind: keyof typeof DAILY) {
   if ((await DAILY[kind].count(db, userId)) >= LIMITS[kind]) {
-    throw new UserError(`That's ${n(LIMITS[kind])} ${DAILY[kind].what} in the last 24 hours, the most allowed in a day. Try again tomorrow.`);
+    throw new UserError(
+      `That's ${n(LIMITS[kind])} ${DAILY[kind].what} in the last 24 hours, the most allowed in a day. Try again tomorrow.`,
+    );
   }
 }

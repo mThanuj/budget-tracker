@@ -23,7 +23,17 @@ const FAILURES: Record<Exclude<WriteInsightResult, { ok: true }>["reason"], stri
  * included first report for last month); otherwise it waits for the button.
  * On success the page re-renders with the saved report.
  */
-export function ReportWriter({ kind, auto = false, label, note }: { kind: InsightKind; auto?: boolean; label: string; note?: string }) {
+export function ReportWriter({
+  kind,
+  auto = false,
+  label,
+  note,
+}: {
+  kind: InsightKind;
+  auto?: boolean;
+  label: string;
+  note?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);

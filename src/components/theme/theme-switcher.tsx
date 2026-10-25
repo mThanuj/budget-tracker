@@ -15,11 +15,7 @@ export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div
-      role="radiogroup"
-      aria-label="Theme"
-      className="inline-flex flex-wrap gap-1 rounded-xl bg-muted p-1"
-    >
+    <div role="radiogroup" aria-label="Theme" className="inline-flex flex-wrap gap-1 rounded-xl bg-muted p-1">
       {OPTIONS.map(({ value, label, Icon }) => {
         const selected = theme === value;
         return (

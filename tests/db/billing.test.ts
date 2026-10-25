@@ -8,13 +8,21 @@ import { handleRazorpayWebhook } from "@/server/billing/subscriptions";
 import { paymentEvent, subscription } from "@/server/db/schema";
 import { createTestDb, createTestUser } from "./helpers";
 
-const cfg: RazorpayConfig = { keyId: "rzp_test", keySecret: "key_secret", webhookSecret: "whsec", plans: { monthly: "plan_m", yearly: "plan_y" } };
+const cfg: RazorpayConfig = {
+  keyId: "rzp_test",
+  keySecret: "key_secret",
+  webhookSecret: "whsec",
+  plans: { monthly: "plan_m", yearly: "plan_y" },
+};
 const unix = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 const deliver = (body: object, eventId: string) => {
   const rawBody = JSON.stringify(body);
   return { rawBody, eventId, signature: createHmac("sha256", cfg.webhookSecret).update(rawBody).digest("hex") };
 };
-const event = (name: string, id: string) => ({ event: name, payload: { subscription: { entity: { id, status: "ignored" } } } });
+const event = (name: string, id: string) => ({
+  event: name,
+  payload: { subscription: { entity: { id, status: "ignored" } } },
+});
 
 describe("Razorpay webhooks", () => {
   let t: Awaited<ReturnType<typeof createTestDb>>;
@@ -30,10 +38,17 @@ describe("Razorpay webhooks", () => {
   beforeAll(async () => {
     t = await createTestDb();
     userId = (await createTestUser(t.db)).id;
-    await t.db.insert(subscription).values({ userId, razorpaySubscriptionId: "sub_1", planKey: "monthly", status: "created" });
+    await t.db
+      .insert(subscription)
+      .values({ userId, razorpaySubscriptionId: "sub_1", planKey: "monthly", status: "created" });
     remote = {
-      id: "sub_1", plan_id: "plan_m", status: "active", current_start: unix("2026-10-24T00:00:00Z"),
-      current_end: unix("2026-11-24T00:00:00Z"), ended_at: null, notes: { userId, interval: "monthly" },
+      id: "sub_1",
+      plan_id: "plan_m",
+      status: "active",
+      current_start: unix("2026-10-24T00:00:00Z"),
+      current_end: unix("2026-11-24T00:00:00Z"),
+      ended_at: null,
+      notes: { userId, interval: "monthly" },
     };
   });
   afterAll(() => t.close());
@@ -49,7 +64,11 @@ describe("Razorpay webhooks", () => {
     const d = deliver(event("subscription.activated", "sub_1"), "evt_1");
     expect((await handleRazorpayWebhook(t.db, cfg, d, fetchLatest)).status).toBe(200);
     const plan = await getUserPlan(t.db, userId, new Date("2026-10-25T00:00:00Z"));
-    expect(plan).toMatchObject({ id: "pro", limits: { chatDaily: 100 }, subscription: { renewsAt: new Date("2026-11-24T00:00:00Z") } });
+    expect(plan).toMatchObject({
+      id: "pro",
+      limits: { chatDaily: 100 },
+      subscription: { renewsAt: new Date("2026-11-24T00:00:00Z") },
+    });
 
     const before = fetches;
     expect(await handleRazorpayWebhook(t.db, cfg, d, fetchLatest)).toEqual({ status: 200, body: "Already handled" });
@@ -88,12 +107,19 @@ describe("Razorpay webhooks", () => {
 
     remote = { ...remote, id: "sub_3", notes: { userId: "nobody" } };
     await handleRazorpayWebhook(t.db, cfg, deliver(event("subscription.activated", "sub_3"), "evt_6"), fetchLatest);
-    expect(await t.db.select().from(subscription).where(eq(subscription.razorpaySubscriptionId, "sub_3"))).toHaveLength(0);
+    expect(await t.db.select().from(subscription).where(eq(subscription.razorpaySubscriptionId, "sub_3"))).toHaveLength(
+      0,
+    );
   });
 
   it("rejects a signed but malformed body without calling Razorpay", async () => {
     const before = fetches;
-    const res = await handleRazorpayWebhook(t.db, cfg, deliver({ event: "subscription.activated", payload: { subscription: { entity: { id: 42 } } } }, "evt_bad_shape"), fetchLatest);
+    const res = await handleRazorpayWebhook(
+      t.db,
+      cfg,
+      deliver({ event: "subscription.activated", payload: { subscription: { entity: { id: 42 } } } }, "evt_bad_shape"),
+      fetchLatest,
+    );
     expect(res).toEqual({ status: 400, body: "Unexpected payload" });
     expect(fetches).toBe(before);
     expect(await t.db.select().from(paymentEvent).where(eq(paymentEvent.eventId, "evt_bad_shape"))).toHaveLength(0);
@@ -102,14 +128,22 @@ describe("Razorpay webhooks", () => {
   it("ignores note values that aren't strings when recreating a row", async () => {
     remote = { ...remote, id: "sub_4", status: "active", notes: { userId: 12345, interval: "monthly" } };
     await handleRazorpayWebhook(t.db, cfg, deliver(event("subscription.activated", "sub_4"), "evt_7"), fetchLatest);
-    expect(await t.db.select().from(subscription).where(eq(subscription.razorpaySubscriptionId, "sub_4"))).toHaveLength(0);
+    expect(await t.db.select().from(subscription).where(eq(subscription.razorpaySubscriptionId, "sub_4"))).toHaveLength(
+      0,
+    );
   });
 
   it("gives Pro users Pro limits and the Pro chain when one is set up", async () => {
     const env = {
       BILLING_ENABLED: "true",
-      LLM_CHAIN_FREE: "groq", LLM_GROQ_BASE_URL: "https://g", LLM_GROQ_API_KEY: "k", LLM_GROQ_MODEL: "m",
-      LLM_CHAIN_PRO: "groq_paid,groq", LLM_GROQ_PAID_BASE_URL: "https://g", LLM_GROQ_PAID_API_KEY: "k2", LLM_GROQ_PAID_MODEL: "m",
+      LLM_CHAIN_FREE: "groq",
+      LLM_GROQ_BASE_URL: "https://g",
+      LLM_GROQ_API_KEY: "k",
+      LLM_GROQ_MODEL: "m",
+      LLM_CHAIN_PRO: "groq_paid,groq",
+      LLM_GROQ_PAID_BASE_URL: "https://g",
+      LLM_GROQ_PAID_API_KEY: "k2",
+      LLM_GROQ_PAID_MODEL: "m",
     };
     const pro = await aiAccess(t.db, userId, env);
     expect(pro.chain.map((p) => p.name)).toEqual(["groq_paid", "groq"]);

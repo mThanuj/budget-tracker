@@ -105,19 +105,20 @@ async function DashboardContent() {
   // Compare with the same stretch of last month, not all of it.
   const lastMonthSameDays = sameDaysLastMonth(today);
 
-  const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar, rules, upcoming, waiting] = await Promise.all([
-    getBudgetOverview(db, user.id, month),
-    listGoals(db, user.id),
-    listWallets(db, user.id),
-    spendingByCategory(db, user.id, start, end),
-    monthlyTotals(db, user.id, addMonths(month, -5), month),
-    listTransactions(db, user.id, {}, 5),
-    summarizeTransactions(db, user.id, { from: start, to: end }),
-    summarizeTransactions(db, user.id, { from: lastMonthSameDays.start, to: lastMonthSameDays.end }),
-    listRules(db, user.id),
-    listUpcoming(db, user.id, today, 14),
-    listAwaitingConfirmation(db, user.id, today),
-  ]);
+  const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar, rules, upcoming, waiting] =
+    await Promise.all([
+      getBudgetOverview(db, user.id, month),
+      listGoals(db, user.id),
+      listWallets(db, user.id),
+      spendingByCategory(db, user.id, start, end),
+      monthlyTotals(db, user.id, addMonths(month, -5), month),
+      listTransactions(db, user.id, {}, 5),
+      summarizeTransactions(db, user.id, { from: start, to: end }),
+      summarizeTransactions(db, user.id, { from: lastMonthSameDays.start, to: lastMonthSameDays.end }),
+      listRules(db, user.id),
+      listUpcoming(db, user.id, today, 14),
+      listAwaitingConfirmation(db, user.id, today),
+    ]);
   const alerts = (
     await withoutDismissed(db, user.id, [
       ...buildAlerts({ overview, goals, month, today, currency }),
@@ -181,14 +182,20 @@ async function DashboardContent() {
             <p id="hero-label" className="text-sm text-muted-foreground">
               {overall.remainingMinor >= 0 ? "Left to spend this month" : "Over your monthly limit"}
             </p>
-            <p className={cn("mt-1 text-5xl font-semibold tracking-tight", overall.remainingMinor < 0 && "text-destructive")}>
+            <p
+              className={cn(
+                "mt-1 text-5xl font-semibold tracking-tight",
+                overall.remainingMinor < 0 && "text-destructive",
+              )}
+            >
               {formatMoney(Math.abs(overall.remainingMinor), currency)}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               {formatMoney(overall.spentMinor, currency)} spent of {formatMoney(overall.amountMinor, currency)}
               {daysLeft !== null && overall.remainingMinor > 0 && (
                 <>
-                  {" "}· {daysLeft} {daysLeft === 1 ? "day" : "days"} left, about{" "}
+                  {" "}
+                  · {daysLeft} {daysLeft === 1 ? "day" : "days"} left, about{" "}
                   {formatMoney(Math.floor(overall.remainingMinor / daysLeft), currency)} a day
                 </>
               )}
@@ -207,8 +214,12 @@ async function DashboardContent() {
               <p id="hero-label" className="text-sm text-muted-foreground">
                 Spent this month
               </p>
-              <p className="mt-1 text-5xl font-semibold tracking-tight">{formatMoney(thisMonth.expenseMinor, currency)}</p>
-              <p className="mt-2 text-sm text-muted-foreground">Set a monthly limit to see how much is left to spend.</p>
+              <p className="mt-1 text-5xl font-semibold tracking-tight">
+                {formatMoney(thisMonth.expenseMinor, currency)}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Set a monthly limit to see how much is left to spend.
+              </p>
             </div>
             <Button nativeButton={false} render={<Link href="/budgets" />}>
               Set a limit
@@ -242,8 +253,13 @@ async function DashboardContent() {
               <span>Same as this time last month</span>
             ) : (
               <span className={cn("inline-flex items-center gap-1", spendDelta < 0 ? "text-primary" : "text-warning")}>
-                {spendDelta < 0 ? <ArrowDownIcon className="size-3.5" aria-hidden /> : <ArrowUpIcon className="size-3.5" aria-hidden />}
-                {formatMoney(Math.abs(spendDelta), currency)} {spendDelta < 0 ? "less" : "more"} than this time last month
+                {spendDelta < 0 ? (
+                  <ArrowDownIcon className="size-3.5" aria-hidden />
+                ) : (
+                  <ArrowUpIcon className="size-3.5" aria-hidden />
+                )}
+                {formatMoney(Math.abs(spendDelta), currency)} {spendDelta < 0 ? "less" : "more"} than this time last
+                month
               </span>
             )
           ) : (
@@ -258,8 +274,8 @@ async function DashboardContent() {
         <StatTile label="Total balance" value={formatMoney(totalBalance, currency)}>
           {setAside > 0 ? (
             <>
-              {formatMoney(setAside, currency)} set aside for goals ·{" "}
-              {formatMoney(totalBalance - setAside, currency)} free
+              {formatMoney(setAside, currency)} set aside for goals · {formatMoney(totalBalance - setAside, currency)}{" "}
+              free
             </>
           ) : (
             `Across ${wallets.length} ${wallets.length === 1 ? "wallet" : "wallets"}`
@@ -325,11 +341,16 @@ async function DashboardContent() {
             <ul className="grid gap-3">
               {upcoming.slice(0, 5).map((u) => (
                 <li key={`${u.rule.id}-${u.date}`} className="flex items-center gap-3 text-sm">
-                  <CategoryIcon icon={u.categoryIcon ?? (u.rule.type === "transfer" ? "repeat" : "receipt")} color={u.categoryColor} size="sm" />
+                  <CategoryIcon
+                    icon={u.categoryIcon ?? (u.rule.type === "transfer" ? "repeat" : "receipt")}
+                    color={u.categoryColor}
+                    size="sm"
+                  />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{u.rule.description}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {capitalize(relativeDay(u.date, today))} · {u.rule.mode === "auto" ? "added automatically" : "asks first"}
+                      {capitalize(relativeDay(u.date, today))} ·{" "}
+                      {u.rule.mode === "auto" ? "added automatically" : "asks first"}
                     </span>
                   </span>
                   <span className={cn("tabular shrink-0 text-right", u.rule.type === "income" && "text-primary")}>
@@ -348,7 +369,12 @@ async function DashboardContent() {
           ) : (
             <ul className="grid gap-4">
               {goals.slice(0, 3).map((g) => {
-                const p = goalProgress({ targetMinor: g.targetMinor, savedMinor: g.savedMinor, targetDate: g.targetDate, today });
+                const p = goalProgress({
+                  targetMinor: g.targetMinor,
+                  savedMinor: g.savedMinor,
+                  targetDate: g.targetDate,
+                  today,
+                });
                 return (
                   <li key={g.id} className="grid gap-2">
                     <div className="flex items-center gap-2 text-sm">

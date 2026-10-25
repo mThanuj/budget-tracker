@@ -22,15 +22,7 @@ import { userCurrency, userTimeZone } from "@/lib/user-prefs";
 
 export const metadata = { title: "Settings" };
 
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     // minmax(0, …): a long email truncates instead of widening the column.
     <section className="grid grid-cols-1 gap-6 border-t border-border py-8 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-10">
@@ -52,20 +44,14 @@ export default function SettingsPage() {
       </Suspense>
       {billingEnabled() && (
         <Section title="Plan" description="Free, or Pro for more AI help.">
-          <Link
-            href="/billing"
-            className="link inline-flex items-center gap-1 text-sm font-medium"
-          >
+          <Link href="/billing" className="link inline-flex items-center gap-1 text-sm font-medium">
             Plan & billing
             <ChevronRightIcon className="size-4" aria-hidden />
           </Link>
         </Section>
       )}
       <Section title="Categories" description="Add, rename or archive the groups your entries go into.">
-        <Link
-          href="/categories"
-          className="link inline-flex items-center gap-1 text-sm font-medium"
-        >
+        <Link href="/categories" className="link inline-flex items-center gap-1 text-sm font-medium">
           Manage categories
           <ChevronRightIcon className="size-4" aria-hidden />
         </Link>
@@ -126,7 +112,10 @@ async function SettingsContent() {
         </div>
       </Section>
       {aiConfigured() && (
-        <Section title="AI features" description="Fill in entries from a sentence, get category suggestions, ask questions and read reports.">
+        <Section
+          title="AI features"
+          description="Fill in entries from a sentence, get category suggestions, ask questions and read reports."
+        >
           <AiToggle enabled={user.aiEnabled !== false} />
         </Section>
       )}

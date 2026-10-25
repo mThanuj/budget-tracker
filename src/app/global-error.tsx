@@ -15,7 +15,16 @@ export default function GlobalError({ retry }: { error: unknown; retry: () => vo
           <button
             type="button"
             onClick={() => retry()}
-            style={{ marginTop: 12, padding: "10px 16px", border: 0, borderRadius: 8, background: "#0f6e66", color: "#f4fbf9", fontSize: 15, cursor: "pointer" }}
+            style={{
+              marginTop: 12,
+              padding: "10px 16px",
+              border: 0,
+              borderRadius: 8,
+              background: "#0f6e66",
+              color: "#f4fbf9",
+              fontSize: 15,
+              cursor: "pointer",
+            }}
           >
             Try again
           </button>

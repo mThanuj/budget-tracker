@@ -11,7 +11,7 @@ describe("CSV cells", () => {
   });
 
   it("stops spreadsheets running text as formulas", () => {
-    expect(csvCell("=HYPERLINK(\"x\")")).toBe("\"'=HYPERLINK(\"\"x\"\")\"");
+    expect(csvCell('=HYPERLINK("x")')).toBe('"\'=HYPERLINK(""x"")"');
     expect(csvCell("+91 phone")).toBe("'+91 phone");
     expect(csvCell("@sum")).toBe("'@sum");
     // Numbers and dates are left alone.
@@ -21,8 +21,18 @@ describe("CSV cells", () => {
 
 describe("legal details", () => {
   it("lists what's still missing before launch", () => {
-    expect(missingLegalDetails(legalDetails({}))).toEqual(["LEGAL_NAME", "SUPPORT_EMAIL", "BUSINESS_ADDRESS", "LEGAL_CITY"]);
-    const d = legalDetails({ LEGAL_NAME: "A", SUPPORT_EMAIL: "a@b.in", BUSINESS_ADDRESS: " Hyderabad ", LEGAL_CITY: "Hyderabad" });
+    expect(missingLegalDetails(legalDetails({}))).toEqual([
+      "LEGAL_NAME",
+      "SUPPORT_EMAIL",
+      "BUSINESS_ADDRESS",
+      "LEGAL_CITY",
+    ]);
+    const d = legalDetails({
+      LEGAL_NAME: "A",
+      SUPPORT_EMAIL: "a@b.in",
+      BUSINESS_ADDRESS: " Hyderabad ",
+      LEGAL_CITY: "Hyderabad",
+    });
     expect(missingLegalDetails(d)).toEqual([]);
     expect(d.address).toBe("Hyderabad");
   });

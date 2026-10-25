@@ -32,7 +32,12 @@ export async function adminStats(db: Db, now: Date = new Date()) {
     db
       .select({ scope: aiUsage.scope, day: aiUsage.day, feature: aiUsage.feature, count: aiUsage.count })
       .from(aiUsage)
-      .where(and(gte(aiUsage.day, fromDay), sql`(${aiUsage.scope} = 'global' or ${like(aiUsage.scope, "provider:%")} or ${aiUsage.feature} = 'chat')`)),
+      .where(
+        and(
+          gte(aiUsage.day, fromDay),
+          sql`(${aiUsage.scope} = 'global' or ${like(aiUsage.scope, "provider:%")} or ${aiUsage.feature} = 'chat')`,
+        ),
+      ),
   ]);
 
   // Pro, using the same rules the app applies to each user.

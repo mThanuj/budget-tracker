@@ -56,7 +56,12 @@ describe("budgets", () => {
   it("tracks spending against category and overall limits", async () => {
     const s = await setup(t);
     await createBudget(t.db, s.userId, { categoryId: null, amount: 10_000_00, rollover: false }, "2026-10");
-    await createBudget(t.db, s.userId, { categoryId: s.cats["Dining Out"], amount: 3_000_00, rollover: false }, "2026-10");
+    await createBudget(
+      t.db,
+      s.userId,
+      { categoryId: s.cats["Dining Out"], amount: 3_000_00, rollover: false },
+      "2026-10",
+    );
     await s.spend(2_500_00, "2026-10-05");
     await s.spend(400_00, "2026-10-06", null); // uncategorized
     await s.spend(999_00, "2026-09-30"); // last month
@@ -71,7 +76,12 @@ describe("budgets", () => {
 
   it("rolls leftovers and overspending into later months", async () => {
     const s = await setup(t);
-    await createBudget(t.db, s.userId, { categoryId: s.cats["Dining Out"], amount: 3_000_00, rollover: true }, "2026-08");
+    await createBudget(
+      t.db,
+      s.userId,
+      { categoryId: s.cats["Dining Out"], amount: 3_000_00, rollover: true },
+      "2026-08",
+    );
     await s.spend(2_500_00, "2026-08-10"); // +500
     await s.spend(3_800_00, "2026-09-10"); // -800
     await s.spend(1_000_00, "2026-10-10");
@@ -84,7 +94,12 @@ describe("budgets", () => {
 
   it("restarts rollover from this month when the amount changes", async () => {
     const s = await setup(t);
-    const b = await createBudget(t.db, s.userId, { categoryId: s.cats.Groceries, amount: 3_000_00, rollover: true }, "2026-08");
+    const b = await createBudget(
+      t.db,
+      s.userId,
+      { categoryId: s.cats.Groceries, amount: 3_000_00, rollover: true },
+      "2026-08",
+    );
     await s.spend(1_000_00, "2026-08-10", s.cats.Groceries);
     await updateBudget(t.db, s.userId, b.id, { amount: 4_000_00, rollover: true }, "2026-10");
     const [oct] = (await getBudgetOverview(t.db, s.userId, "2026-10")).categories;
@@ -98,18 +113,31 @@ describe("budgets", () => {
   it("allows one budget per category and one overall limit", async () => {
     const s = await setup(t);
     await createBudget(t.db, s.userId, { categoryId: null, amount: 100, rollover: false }, "2026-10");
-    await expect(createBudget(t.db, s.userId, { categoryId: null, amount: 200, rollover: false }, "2026-10")).rejects.toThrow(/already a budget/);
+    await expect(
+      createBudget(t.db, s.userId, { categoryId: null, amount: 200, rollover: false }, "2026-10"),
+    ).rejects.toThrow(/already a budget/);
     await createBudget(t.db, s.userId, { categoryId: s.cats.Fuel, amount: 100, rollover: false }, "2026-10");
-    await expect(createBudget(t.db, s.userId, { categoryId: s.cats.Fuel, amount: 100, rollover: false }, "2026-10")).rejects.toThrow(/already a budget/);
+    await expect(
+      createBudget(t.db, s.userId, { categoryId: s.cats.Fuel, amount: 100, rollover: false }, "2026-10"),
+    ).rejects.toThrow(/already a budget/);
     expect((await unbudgetedCategories(t.db, s.userId)).map((c) => c.name)).not.toContain("Fuel");
   });
 
   it("only budgets the user's own spending categories", async () => {
     const a = await setup(t);
     const b = await setup(t);
-    await expect(createBudget(t.db, b.userId, { categoryId: a.cats.Fuel, amount: 100, rollover: false }, "2026-10")).rejects.toThrow(UserError);
-    await expect(createBudget(t.db, a.userId, { categoryId: a.cats.Salary, amount: 100, rollover: false }, "2026-10")).rejects.toThrow(/spending categories/);
-    const own = await createBudget(t.db, a.userId, { categoryId: a.cats.Fuel, amount: 100, rollover: false }, "2026-10");
+    await expect(
+      createBudget(t.db, b.userId, { categoryId: a.cats.Fuel, amount: 100, rollover: false }, "2026-10"),
+    ).rejects.toThrow(UserError);
+    await expect(
+      createBudget(t.db, a.userId, { categoryId: a.cats.Salary, amount: 100, rollover: false }, "2026-10"),
+    ).rejects.toThrow(/spending categories/);
+    const own = await createBudget(
+      t.db,
+      a.userId,
+      { categoryId: a.cats.Fuel, amount: 100, rollover: false },
+      "2026-10",
+    );
     await expect(deleteBudget(t.db, b.userId, own.id)).rejects.toThrow(UserError);
     expect((await getBudgetOverview(t.db, b.userId, "2026-10")).categories).toHaveLength(0);
   });
@@ -133,14 +161,22 @@ describe("goals", () => {
   });
   afterAll(() => t.close());
 
-  const newGoal = { name: "MacBook", target: 1_20_000_00, targetDate: "2027-05-31", icon: "laptop", color: "#4a7fc1" } as const;
+  const newGoal = {
+    name: "MacBook",
+    target: 1_20_000_00,
+    targetDate: "2027-05-31",
+    icon: "laptop",
+    color: "#4a7fc1",
+  } as const;
 
   it("adds and withdraws money, never below zero", async () => {
     const s = await setup(t);
     const g = await createGoal(t.db, s.userId, newGoal);
     await addContribution(t.db, s.userId, g.id, contribution(40_000_00));
     await addContribution(t.db, s.userId, g.id, contribution(5_000_00, "withdraw"));
-    await expect(addContribution(t.db, s.userId, g.id, contribution(35_000_01, "withdraw"))).rejects.toThrow(/more than is saved/);
+    await expect(addContribution(t.db, s.userId, g.id, contribution(35_000_01, "withdraw"))).rejects.toThrow(
+      /more than is saved/,
+    );
 
     const [row] = await listGoals(t.db, s.userId);
     expect(row.savedMinor).toBe(35_000_00);
@@ -173,12 +209,21 @@ describe("reports and alerts", () => {
     await s.spend(200_00, "2026-10-31", s.cats["Dining Out"]);
     await s.spend(100_00, "2026-11-01", s.cats["Dining Out"]);
     await createTransaction(t.db, s.userId, {
-      type: "income", amount: 1_000_00, occurredOn: "2026-09-15", description: "", notes: null,
-      walletId: bank.id, toWalletId: null, categoryId: s.cats.Salary,
+      type: "income",
+      amount: 1_000_00,
+      occurredOn: "2026-09-15",
+      description: "",
+      notes: null,
+      walletId: bank.id,
+      toWalletId: null,
+      categoryId: s.cats.Salary,
     });
 
     const byCat = await spendingByCategory(t.db, s.userId, "2026-10-01", "2026-11-01");
-    expect(byCat.map((r) => [r.name, r.spentMinor])).toEqual([["Groceries", 300_00], ["Dining Out", 200_00]]);
+    expect(byCat.map((r) => [r.name, r.spentMinor])).toEqual([
+      ["Groceries", 300_00],
+      ["Dining Out", 200_00],
+    ]);
 
     expect(await monthlyTotals(t.db, s.userId, "2026-08", "2026-11")).toEqual([
       { month: "2026-08", incomeMinor: 0, expenseMinor: 0 },
@@ -190,9 +235,20 @@ describe("reports and alerts", () => {
 
   it("raises budget and goal alerts that stay dismissed until something changes", async () => {
     const s = await setup(t);
-    const b = await createBudget(t.db, s.userId, { categoryId: s.cats["Dining Out"], amount: 1_000_00, rollover: false }, "2026-10");
+    const b = await createBudget(
+      t.db,
+      s.userId,
+      { categoryId: s.cats["Dining Out"], amount: 1_000_00, rollover: false },
+      "2026-10",
+    );
     await s.spend(850_00, "2026-10-05");
-    const g = await createGoal(t.db, s.userId, { name: "Trip", target: 10_000_00, targetDate: null, icon: "plane", color: "#2f8f9d" });
+    const g = await createGoal(t.db, s.userId, {
+      name: "Trip",
+      target: 10_000_00,
+      targetDate: null,
+      icon: "plane",
+      color: "#2f8f9d",
+    });
     await addContribution(t.db, s.userId, g.id, contribution(5_000_00));
 
     const alertsFor = async () =>

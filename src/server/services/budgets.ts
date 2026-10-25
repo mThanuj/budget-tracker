@@ -16,7 +16,8 @@ export type BudgetStatus = Awaited<ReturnType<typeof getBudgetOverview>>["catego
 export async function getBudgetOverview(db: Db, userId: string, month: ISOMonth) {
   const { start, end } = monthRange(month);
   // Correlated subqueries reference the outer budget row explicitly.
-  const spentIn = (from: unknown, to: unknown) => sql<number>`(
+  const spentIn = (from: unknown, to: unknown) =>
+    sql<number>`(
     select coalesce(sum(t.amount_minor), 0) from "transaction" t
     where t.user_id = "budget"."user_id" and t.type = 'expense'
       and ("budget"."category_id" is null or t.category_id = "budget"."category_id")
@@ -36,7 +37,10 @@ export async function getBudgetOverview(db: Db, userId: string, month: ISOMonth)
       categoryPosition: category.position,
       categoryArchived: sql<boolean>`${category.archivedAt} is not null`,
       spentMinor: spentIn(start, end),
-      spentSinceRolloverMinor: sql<number>`case when "budget"."rollover" then ${spentIn(sql`"budget"."rollover_from"`, start)} else 0 end`.mapWith(Number),
+      spentSinceRolloverMinor:
+        sql<number>`case when "budget"."rollover" then ${spentIn(sql`"budget"."rollover_from"`, start)} else 0 end`.mapWith(
+          Number,
+        ),
     })
     .from(budget)
     .leftJoin(category, eq(category.id, budget.categoryId))
@@ -53,13 +57,18 @@ export async function getBudgetOverview(db: Db, userId: string, month: ISOMonth)
             spentSinceMinor: r.spentSinceRolloverMinor,
           })
         : 0;
-    return { ...r, carryInMinor, ...budgetProgress({ limitMinor: r.amountMinor, carryInMinor, spentMinor: r.spentMinor }) };
+    return {
+      ...r,
+      carryInMinor,
+      ...budgetProgress({ limitMinor: r.amountMinor, carryInMinor, spentMinor: r.spentMinor }),
+    };
   });
 
   const [totals] = await db
     .select({
       totalSpentMinor: sql<number>`coalesce(sum(${transaction.amountMinor}), 0)`.mapWith(Number),
-      unbudgetedMinor: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.categoryId} is null or not exists (
+      unbudgetedMinor:
+        sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.categoryId} is null or not exists (
         select 1 from "budget" b where b.user_id = ${userId} and b.category_id = "transaction"."category_id"
       )), 0)`.mapWith(Number),
     })
@@ -121,13 +130,19 @@ export async function averageMonthlySpending(db: Db, userId: string, month: ISOM
 }
 
 async function getOwnedBudget(db: Db, userId: string, id: string) {
-  const [row] = await db.select().from(budget).where(and(eq(budget.id, id), eq(budget.userId, userId)));
+  const [row] = await db
+    .select()
+    .from(budget)
+    .where(and(eq(budget.id, id), eq(budget.userId, userId)));
   if (!row) throw new UserError("That budget doesn't exist.");
   return row;
 }
 
 function rethrowDuplicate(err: unknown): never {
-  if (err instanceof Error && /budget_user_category_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)) {
+  if (
+    err instanceof Error &&
+    /budget_user_category_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)
+  ) {
     throw new UserError("There's already a budget for that. Edit it instead.", "categoryId");
   }
   throw err;
@@ -187,6 +202,8 @@ export async function unbudgetedCategories(db: Db, userId: string) {
     .select({ id: category.id, name: category.name, icon: category.icon, color: category.color })
     .from(category)
     .leftJoin(budget, and(eq(budget.categoryId, category.id), eq(budget.userId, userId)))
-    .where(and(eq(category.userId, userId), eq(category.kind, "expense"), isNull(category.archivedAt), isNull(budget.id)))
+    .where(
+      and(eq(category.userId, userId), eq(category.kind, "expense"), isNull(category.archivedAt), isNull(budget.id)),
+    )
     .orderBy(asc(category.position));
 }

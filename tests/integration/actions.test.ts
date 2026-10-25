@@ -65,7 +65,8 @@ const form = (fields: Record<string, string>) => {
   for (const [k, v] of Object.entries(fields)) data.set(k, v);
   return data;
 };
-const isRedirect = (err: unknown) => err instanceof Error && "digest" in err && String(err.digest).startsWith("NEXT_REDIRECT");
+const isRedirect = (err: unknown) =>
+  err instanceof Error && "digest" in err && String(err.digest).startsWith("NEXT_REDIRECT");
 
 let alice: Awaited<ReturnType<typeof newUser>>;
 let bob: Awaited<ReturnType<typeof newUser>>;
@@ -88,27 +89,57 @@ afterEach(() => {
 describe("entries (saveTransaction / removeTransaction)", async () => {
   const { removeTransaction, saveTransaction } = await import("@/server/actions/transactions");
   const entry = (over: Record<string, string> = {}) =>
-    form({ type: "expense", amount: "240", occurredOn: "2026-10-20", description: "Chai", walletId: alice.cashId, categoryId: alice.groceriesId, ...over });
+    form({
+      type: "expense",
+      amount: "240",
+      occurredOn: "2026-10-20",
+      description: "Chai",
+      walletId: alice.cashId,
+      categoryId: alice.groceriesId,
+      ...over,
+    });
 
   it("saves an entry for the signed-in user", async () => {
     expect(await saveTransaction(undefined, entry({ description: "Chai and samosa" }))).toEqual({ ok: true });
-    const rows = await db.select().from(schema.transaction).where(eq(schema.transaction.description, "Chai and samosa"));
+    const rows = await db
+      .select()
+      .from(schema.transaction)
+      .where(eq(schema.transaction.description, "Chai and samosa"));
     expect(rows).toEqual([expect.objectContaining({ userId: alice.user.id, amountMinor: 240_00 })]);
   });
 
   it("explains a bad amount instead of saving", async () => {
-    expect(await saveTransaction(undefined, entry({ amount: "" }))).toEqual({ ok: false, fieldErrors: { amount: expect.any(String) } });
-    expect(await saveTransaction(undefined, entry({ amount: "-5" }))).toMatchObject({ ok: false, fieldErrors: { amount: expect.any(String) } });
+    expect(await saveTransaction(undefined, entry({ amount: "" }))).toEqual({
+      ok: false,
+      fieldErrors: { amount: expect.any(String) },
+    });
+    expect(await saveTransaction(undefined, entry({ amount: "-5" }))).toMatchObject({
+      ok: false,
+      fieldErrors: { amount: expect.any(String) },
+    });
   });
 
   it("won't use someone else's wallet or category", async () => {
-    expect(await saveTransaction(undefined, entry({ walletId: bob.cashId }))).toEqual({ ok: false, fieldErrors: { walletId: "That wallet doesn't exist." } });
-    expect(await saveTransaction(undefined, entry({ categoryId: bob.groceriesId }))).toMatchObject({ ok: false, fieldErrors: { categoryId: expect.any(String) } });
+    expect(await saveTransaction(undefined, entry({ walletId: bob.cashId }))).toEqual({
+      ok: false,
+      fieldErrors: { walletId: "That wallet doesn't exist." },
+    });
+    expect(await saveTransaction(undefined, entry({ categoryId: bob.groceriesId }))).toMatchObject({
+      ok: false,
+      fieldErrors: { categoryId: expect.any(String) },
+    });
   });
 
   it("won't delete someone else's entry", async () => {
     const theirs = await createTransaction(db, bob.user.id, {
-      type: "expense", amount: 99_00, occurredOn: "2026-10-20", description: "Bob's", notes: null, walletId: bob.cashId, toWalletId: null, categoryId: null,
+      type: "expense",
+      amount: 99_00,
+      occurredOn: "2026-10-20",
+      description: "Bob's",
+      notes: null,
+      walletId: bob.cashId,
+      toWalletId: null,
+      categoryId: null,
     });
     expect(await removeTransaction(theirs.id)).toEqual({ ok: false, error: "That entry doesn't exist." });
     expect(await db.$count(schema.transaction, eq(schema.transaction.id, theirs.id))).toBe(1);
@@ -156,14 +187,19 @@ describe("budgets, goals and recurring items", async () => {
   it("saves a budget, but not on someone else's category", async () => {
     expect(await saveBudget(undefined, form({ categoryId: alice.groceriesId, amount: "5000" }))).toEqual({ ok: true });
     expect(await saveBudget(undefined, form({ categoryId: bob.groceriesId, amount: "5000" }))).toEqual({
-      ok: false, fieldErrors: { categoryId: "That category doesn't exist." },
+      ok: false,
+      fieldErrors: { categoryId: "That category doesn't exist." },
     });
-    expect(await saveBudget(undefined, form({ categoryId: alice.groceriesId, amount: "lots" }))).toMatchObject({ ok: false, fieldErrors: { amount: expect.any(String) } });
+    expect(await saveBudget(undefined, form({ categoryId: alice.groceriesId, amount: "lots" }))).toMatchObject({
+      ok: false,
+      fieldErrors: { amount: expect.any(String) },
+    });
   });
 
   it("explains a goal without a name or target", async () => {
     expect(await saveGoal(undefined, form({ name: "", target: "" }))).toMatchObject({
-      ok: false, fieldErrors: { name: expect.any(String), target: expect.any(String) },
+      ok: false,
+      fieldErrors: { name: expect.any(String), target: expect.any(String) },
     });
   });
 
@@ -179,9 +215,13 @@ describe("Pro checkout (billing actions)", async () => {
   const { cancelPro, confirmCheckout, startCheckout } = await import("@/server/actions/billing");
   const configure = () => {
     for (const [k, v] of Object.entries({
-      RAZORPAY_KEY_ID: "rzp_test", RAZORPAY_KEY_SECRET: "key_secret", RAZORPAY_WEBHOOK_SECRET: "whsec",
-      RAZORPAY_PLAN_MONTHLY: "plan_m", RAZORPAY_PLAN_YEARLY: "plan_y",
-    })) vi.stubEnv(k, v);
+      RAZORPAY_KEY_ID: "rzp_test",
+      RAZORPAY_KEY_SECRET: "key_secret",
+      RAZORPAY_WEBHOOK_SECRET: "whsec",
+      RAZORPAY_PLAN_MONTHLY: "plan_m",
+      RAZORPAY_PLAN_YEARLY: "plan_y",
+    }))
+      vi.stubEnv(k, v);
   };
   const paid = (subscriptionId: string, paymentId = "pay_1") => ({
     razorpay_payment_id: paymentId,
@@ -190,43 +230,72 @@ describe("Pro checkout (billing actions)", async () => {
   });
 
   it("says Pro isn't available while payments aren't set up", async () => {
-    expect(await startCheckout("monthly")).toEqual({ ok: false, error: "Pro isn't available yet. Please check back soon." });
+    expect(await startCheckout("monthly")).toEqual({
+      ok: false,
+      error: "Pro isn't available yet. Please check back soon.",
+    });
     expect(razorpay.createSubscription).not.toHaveBeenCalled();
   });
 
   it("refuses an interval that isn't monthly or yearly", async () => {
     configure();
-    expect(await Reflect.apply(startCheckout, null, ["weekly"])).toEqual({ ok: false, error: "Choose monthly or yearly." });
+    expect(await Reflect.apply(startCheckout, null, ["weekly"])).toEqual({
+      ok: false,
+      error: "Choose monthly or yearly.",
+    });
   });
 
   it("explains, without details, when Razorpay can't be reached", async () => {
     configure();
     vi.mocked(razorpay.createSubscription).mockRejectedValueOnce(new Error("ECONNRESET"));
-    expect(await startCheckout("yearly")).toEqual({ ok: false, error: "We couldn't reach the payment service. Try again in a minute." });
+    expect(await startCheckout("yearly")).toEqual({
+      ok: false,
+      error: "We couldn't reach the payment service. Try again in a minute.",
+    });
   });
 
   it("won't confirm a payment for someone else's subscription, even with a valid signature", async () => {
     configure();
-    await db.insert(schema.subscription).values({ userId: bob.user.id, razorpaySubscriptionId: "sub_bob", planKey: "monthly", status: "created" });
-    expect(await confirmCheckout(paid("sub_bob"))).toMatchObject({ ok: false, error: expect.stringContaining("couldn't confirm") });
-    expect(await confirmCheckout({ ...paid("sub_bob"), razorpay_signature: "nope" })).toEqual({ ok: false, error: "That payment response looks incomplete." });
+    await db
+      .insert(schema.subscription)
+      .values({ userId: bob.user.id, razorpaySubscriptionId: "sub_bob", planKey: "monthly", status: "created" });
+    expect(await confirmCheckout(paid("sub_bob"))).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("couldn't confirm"),
+    });
+    expect(await confirmCheckout({ ...paid("sub_bob"), razorpay_signature: "nope" })).toEqual({
+      ok: false,
+      error: "That payment response looks incomplete.",
+    });
     expect(razorpay.fetchSubscription).not.toHaveBeenCalled();
     expect((await getUserPlan(db, alice.user.id)).id).toBe("free");
   });
 
   it("confirms a signed payment for the user's own checkout", async () => {
     configure();
-    await db.insert(schema.subscription).values({ userId: alice.user.id, razorpaySubscriptionId: "sub_alice", planKey: "monthly", status: "created" });
+    await db
+      .insert(schema.subscription)
+      .values({ userId: alice.user.id, razorpaySubscriptionId: "sub_alice", planKey: "monthly", status: "created" });
     vi.mocked(razorpay.fetchSubscription).mockResolvedValueOnce({
-      id: "sub_alice", plan_id: "plan_m", status: "active", current_start: Date.UTC(2026, 9, 24) / 1000,
-      current_end: Date.UTC(2099, 0, 1) / 1000, ended_at: null, notes: { userId: alice.user.id, interval: "monthly" },
+      id: "sub_alice",
+      plan_id: "plan_m",
+      status: "active",
+      current_start: Date.UTC(2026, 9, 24) / 1000,
+      current_end: Date.UTC(2099, 0, 1) / 1000,
+      ended_at: null,
+      notes: { userId: alice.user.id, interval: "monthly" },
     });
     expect(await confirmCheckout(paid("sub_alice"))).toEqual({ ok: true, active: true });
     expect((await getUserPlan(db, alice.user.id)).id).toBe("pro");
     // ...and a second checkout is refused rather than charging twice.
     vi.mocked(razorpay.fetchSubscription).mockResolvedValue({
-      id: "sub_alice", plan_id: "plan_m", status: "active", current_start: Date.UTC(2026, 9, 24) / 1000,
-      current_end: Date.UTC(2099, 0, 1) / 1000, ended_at: null, notes: { userId: alice.user.id, interval: "monthly" },
+      id: "sub_alice",
+      plan_id: "plan_m",
+      status: "active",
+      current_start: Date.UTC(2026, 9, 24) / 1000,
+      current_end: Date.UTC(2099, 0, 1) / 1000,
+      ended_at: null,
+      notes: { userId: alice.user.id, interval: "monthly" },
     });
     expect(await startCheckout("monthly")).toEqual({ ok: false, error: "You already have Pro." });
     expect(razorpay.createSubscription).not.toHaveBeenCalled();
@@ -269,13 +338,19 @@ describe("settings", async () => {
   });
 
   it("refuses an unknown currency or time zone", async () => {
-    expect(await savePreferences(undefined, form({ currency: "XYZ", timezone: "Asia/Kolkata" }))).toMatchObject({ error: expect.any(String) });
-    expect(await savePreferences(undefined, form({ currency: "INR", timezone: "Mars/Olympus" }))).toMatchObject({ error: expect.any(String) });
+    expect(await savePreferences(undefined, form({ currency: "XYZ", timezone: "Asia/Kolkata" }))).toMatchObject({
+      error: expect.any(String),
+    });
+    expect(await savePreferences(undefined, form({ currency: "INR", timezone: "Mars/Olympus" }))).toMatchObject({
+      error: expect.any(String),
+    });
     expect(await savePreferences(undefined, new FormData())).toMatchObject({ error: expect.any(String) });
   });
 
   it("saves a currency and time zone from the lists", async () => {
-    expect(await savePreferences(undefined, form({ currency: "USD", timezone: "America/New_York" }))).toEqual({ ok: true });
+    expect(await savePreferences(undefined, form({ currency: "USD", timezone: "America/New_York" }))).toEqual({
+      ok: true,
+    });
     const [row] = await db.select().from(schema.user).where(eq(schema.user.id, alice.user.id));
     expect(row).toMatchObject({ currency: "USD", timezone: "America/New_York" });
     await savePreferences(undefined, form({ currency: "INR", timezone: "Asia/Kolkata" }));
@@ -291,7 +366,10 @@ describe("money chat (askMoney)", async () => {
   });
 
   it("says AI is unavailable when no provider is configured (never calls out)", async () => {
-    expect(await askMoney([{ role: "user", content: "How much did I spend?" }])).toMatchObject({ ok: false, reason: "disabled" });
+    expect(await askMoney([{ role: "user", content: "How much did I spend?" }])).toMatchObject({
+      ok: false,
+      reason: "disabled",
+    });
   });
 });
 
@@ -313,7 +391,8 @@ describe("signing out (signOut)", async () => {
   it("ends the session through Better Auth and goes to the landing page", async () => {
     const outcome = await signOut().then(
       () => "returned",
-      (err: unknown) => (isRedirect(err) && String((err as { digest: string }).digest).includes(";/;") ? "redirected home" : String(err)),
+      (err: unknown) =>
+        isRedirect(err) && String((err as { digest: string }).digest).includes(";/;") ? "redirected home" : String(err),
     );
     expect(outcome).toBe("redirected home");
     expect(auth.api.signOut).toHaveBeenCalledTimes(1);

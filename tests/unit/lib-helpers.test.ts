@@ -23,14 +23,22 @@ describe("chart axis ticks", () => {
 
 describe("wallet balance wording", () => {
   it("shows a card's negative balance as an amount owed, never a minus sign", () => {
-    expect(describeBalance("credit_card", -1_500_00, "INR")).toEqual({ label: "Owed", amount: "₹1,500.00", tone: "owed" });
+    expect(describeBalance("credit_card", -1_500_00, "INR")).toEqual({
+      label: "Owed",
+      amount: "₹1,500.00",
+      tone: "owed",
+    });
     expect(describeBalance("credit_card", 200_00, "INR")).toMatchObject({ label: "Credit", tone: "positive" });
     expect(describeBalance("credit_card", 0, "INR")).toMatchObject({ label: "Nothing owed", tone: "neutral" });
   });
 
   it("flags an overdrawn bank account", () => {
     expect(describeBalance("bank", -50_00, "INR")).toMatchObject({ label: "Balance", tone: "owed" });
-    expect(describeBalance("cash", 4_283_00, "INR")).toEqual({ label: "Balance", amount: "₹4,283.00", tone: "neutral" });
+    expect(describeBalance("cash", 4_283_00, "INR")).toEqual({
+      label: "Balance",
+      amount: "₹4,283.00",
+      tone: "neutral",
+    });
   });
 });
 

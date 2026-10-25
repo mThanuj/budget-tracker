@@ -45,7 +45,11 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
               </Suspense>
             </div>
           </header>
-          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-28 outline-none sm:px-6 lg:px-10 lg:py-10">
+          <main
+            id="main"
+            tabIndex={-1}
+            className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-28 outline-none sm:px-6 lg:px-10 lg:py-10"
+          >
             {children}
           </main>
         </div>

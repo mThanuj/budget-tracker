@@ -3,10 +3,14 @@ import { contentSecurityPolicy, securityHeaders } from "@/lib/security-headers";
 
 const map = (dev: boolean) => Object.fromEntries(securityHeaders({ dev }).map((h) => [h.key, h.value]));
 const directives = (dev: boolean) =>
-  Object.fromEntries(contentSecurityPolicy({ dev }).split("; ").map((d) => {
-    const [k, ...v] = d.split(" ");
-    return [k, v.join(" ")];
-  }));
+  Object.fromEntries(
+    contentSecurityPolicy({ dev })
+      .split("; ")
+      .map((d) => {
+        const [k, ...v] = d.split(" ");
+        return [k, v.join(" ")];
+      }),
+  );
 
 describe("security headers", () => {
   it("locks down the dangerous script and framing surfaces", () => {

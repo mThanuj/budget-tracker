@@ -4,7 +4,10 @@ import { PLANS, type PlanId } from "@/config/plans";
 import type { Db } from "../db";
 import { subscription } from "../db/schema";
 
-type SubscriptionRow = Pick<typeof subscription.$inferSelect, "status" | "currentEnd" | "planKey" | "cancelAtCycleEnd" | "razorpaySubscriptionId">;
+type SubscriptionRow = Pick<
+  typeof subscription.$inferSelect,
+  "status" | "currentEnd" | "planKey" | "cancelAtCycleEnd" | "razorpaySubscriptionId"
+>;
 
 const STALE_AFTER_MS = 7 * 86_400_000;
 
@@ -13,7 +16,11 @@ const STALE_AFTER_MS = 7 * 86_400_000;
  * webhooks), so it stops counting until a sync with Razorpay confirms it.
  */
 export function isStale(s: Pick<SubscriptionRow, "status" | "currentEnd">, now: Date = new Date()) {
-  return (s.status === "active" || s.status === "pending") && s.currentEnd !== null && s.currentEnd.getTime() < now.getTime() - STALE_AFTER_MS;
+  return (
+    (s.status === "active" || s.status === "pending") &&
+    s.currentEnd !== null &&
+    s.currentEnd.getTime() < now.getTime() - STALE_AFTER_MS
+  );
 }
 
 /**
@@ -27,7 +34,10 @@ export function planFromSubscriptions(subs: SubscriptionRow[], now: Date = new D
     subs.find((s) => (s.status === "active" || s.status === "pending") && !isStale(s, now)) ??
     subs.find((s) => (s.status === "cancelled" || s.status === "completed") && paidUntil(s));
   if (!current) return { id: "free" as PlanId, subscription: null };
-  const endingAt = current.status === "cancelled" || current.status === "completed" || current.cancelAtCycleEnd ? current.currentEnd : null;
+  const endingAt =
+    current.status === "cancelled" || current.status === "completed" || current.cancelAtCycleEnd
+      ? current.currentEnd
+      : null;
   return {
     id: "pro" as PlanId,
     subscription: {
@@ -41,11 +51,15 @@ export function planFromSubscriptions(subs: SubscriptionRow[], now: Date = new D
   };
 }
 
-export async function getUserPlan(db: Db, userId: string, now: Date = new Date(), env: Record<string, string | undefined> = process.env) {
+export async function getUserPlan(
+  db: Db,
+  userId: string,
+  now: Date = new Date(),
+  env: Record<string, string | undefined> = process.env,
+) {
   // With payments switched off, everyone is on Free.
   if (!billingEnabled(env)) return { id: "free" as PlanId, subscription: null, limits: PLANS.free };
   const subs = await db.select().from(subscription).where(eq(subscription.userId, userId));
   const plan = planFromSubscriptions(subs, now);
   return { ...plan, limits: PLANS[plan.id] };
 }
-

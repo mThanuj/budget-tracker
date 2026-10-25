@@ -8,11 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/server/db";
 import { syncRecurring } from "@/server/recurring-sync";
 import { listCategories } from "@/server/services/categories";
-import {
-  listAwaitingConfirmation,
-  listRules,
-  listSubscriptionSuggestions,
-} from "@/server/services/recurring";
+import { listAwaitingConfirmation, listRules, listSubscriptionSuggestions } from "@/server/services/recurring";
 import { listWallets } from "@/server/services/wallets";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";

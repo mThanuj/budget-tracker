@@ -16,7 +16,12 @@ function merge(base: Record<string, unknown>, extra: Record<string, unknown>): R
   for (const [k, v] of Object.entries(extra)) {
     const current = out[k];
     out[k] =
-      v && typeof v === "object" && !Array.isArray(v) && current && typeof current === "object" && !Array.isArray(current)
+      v &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      current &&
+      typeof current === "object" &&
+      !Array.isArray(current)
         ? merge(current as Record<string, unknown>, v as Record<string, unknown>)
         : v;
   }

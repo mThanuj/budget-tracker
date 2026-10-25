@@ -35,7 +35,12 @@ export async function writeInsight(kind: InsightKind): Promise<WriteInsightResul
   const today = userToday(user);
   const thisMonth = monthOf(today);
   const month = parsedKind.data === "month" ? addMonths(thisMonth, -1) : thisMonth;
-  const facts = await buildInsightFacts(db, user.id, { kind: parsedKind.data, month, today, currency: userCurrency(user) });
+  const facts = await buildInsightFacts(db, user.id, {
+    kind: parsedKind.data,
+    month,
+    today,
+    currency: userCurrency(user),
+  });
   if (facts.entries < MIN_ENTRIES_FOR_INSIGHTS) return { ok: false, reason: "not_enough" };
 
   const hash = factsHash(facts);
@@ -51,12 +56,24 @@ export async function writeInsight(kind: InsightKind): Promise<WriteInsightResul
     return { ok: false, reason: "limit" };
   }
 
-  const result = await runWithFallback(access.chain, (m) => writeInsightWithModel(m, facts), record(db), Date.now, "chat");
+  const result = await runWithFallback(
+    access.chain,
+    (m) => writeInsightWithModel(m, facts),
+    record(db),
+    Date.now,
+    "chat",
+  );
   if (!result.ok) {
     await giveBack();
     return { ok: false, reason: result.reason };
   }
-  await saveInsight(db, user.id, { kind: parsedKind.data, month, factsHash: hash, report: result.value, model: result.provider });
+  await saveInsight(db, user.id, {
+    kind: parsedKind.data,
+    month,
+    factsHash: hash,
+    report: result.value,
+    model: result.provider,
+  });
   refresh();
   return { ok: true };
 }

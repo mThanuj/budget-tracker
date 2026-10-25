@@ -5,7 +5,14 @@ import { chooseCategoryWithModel } from "@/server/ai/categorize";
 import { globalAiLimit, type ProviderConfig, providerChain } from "@/server/ai/config";
 import { classifyError } from "@/server/ai/errors";
 import { resetCooldowns, runWithFallback } from "@/server/ai/fallback";
-import { type EntryContext, entryInstructions, entrySchema, extractEntryWithModel, type RawEntry, toPrefill } from "@/server/ai/parse-entry";
+import {
+  type EntryContext,
+  entryInstructions,
+  entrySchema,
+  extractEntryWithModel,
+  type RawEntry,
+  toPrefill,
+} from "@/server/ai/parse-entry";
 import { z } from "zod";
 import type { ModelChoice } from "@/server/ai/providers";
 
@@ -73,8 +80,15 @@ describe("providerChain", () => {
   it("keeps the order and skips providers without a key", () => {
     const chain = providerChain(env);
     expect(chain.map((p) => p.name)).toEqual(["groq", "openrouter"]);
-    expect(chain[0]).toMatchObject({ fastModel: "openai/gpt-oss-20b", structured: true, options: { reasoningEffort: "low" } });
-    expect(chain[1]).toMatchObject({ fastModel: "nvidia/nemotron-3-super-120b-a12b:free", body: { provider: { data_collection: "deny" } } });
+    expect(chain[0]).toMatchObject({
+      fastModel: "openai/gpt-oss-20b",
+      structured: true,
+      options: { reasoningEffort: "low" },
+    });
+    expect(chain[1]).toMatchObject({
+      fastModel: "nvidia/nemotron-3-super-120b-a12b:free",
+      body: { provider: { data_collection: "deny" } },
+    });
   });
 
   it("skips a provider with a malformed JSON setting instead of crashing, and says why once", () => {
@@ -85,8 +99,8 @@ describe("providerChain", () => {
     expect(providerChain({ ...env, LLM_OPENROUTER_BODY: "not json" }).map((p) => p.name)).toEqual(["groq"]);
     providerChain({ ...env, LLM_OPENROUTER_BODY: "not json" }); // same problem again: not logged twice
     expect(logged.mock.calls.map((c) => String(c[0]))).toEqual([
-      expect.stringContaining('LLM_GROQ_OPTIONS must be a JSON object'),
-      expect.stringContaining('LLM_OPENROUTER_BODY must be a JSON object'),
+      expect.stringContaining("LLM_GROQ_OPTIONS must be a JSON object"),
+      expect.stringContaining("LLM_OPENROUTER_BODY must be a JSON object"),
     ]);
     logged.mockRestore();
   });
@@ -110,7 +124,13 @@ describe("runWithFallback", () => {
     body: null,
   });
   const rateLimited = () =>
-    new APICallError({ message: "slow down", url: "x", requestBodyValues: {}, statusCode: 429, responseHeaders: { "retry-after": "30" } });
+    new APICallError({
+      message: "slow down",
+      url: "x",
+      requestBodyValues: {},
+      statusCode: 429,
+      responseHeaders: { "retry-after": "30" },
+    });
 
   beforeEach(() => resetCooldowns());
 
@@ -124,7 +144,11 @@ describe("runWithFallback", () => {
     };
     const record = async (provider: string, outcome: string) => void outcomes.push(`${provider}:${outcome}`);
 
-    expect(await runWithFallback([p("first"), p("second")], task, record, () => 1_000)).toEqual({ ok: true, value: "done", provider: "second" });
+    expect(await runWithFallback([p("first"), p("second")], task, record, () => 1_000)).toEqual({
+      ok: true,
+      value: "done",
+      provider: "second",
+    });
     expect(outcomes).toEqual(["first:rate_limited", "second:ok"]);
 
     await runWithFallback([p("first"), p("second")], task, record, () => 20_000); // still cooling down (30s)
@@ -141,12 +165,19 @@ describe("runWithFallback", () => {
       tried.push(m.provider);
       return "answer";
     };
-    expect(await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 1_000)).toEqual({ ok: true, value: "answer", provider: "first" });
+    expect(await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 1_000)).toEqual({
+      ok: true,
+      value: "answer",
+      provider: "first",
+    });
     // The working provider wasn't put on a cooldown or retried elsewhere.
     expect(tried).toEqual(["first"]);
     await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 2_000);
     expect(tried).toEqual(["first", "first"]);
-    expect(logged).toHaveBeenCalledWith(expect.stringContaining("couldn't record a ok result for first"), "db connection lost");
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining("couldn't record a ok result for first"),
+      "db connection lost",
+    );
     logged.mockRestore();
   });
 
@@ -158,15 +189,25 @@ describe("runWithFallback", () => {
       return "from second";
     };
     const brokenRecord = async () => Promise.reject(new Error("db down"));
-    expect(await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 1_000)).toEqual({ ok: true, value: "from second", provider: "second" });
+    expect(await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 1_000)).toEqual({
+      ok: true,
+      value: "from second",
+      provider: "second",
+    });
     vi.restoreAllMocks();
   });
 
   it("reports busy when everything is down, unreadable when answers were bad", async () => {
-    expect(await runWithFallback([p("a")], async () => Promise.reject(new TypeError("fetch failed")))).toEqual({ ok: false, reason: "busy" });
+    expect(await runWithFallback([p("a")], async () => Promise.reject(new TypeError("fetch failed")))).toEqual({
+      ok: false,
+      reason: "busy",
+    });
     resetCooldowns();
     const bad = new APICallError({ message: "schema", url: "x", requestBodyValues: {}, statusCode: 400 });
-    expect(await runWithFallback([p("a")], async () => Promise.reject(bad))).toEqual({ ok: false, reason: "unreadable" });
+    expect(await runWithFallback([p("a")], async () => Promise.reject(bad))).toEqual({
+      ok: false,
+      reason: "unreadable",
+    });
     expect(await runWithFallback([], async () => "x")).toEqual({ ok: false, reason: "busy" });
   });
 
@@ -184,8 +225,12 @@ describe("runWithFallback", () => {
 
   it("classifies errors", () => {
     expect(classifyError(rateLimited())).toEqual({ kind: "rate_limited", cooldownMs: 30_000 });
-    expect(classifyError(new APICallError({ message: "", url: "", requestBodyValues: {}, statusCode: 401 })).kind).toBe("auth");
-    expect(classifyError(new APICallError({ message: "", url: "", requestBodyValues: {}, statusCode: 503 })).kind).toBe("unavailable");
+    expect(classifyError(new APICallError({ message: "", url: "", requestBodyValues: {}, statusCode: 401 })).kind).toBe(
+      "auth",
+    );
+    expect(classifyError(new APICallError({ message: "", url: "", requestBodyValues: {}, statusCode: 503 })).kind).toBe(
+      "unavailable",
+    );
     expect(classifyError(new DOMException("timed out", "TimeoutError")).kind).toBe("unavailable");
   });
 });
@@ -210,7 +255,9 @@ describe("entry parsing", () => {
     const oneWallet = { ...ctx, wallets: [{ id: "w-cash", name: "Cash" }] };
     const props = z.toJSONSchema(entrySchema(oneWallet)).properties as Record<string, unknown>;
     expect(JSON.stringify(props.wallet)).not.toContain("enum");
-    expect(JSON.stringify(z.toJSONSchema(entrySchema(ctx)).properties)).toContain('"enum":["Cash","SBI Debit","ICICI Credit Card"]');
+    expect(JSON.stringify(z.toJSONSchema(entrySchema(ctx)).properties)).toContain(
+      '"enum":["Cash","SBI Debit","ICICI Credit Card"]',
+    );
   });
 
   it("explains Indian shorthand and common mix-ups, briefly", () => {
@@ -231,12 +278,16 @@ describe("entry parsing", () => {
       toWalletId: null,
       categoryId: "c-dining",
     });
-    expect(toPrefill(ctx, raw({ type: "income", amount: 42000, wallet: "sbi debit", category: "Salary" }))).toMatchObject({
+    expect(
+      toPrefill(ctx, raw({ type: "income", amount: 42000, wallet: "sbi debit", category: "Salary" })),
+    ).toMatchObject({
       walletId: "w-sbi",
       categoryId: "c-salary",
       amountMinor: 4_200_000,
     });
-    expect(toPrefill(ctx, raw({ type: "transfer", wallet: "SBI Debit", toWallet: "Cash", category: "Dining Out" }))).toMatchObject({
+    expect(
+      toPrefill(ctx, raw({ type: "transfer", wallet: "SBI Debit", toWallet: "Cash", category: "Dining Out" })),
+    ).toMatchObject({
       walletId: "w-sbi",
       toWalletId: "w-cash",
       categoryId: null,
@@ -245,7 +296,9 @@ describe("entry parsing", () => {
 
   it("never trusts the model blindly", () => {
     // Wrong-kind category, unknown wallet, far-future date.
-    expect(toPrefill(ctx, raw({ type: "income", category: "Dining Out", wallet: "Paytm", date: "2030-01-01" }))).toMatchObject({
+    expect(
+      toPrefill(ctx, raw({ type: "income", category: "Dining Out", wallet: "Paytm", date: "2030-01-01" })),
+    ).toMatchObject({
       categoryId: null,
       walletId: "w-cash",
       occurredOn: "2026-10-24",

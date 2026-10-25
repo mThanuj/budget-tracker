@@ -12,12 +12,7 @@ import {
   summarizeTransactions,
   updateTransaction,
 } from "@/server/services/transactions";
-import {
-  archiveWallet,
-  createWallet,
-  deleteWallet,
-  listWallets,
-} from "@/server/services/wallets";
+import { archiveWallet, createWallet, deleteWallet, listWallets } from "@/server/services/wallets";
 import { createTestDb, createTestUser } from "./helpers";
 
 type T = Awaited<ReturnType<typeof createTestDb>>;
@@ -27,8 +22,18 @@ async function setupUser(t: T) {
   await seedNewUser(t.db, u.id);
   const cats = await listCategories(t.db, u.id);
   const [cash] = await listWallets(t.db, u.id);
-  const bank = await createWallet(t.db, u.id, { name: "SBI Debit", kind: "bank", color: "#4a7fc1", openingBalanceMinor: 1_000_00 });
-  const card = await createWallet(t.db, u.id, { name: "ICICI Credit Card", kind: "credit_card", color: "#8a64b8", openingBalanceMinor: -500_00 });
+  const bank = await createWallet(t.db, u.id, {
+    name: "SBI Debit",
+    kind: "bank",
+    color: "#4a7fc1",
+    openingBalanceMinor: 1_000_00,
+  });
+  const card = await createWallet(t.db, u.id, {
+    name: "ICICI Credit Card",
+    kind: "credit_card",
+    color: "#8a64b8",
+    openingBalanceMinor: -500_00,
+  });
   return {
     user: u,
     cash,
@@ -72,11 +77,23 @@ describe("wallets and transactions", () => {
 
   it("computes balances from opening balance, income, spending and transfers", async () => {
     const s = await setupUser(t);
-    await createTransaction(t.db, s.user.id, entry({ type: "income", amount: 42_000_00, walletId: s.bank.id, categoryId: s.salary.id }));
-    await createTransaction(t.db, s.user.id, entry({ amount: 2_380_00, walletId: s.bank.id, categoryId: s.groceries.id }));
+    await createTransaction(
+      t.db,
+      s.user.id,
+      entry({ type: "income", amount: 42_000_00, walletId: s.bank.id, categoryId: s.salary.id }),
+    );
+    await createTransaction(
+      t.db,
+      s.user.id,
+      entry({ amount: 2_380_00, walletId: s.bank.id, categoryId: s.groceries.id }),
+    );
     await createTransaction(t.db, s.user.id, entry({ amount: 1_150_00, walletId: s.card.id }));
     // Pay the card bill from the bank: moves money, isn't spending.
-    await createTransaction(t.db, s.user.id, entry({ type: "transfer", amount: 1_650_00, walletId: s.bank.id, toWalletId: s.card.id }));
+    await createTransaction(
+      t.db,
+      s.user.id,
+      entry({ type: "transfer", amount: 1_650_00, walletId: s.bank.id, toWalletId: s.card.id }),
+    );
 
     expect(await balanceOf(t, s.user.id, s.bank.id)).toBe(1_000_00 + 42_000_00 - 2_380_00 - 1_650_00);
     expect(await balanceOf(t, s.user.id, s.card.id)).toBe(-500_00 - 1_150_00 + 1_650_00);
@@ -89,8 +106,16 @@ describe("wallets and transactions", () => {
 
   it("filters the list by month, wallet, category, type and search text", async () => {
     const s = await setupUser(t);
-    await createTransaction(t.db, s.user.id, entry({ walletId: s.bank.id, categoryId: s.groceries.id, description: "Big Bazaar 50% off" }));
-    await createTransaction(t.db, s.user.id, entry({ walletId: s.cash.id, occurredOn: "2026-09-30", description: "Chai" }));
+    await createTransaction(
+      t.db,
+      s.user.id,
+      entry({ walletId: s.bank.id, categoryId: s.groceries.id, description: "Big Bazaar 50% off" }),
+    );
+    await createTransaction(
+      t.db,
+      s.user.id,
+      entry({ walletId: s.cash.id, occurredOn: "2026-09-30", description: "Chai" }),
+    );
     await createTransaction(t.db, s.user.id, entry({ type: "transfer", walletId: s.bank.id, toWalletId: s.cash.id }));
 
     const oct = { from: "2026-10-01", to: "2026-11-01" };
@@ -118,7 +143,9 @@ describe("wallets and transactions", () => {
     await expect(
       createTransaction(t.db, b.user.id, entry({ walletId: b.bank.id, categoryId: a.groceries.id })),
     ).rejects.toThrow(UserError);
-    await expect(updateTransaction(t.db, b.user.id, aEntry.id, entry({ walletId: b.bank.id }))).rejects.toThrow(UserError);
+    await expect(updateTransaction(t.db, b.user.id, aEntry.id, entry({ walletId: b.bank.id }))).rejects.toThrow(
+      UserError,
+    );
     await expect(deleteTransaction(t.db, b.user.id, aEntry.id)).rejects.toThrow(UserError);
     await expect(archiveWallet(t.db, b.user.id, a.bank.id)).rejects.toThrow(UserError);
     await expect(deleteCategory(t.db, b.user.id, a.groceries.id)).rejects.toThrow(UserError);
@@ -145,7 +172,12 @@ describe("wallets and transactions", () => {
       createTransaction(t.db, s.user.id, entry({ walletId: s.bank.id, categoryId: s.groceries.id })),
     ).rejects.toThrow(/archived/);
     // Editing the amount of an existing entry is still fine.
-    await updateTransaction(t.db, s.user.id, old.id, entry({ walletId: s.cash.id, categoryId: s.groceries.id, amount: 5_00 }));
+    await updateTransaction(
+      t.db,
+      s.user.id,
+      old.id,
+      entry({ walletId: s.cash.id, categoryId: s.groceries.id, amount: 5_00 }),
+    );
 
     const [row] = await t.db.select().from(user).where(eq(user.id, s.user.id));
     expect(row.defaultWalletId).toBeNull(); // archiving the default clears it

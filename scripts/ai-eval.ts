@@ -30,17 +30,32 @@ type Expect = {
 };
 
 const CASES: [string, Expect][] = [
-  ["spent 240 on chai yesterday, paid cash", { type: "expense", amount: 240, date: "2026-10-23", wallet: "Cash", category: "Dining Out" }],
+  [
+    "spent 240 on chai yesterday, paid cash",
+    { type: "expense", amount: 240, date: "2026-10-23", wallet: "Cash", category: "Dining Out" },
+  ],
   ["uber to office 180", { type: "expense", amount: 180, category: "Transport" }],
   ["got salary 42k in SBI", { type: "income", amount: 42000, wallet: "SBI Debit", category: "Salary" }],
   ["paid 1.5L rent", { type: "expense", amount: 150000, category: "Rent & Housing" }],
   ["moved 5000 from SBI to cash", { type: "transfer", amount: 5000, wallet: "SBI Debit", toWallet: "Cash" }],
   ["ATM withdrawal 2000 from SBI", { type: "transfer", amount: 2000, wallet: "SBI Debit", toWallet: "Cash" }],
-  ["netflix 649 on icici card", { type: "expense", amount: 649, wallet: "ICICI Credit Card", category: ["Subscriptions", "Entertainment"] }],
-  ["groceries at big bazaar 2,380 on 21st", { type: "expense", amount: 2380, date: "2026-10-21", category: "Groceries" }],
-  ["petrol 1150 last thursday on card", { type: "expense", amount: 1150, date: "2026-10-22", wallet: "ICICI Credit Card", category: "Fuel" }],
+  [
+    "netflix 649 on icici card",
+    { type: "expense", amount: 649, wallet: "ICICI Credit Card", category: ["Subscriptions", "Entertainment"] },
+  ],
+  [
+    "groceries at big bazaar 2,380 on 21st",
+    { type: "expense", amount: 2380, date: "2026-10-21", category: "Groceries" },
+  ],
+  [
+    "petrol 1150 last thursday on card",
+    { type: "expense", amount: 1150, date: "2026-10-22", wallet: "ICICI Credit Card", category: "Fuel" },
+  ],
   ["refund from amazon 499", { type: "income", amount: 499, category: "Refunds & Cashback" }],
-  ["paid credit card bill 15000 from sbi", { type: "transfer", amount: 15000, wallet: "SBI Debit", toWallet: "ICICI Credit Card" }],
+  [
+    "paid credit card bill 15000 from sbi",
+    { type: "transfer", amount: 15000, wallet: "SBI Debit", toWallet: "ICICI Credit Card" },
+  ],
   ["electricity bill 1,480", { type: "expense", amount: 1480, category: "Bills & Utilities" }],
   ["medicines 320 yesterday", { type: "expense", amount: 320, date: "2026-10-23", category: "Health" }],
   ["movie tickets 600", { type: "expense", amount: 600, category: "Entertainment" }],

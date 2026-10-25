@@ -27,7 +27,8 @@ export const DEFAULT_WALLET_COLOR: Record<WalletKind, string> = {
 export function describeBalance(kind: WalletKind, balanceMinor: number, currency: string) {
   if (kind === "credit_card") {
     if (balanceMinor < 0) return { label: "Owed", amount: formatMoney(-balanceMinor, currency), tone: "owed" as const };
-    if (balanceMinor > 0) return { label: "Credit", amount: formatMoney(balanceMinor, currency), tone: "positive" as const };
+    if (balanceMinor > 0)
+      return { label: "Credit", amount: formatMoney(balanceMinor, currency), tone: "positive" as const };
     return { label: "Nothing owed", amount: formatMoney(0, currency), tone: "neutral" as const };
   }
   return {

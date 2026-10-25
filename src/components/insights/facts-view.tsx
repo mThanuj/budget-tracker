@@ -28,28 +28,40 @@ export function FactsView({ facts }: { facts: InsightFacts }) {
   const notes: ReactNode[] = [];
   for (const b of facts.budgetsOver) {
     notes.push(
-      <Note key={`over-${b.category}`} icon={<OctagonAlertIcon className="size-4 text-destructive" aria-label="Over budget" />}>
+      <Note
+        key={`over-${b.category}`}
+        icon={<OctagonAlertIcon className="size-4 text-destructive" aria-label="Over budget" />}
+      >
         {b.category}: {b.spent} of {b.limit}, {b.over} over
       </Note>,
     );
   }
   for (const b of facts.budgetsNearLimit) {
     notes.push(
-      <Note key={`near-${b.category}`} icon={<TriangleAlertIcon className="size-4 text-warning" aria-label="Almost used up" />}>
+      <Note
+        key={`near-${b.category}`}
+        icon={<TriangleAlertIcon className="size-4 text-warning" aria-label="Almost used up" />}
+      >
         {b.category}: {b.used} of {b.limit} used
       </Note>,
     );
   }
   for (const d of facts.possibleDuplicates) {
     notes.push(
-      <Note key={`dup-${d.what}-${d.dates[0]}`} icon={<CopyIcon className="size-4 text-warning" aria-label="Possible double charge" />}>
+      <Note
+        key={`dup-${d.what}-${d.dates[0]}`}
+        icon={<CopyIcon className="size-4 text-warning" aria-label="Possible double charge" />}
+      >
         {d.what}, {d.amount} on {d.dates.join(" and ")}. Charged twice?
       </Note>,
     );
   }
   for (const p of facts.priceChanges) {
     notes.push(
-      <Note key={`price-${p.name}`} icon={<CircleAlertIcon className="size-4 text-muted-foreground" aria-label="Price change" />}>
+      <Note
+        key={`price-${p.name}`}
+        icon={<CircleAlertIcon className="size-4 text-muted-foreground" aria-label="Price change" />}
+      >
         {p.name} changed from {p.from} to {p.to}
       </Note>,
     );
@@ -57,7 +69,8 @@ export function FactsView({ facts }: { facts: InsightFacts }) {
   if (facts.entriesWithoutCategory > 0) {
     notes.push(
       <Note key="uncat" icon={<CircleAlertIcon className="size-4 text-muted-foreground" aria-label="Tip" />}>
-        {facts.entriesWithoutCategory} {facts.entriesWithoutCategory === 1 ? "expense has" : "expenses have"} no category
+        {facts.entriesWithoutCategory} {facts.entriesWithoutCategory === 1 ? "expense has" : "expenses have"} no
+        category
       </Note>,
     );
   }
@@ -69,14 +82,21 @@ export function FactsView({ facts }: { facts: InsightFacts }) {
         <Stat
           label="Spent"
           value={facts.spending}
-          note={facts.comparedWith && `${facts.comparedWith.change} than ${facts.comparedWith.period} (${facts.comparedWith.spending})`}
+          note={
+            facts.comparedWith &&
+            `${facts.comparedWith.change} than ${facts.comparedWith.period} (${facts.comparedWith.spending})`
+          }
         />
         {facts.kept ? (
           <Stat label="Kept" value={facts.kept.amount} note={`${facts.kept.shareOfIncome} of what came in`} />
         ) : facts.spentMoreThanIncomeBy ? (
           <Stat label="Spent more than came in" value={facts.spentMoreThanIncomeBy} />
         ) : limit ? (
-          <Stat label="Monthly limit" value={limit.left ?? limit.over ?? ""} note={limit.left ? `left of ${limit.limit}` : `over ${limit.limit}`} />
+          <Stat
+            label="Monthly limit"
+            value={limit.left ?? limit.over ?? ""}
+            note={limit.left ? `left of ${limit.limit}` : `over ${limit.limit}`}
+          />
         ) : null}
       </dl>
 
@@ -103,9 +123,15 @@ export function FactsView({ facts }: { facts: InsightFacts }) {
             <caption className="mb-2 text-left font-medium">Where it went</caption>
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
-                <th scope="col" className="py-2 pr-3 font-normal">Category</th>
-                <th scope="col" className="py-2 pr-3 text-right font-normal">Spent</th>
-                <th scope="col" className="py-2 pr-3 text-right font-normal">Share</th>
+                <th scope="col" className="py-2 pr-3 font-normal">
+                  Category
+                </th>
+                <th scope="col" className="py-2 pr-3 text-right font-normal">
+                  Spent
+                </th>
+                <th scope="col" className="py-2 pr-3 text-right font-normal">
+                  Share
+                </th>
                 <th scope="col" className="hidden py-2 text-right font-normal sm:table-cell">
                   {facts.comparedWith ? `vs ${facts.comparedWith.period}` : "Before"}
                 </th>
@@ -114,7 +140,9 @@ export function FactsView({ facts }: { facts: InsightFacts }) {
             <tbody>
               {facts.categories.map((c) => (
                 <tr key={c.name} className="border-b border-border/60 last:border-0">
-                  <th scope="row" className="py-2 pr-3 text-left font-normal">{c.name}</th>
+                  <th scope="row" className="py-2 pr-3 text-left font-normal">
+                    {c.name}
+                  </th>
                   <td className="tabular py-2 pr-3 text-right">{c.spent}</td>
                   <td className="tabular py-2 pr-3 text-right text-muted-foreground">{c.shareOfSpending}</td>
                   <td className="hidden py-2 text-right text-muted-foreground sm:table-cell">{c.change}</td>

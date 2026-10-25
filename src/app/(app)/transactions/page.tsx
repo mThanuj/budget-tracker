@@ -40,7 +40,10 @@ export default function TransactionsPage({ searchParams }: PageProps<"/transacti
 const paramsSchema = z.object({
   month: z.string().optional(),
   wallet: z.uuid().optional().catch(undefined),
-  category: z.union([z.uuid(), z.literal("none")]).optional().catch(undefined),
+  category: z
+    .union([z.uuid(), z.literal("none")])
+    .optional()
+    .catch(undefined),
   type: z.enum(["income", "expense", "transfer"]).optional().catch(undefined),
   q: z.string().max(100).optional().catch(undefined),
 });
@@ -88,9 +91,7 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
 
   const values: FilterValues = { wallet: params.wallet, category: params.category, type: params.type, q: params.q };
   const filtered = Boolean(values.wallet || values.category || values.type || values.q);
-  const keep = new URLSearchParams(
-    Object.entries(values).filter((e): e is [string, string] => Boolean(e[1])),
-  );
+  const keep = new URLSearchParams(Object.entries(values).filter((e): e is [string, string] => Boolean(e[1])));
   const monthHref = (m: string) => `/transactions?${new URLSearchParams({ month: m, ...Object.fromEntries(keep) })}`;
   const left = summary.incomeMinor - summary.expenseMinor;
 
@@ -126,7 +127,9 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
       {rows.length === 0 ? (
         <EmptyState
           headingLevel={3}
-          title={filtered ? "No entries match these filters" : `Nothing recorded in ${formatMonth(month).split(" ")[0]}`}
+          title={
+            filtered ? "No entries match these filters" : `Nothing recorded in ${formatMonth(month).split(" ")[0]}`
+          }
           action={!filtered && <AddEntryButton />}
         >
           {filtered
@@ -136,11 +139,17 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
       ) : (
         <div className="grid gap-5">
           {groupByDay(rows).map((g) => (
-            <section key={g.date} aria-label={formatDay(g.date, today)} className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
+            <section
+              key={g.date}
+              aria-label={formatDay(g.date, today)}
+              className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10"
+            >
               <header className="flex items-baseline justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2 text-sm sm:px-5">
                 <h3 className="font-medium">{formatDay(g.date, today)}</h3>
                 {g.spentMinor > 0 && (
-                  <span className="tabular text-xs text-muted-foreground">{formatMoney(g.spentMinor, currency)} spent</span>
+                  <span className="tabular text-xs text-muted-foreground">
+                    {formatMoney(g.spentMinor, currency)} spent
+                  </span>
                 )}
               </header>
               <ul className="divide-y divide-dashed divide-border">
@@ -153,7 +162,9 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
             </section>
           ))}
           {rows.length >= 500 && (
-            <p className="text-center text-sm text-muted-foreground">Showing the latest 500 entries. Use filters to narrow it down.</p>
+            <p className="text-center text-sm text-muted-foreground">
+              Showing the latest 500 entries. Use filters to narrow it down.
+            </p>
           )}
         </div>
       )}

@@ -12,7 +12,11 @@ export async function POST(request: Request) {
   const result = await handleRazorpayWebhook(
     db,
     cfg,
-    { rawBody, signature: request.headers.get("x-razorpay-signature"), eventId: request.headers.get("x-razorpay-event-id") },
+    {
+      rawBody,
+      signature: request.headers.get("x-razorpay-signature"),
+      eventId: request.headers.get("x-razorpay-event-id"),
+    },
     (id) => fetchSubscription(cfg, id),
   );
   return new Response(result.body, { status: result.status });

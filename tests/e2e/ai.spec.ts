@@ -56,29 +56,44 @@ test("a question in a link from elsewhere is filled in, not sent", async ({ sign
   await page.goto(`/ask?q=${encodeURIComponent(question)}`);
   await expect(page.getByLabel("Your question")).toHaveValue(question); // filled in once hydrated
   await expect(page.getByText("10 questions left today")).toBeVisible();
-  expect(await db.select().from(schema.aiUsage).where(eq(schema.aiUsage.scope, `user:${userId}`))).toHaveLength(0);
+  expect(
+    await db
+      .select()
+      .from(schema.aiUsage)
+      .where(eq(schema.aiUsage.scope, `user:${userId}`)),
+  ).toHaveLength(0);
 });
 
 // The AI work happens on the server, so the heavier AI tests run in one browser
 // only; running both at once just doubles traffic against free rate limits.
 const desktopOnly = () => test.skip(test.info().project.name !== "desktop-chrome", "Server-side AI: checked once");
 
-test("the money chat answers from the user's own entries", { tag: "@live-ai" }, async ({ signedIn: { page, userId } }) => {
-  desktopOnly();
-  const [cash] = await listWallets(db, userId);
-  const groceries = (await listCategories(db, userId)).find((c) => c.name === "Groceries")!;
-  await createTransaction(db, userId, {
-    type: "expense", amount: 2_380_00, occurredOn: todayInTz("Asia/Kolkata"), description: "Big Bazaar", notes: null,
-    walletId: cash.id, toWalletId: null, categoryId: groceries.id,
-  });
+test(
+  "the money chat answers from the user's own entries",
+  { tag: "@live-ai" },
+  async ({ signedIn: { page, userId } }) => {
+    desktopOnly();
+    const [cash] = await listWallets(db, userId);
+    const groceries = (await listCategories(db, userId)).find((c) => c.name === "Groceries")!;
+    await createTransaction(db, userId, {
+      type: "expense",
+      amount: 2_380_00,
+      occurredOn: todayInTz("Asia/Kolkata"),
+      description: "Big Bazaar",
+      notes: null,
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId: groceries.id,
+    });
 
-  await page.goto("/ask");
-  await page.getByRole("button", { name: "What are my biggest expenses this month?" }).click();
-  const answer = page.getByRole("list", { name: "Conversation" }).getByRole("listitem").nth(1);
-  await expect(answer).toContainText("2,380", { timeout: 45_000 });
-  await expect(answer).toContainText("Looked up:");
-  await expect(page.getByText(/questions? left today/)).toContainText("9 questions left today");
-});
+    await page.goto("/ask");
+    await page.getByRole("button", { name: "What are my biggest expenses this month?" }).click();
+    const answer = page.getByRole("list", { name: "Conversation" }).getByRole("listitem").nth(1);
+    await expect(answer).toContainText("2,380", { timeout: 45_000 });
+    await expect(answer).toContainText("Looked up:");
+    await expect(page.getByText(/questions? left today/)).toContainText("9 questions left today");
+  },
+);
 
 test("the setup answer box turns words into rows", { tag: "@live-ai" }, async ({ newUser: { page } }) => {
   desktopOnly();

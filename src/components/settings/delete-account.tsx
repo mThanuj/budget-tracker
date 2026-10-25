@@ -40,9 +40,10 @@ export function DeleteAccount({ pro }: { pro: boolean }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete your account?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently deletes your wallets, entries, budgets, goals, recurring items and reports. It can&rsquo;t be undone.
-              {pro && " Your Pro renewal is cancelled now, and the rest of the paid period isn't refunded."} Download your entries
-              first if you want a copy.
+              This permanently deletes your wallets, entries, budgets, goals, recurring items and reports. It
+              can&rsquo;t be undone.
+              {pro && " Your Pro renewal is cancelled now, and the rest of the paid period isn't refunded."} Download
+              your entries first if you want a copy.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <form
@@ -59,7 +60,13 @@ export function DeleteAccount({ pro }: { pro: boolean }) {
             }}
           >
             <Label htmlFor="delete-confirm">Type DELETE to confirm</Label>
-            <Input id="delete-confirm" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" disabled={pending} />
+            <Input
+              id="delete-confirm"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              autoComplete="off"
+              disabled={pending}
+            />
             {error && (
               <p role="alert" className="text-sm text-destructive">
                 {error}
@@ -68,7 +75,12 @@ export function DeleteAccount({ pro }: { pro: boolean }) {
           </form>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Keep my account</AlertDialogCancel>
-            <Button type="submit" form="delete-account" variant="destructive" disabled={pending || typed.trim().toUpperCase() !== "DELETE"}>
+            <Button
+              type="submit"
+              form="delete-account"
+              variant="destructive"
+              disabled={pending || typed.trim().toUpperCase() !== "DELETE"}
+            >
               {pending ? "Deleting…" : "Delete everything"}
             </Button>
           </AlertDialogFooter>

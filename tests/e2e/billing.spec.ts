@@ -10,7 +10,9 @@ import { db, expect, test } from "./support/fixtures";
 // Plans and upsells only show with BILLING_ENABLED="true" and Razorpay keys in .env.local.
 const billingOn =
   process.env.BILLING_ENABLED?.trim() === "true" &&
-  ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_PLAN_MONTHLY", "RAZORPAY_PLAN_YEARLY"].every((k) => process.env[k]?.trim());
+  ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_PLAN_MONTHLY", "RAZORPAY_PLAN_YEARLY"].every((k) =>
+    process.env[k]?.trim(),
+  );
 const paymentsOff = process.env.BILLING_ENABLED?.trim() !== "true";
 const aiOn = Boolean(process.env.LLM_GROQ_API_KEY);
 
@@ -40,7 +42,14 @@ async function seedLastMonth(userId: string) {
   ] as const;
   for (const [type, amount, day, description, category] of entries) {
     await createTransaction(db, userId, {
-      type, amount, occurredOn: `${lastMonth}-${day}`, description, notes: null, walletId: cash.id, toWalletId: null, categoryId: c[category] ?? null,
+      type,
+      amount,
+      occurredOn: `${lastMonth}-${day}`,
+      description,
+      notes: null,
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId: c[category] ?? null,
     });
   }
   return formatMonth(lastMonth);
@@ -91,7 +100,9 @@ test.describe("with AI on", () => {
   test("free users who run out of questions are pointed at Pro", async ({ signedIn: { page, userId } }) => {
     test.skip(!aiOn, "No AI provider key in .env.local");
     const scope = `user:${userId}`;
-    await db.insert(schema.aiUsage).values({ scope, day: new Date().toISOString().slice(0, 10), feature: "chat", count: 10 });
+    await db
+      .insert(schema.aiUsage)
+      .values({ scope, day: new Date().toISOString().slice(0, 10), feature: "chat", count: 10 });
     try {
       await page.goto("/ask");
       await expect(page.getByText("You've used today's questions. They reset tomorrow.")).toBeVisible();

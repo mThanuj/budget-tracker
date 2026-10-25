@@ -53,7 +53,12 @@ export function GoalCard({ goal, currency, today }: { goal: GoalCardData; curren
   const [editing, setEditing] = useState(false);
   const [contributing, setContributing] = useState<"add" | "withdraw" | null>(null);
   const [confirm, setConfirm] = useState<"archive" | "delete" | null>(null);
-  const p = goalProgress({ targetMinor: goal.targetMinor, savedMinor: goal.savedMinor, targetDate: goal.targetDate, today });
+  const p = goalProgress({
+    targetMinor: goal.targetMinor,
+    savedMinor: goal.savedMinor,
+    targetDate: goal.targetDate,
+    today,
+  });
 
   let plan: string;
   if (p.reached) plan = "Goal reached. You can archive it or keep adding.";
@@ -63,7 +68,12 @@ export function GoalCard({ goal, currency, today }: { goal: GoalCardData; curren
   else plan = `${formatMoney(p.remainingMinor, currency)} to go. Add a date to get a monthly plan.`;
 
   return (
-    <article className={cn("flex flex-col gap-4 rounded-2xl bg-card p-5 ring-1 ring-foreground/10", goal.archived && "opacity-70")}>
+    <article
+      className={cn(
+        "flex flex-col gap-4 rounded-2xl bg-card p-5 ring-1 ring-foreground/10",
+        goal.archived && "opacity-70",
+      )}
+    >
       <div className="flex items-start gap-3">
         <CategoryIcon icon={goal.icon} color={goal.color} size="lg" />
         <div className="min-w-0 flex-1">
@@ -106,7 +116,9 @@ export function GoalCard({ goal, currency, today }: { goal: GoalCardData; curren
       <div>
         <p className="text-2xl font-semibold">
           {formatMoney(goal.savedMinor, currency)}
-          <span className="ml-1.5 text-sm font-normal text-muted-foreground">of {formatMoney(goal.targetMinor, currency)}</span>
+          <span className="ml-1.5 text-sm font-normal text-muted-foreground">
+            of {formatMoney(goal.targetMinor, currency)}
+          </span>
         </p>
         <Meter
           className="mt-3"

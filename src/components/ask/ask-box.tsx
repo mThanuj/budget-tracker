@@ -31,7 +31,13 @@ export function AskBox() {
         }}
         className="flex gap-2"
       >
-        <Input value={q} onChange={(e) => setQ(e.target.value)} aria-label="Your question" placeholder="How much did I spend on food last month?" className="h-10" />
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Your question"
+          placeholder="How much did I spend on food last month?"
+          className="h-10"
+        />
         <Button type="submit" className="h-10" disabled={!q.trim()}>
           Ask
         </Button>

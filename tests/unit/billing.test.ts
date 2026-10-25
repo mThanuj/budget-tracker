@@ -1,7 +1,13 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { planFromSubscriptions } from "@/server/billing/plan";
-import { razorpayConfig, razorpayKeys, razorpaySubscriptionSchema, verifyCheckoutSignature, verifyWebhookSignature } from "@/server/billing/razorpay";
+import {
+  razorpayConfig,
+  razorpayKeys,
+  razorpaySubscriptionSchema,
+  verifyCheckoutSignature,
+  verifyWebhookSignature,
+} from "@/server/billing/razorpay";
 
 const now = new Date("2026-10-24T12:00:00Z");
 const later = new Date("2026-11-24T12:00:00Z");
@@ -26,7 +32,10 @@ describe("plan resolution", () => {
   });
 
   it("stays Pro while Razorpay retries a failed charge, and flags it", () => {
-    expect(planFromSubscriptions([sub("pending")], now)).toMatchObject({ id: "pro", subscription: { paymentProblem: true } });
+    expect(planFromSubscriptions([sub("pending")], now)).toMatchObject({
+      id: "pro",
+      subscription: { paymentProblem: true },
+    });
   });
 
   it("drops to Free once retries run out", () => {
@@ -34,8 +43,14 @@ describe("plan resolution", () => {
   });
 
   it("keeps Pro after cancelling until the paid period ends", () => {
-    expect(planFromSubscriptions([sub("active", later, true)], now)).toMatchObject({ id: "pro", subscription: { renewsAt: null, endsAt: later } });
-    expect(planFromSubscriptions([sub("cancelled", later)], now)).toMatchObject({ id: "pro", subscription: { endsAt: later } });
+    expect(planFromSubscriptions([sub("active", later, true)], now)).toMatchObject({
+      id: "pro",
+      subscription: { renewsAt: null, endsAt: later },
+    });
+    expect(planFromSubscriptions([sub("cancelled", later)], now)).toMatchObject({
+      id: "pro",
+      subscription: { endsAt: later },
+    });
     expect(planFromSubscriptions([sub("cancelled", earlier)], now).id).toBe("free");
     expect(planFromSubscriptions([sub("expired", later)], now).id).toBe("free");
   });
@@ -63,7 +78,9 @@ describe("Razorpay signatures", () => {
     expect(verifyCheckoutSignature({ paymentId: "pay_123", subscriptionId: "sub_456", signature }, secret)).toBe(true);
     // Same payment, someone else's subscription id: rejected.
     expect(verifyCheckoutSignature({ paymentId: "pay_123", subscriptionId: "sub_999", signature }, secret)).toBe(false);
-    expect(verifyCheckoutSignature({ paymentId: "pay_123", subscriptionId: "sub_456", signature: "abc" }, secret)).toBe(false);
+    expect(verifyCheckoutSignature({ paymentId: "pay_123", subscriptionId: "sub_456", signature: "abc" }, secret)).toBe(
+      false,
+    );
   });
 
   it("checks webhooks against the exact raw body", () => {
@@ -75,7 +92,13 @@ describe("Razorpay signatures", () => {
   });
 
   it("needs the switch, keys and both plan ids before billing switches on", () => {
-    const env = { BILLING_ENABLED: "true", RAZORPAY_KEY_ID: "rzp_test_1", RAZORPAY_KEY_SECRET: "s", RAZORPAY_PLAN_MONTHLY: "plan_m", RAZORPAY_PLAN_YEARLY: "plan_y" };
+    const env = {
+      BILLING_ENABLED: "true",
+      RAZORPAY_KEY_ID: "rzp_test_1",
+      RAZORPAY_KEY_SECRET: "s",
+      RAZORPAY_PLAN_MONTHLY: "plan_m",
+      RAZORPAY_PLAN_YEARLY: "plan_y",
+    };
     expect(razorpayConfig(env)).toMatchObject({ keyId: "rzp_test_1", plans: { monthly: "plan_m", yearly: "plan_y" } });
     expect(razorpayConfig({ ...env, RAZORPAY_PLAN_YEARLY: " " })).toBeNull();
     expect(razorpayConfig({})).toBeNull();
@@ -88,10 +111,22 @@ describe("Razorpay signatures", () => {
 });
 
 describe("Razorpay responses are checked, not trusted", () => {
-  const good = { id: "sub_1", plan_id: "plan_m", status: "active", current_start: 1792833694, current_end: 1795458600, ended_at: null, notes: { userId: "u1" } };
+  const good = {
+    id: "sub_1",
+    plan_id: "plan_m",
+    status: "active",
+    current_start: 1792833694,
+    current_end: 1795458600,
+    ended_at: null,
+    notes: { userId: "u1" },
+  };
 
   it("accepts a real subscription, with [] or missing notes and missing timestamps", () => {
-    expect(razorpaySubscriptionSchema.parse(good)).toMatchObject({ id: "sub_1", current_end: 1795458600, ended_at: null });
+    expect(razorpaySubscriptionSchema.parse(good)).toMatchObject({
+      id: "sub_1",
+      current_end: 1795458600,
+      ended_at: null,
+    });
     expect(razorpaySubscriptionSchema.parse({ ...good, notes: [] }).notes).toEqual([]);
     const noEnd: Record<string, unknown> = { ...good };
     delete noEnd.current_end;

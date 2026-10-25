@@ -49,7 +49,10 @@ test("a category budget warns at 80% and the alert can be dismissed", async ({ s
   await expect(row).toContainText("₹150.00 left");
 
   await page.goto("/dashboard");
-  const alert = page.getByRole("list", { name: "Alerts" }).getByRole("listitem").filter({ hasText: "85% of your Dining Out budget used" });
+  const alert = page
+    .getByRole("list", { name: "Alerts" })
+    .getByRole("listitem")
+    .filter({ hasText: "85% of your Dining Out budget used" });
   await expect(alert).toBeVisible();
   // The alert hides instantly; wait for the dismissal to be saved before reloading,
   // otherwise the reload cancels the request.

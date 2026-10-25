@@ -35,7 +35,11 @@ export function IncomeSpendingChart({
   const compact = (v: number) => formatMoney(v, currency, { compact: true });
 
   if (max === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">No income or spending recorded in the last 6 months.</p>;
+    return (
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        No income or spending recorded in the last 6 months.
+      </p>
+    );
   }
 
   return (
@@ -74,7 +78,10 @@ export function IncomeSpendingChart({
               style={{ bottom: `${(t / top) * 100}%` }}
             />
           ))}
-          <ol className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}>
+          <ol
+            className="absolute inset-0 grid"
+            style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}
+          >
             {data.map((d, i) => {
               const sofar = d.month === currentMonth ? " (so far)" : "";
               const left = d.incomeMinor - d.expenseMinor;
@@ -89,7 +96,10 @@ export function IncomeSpendingChart({
                   onBlur={() => setActive((a) => (a === i ? null : a))}
                   className="group relative flex h-full items-end justify-center gap-[2px] rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
-                  <span aria-hidden className={cn("absolute inset-0 rounded-md transition-colors", active === i && "bg-muted/60")} />
+                  <span
+                    aria-hidden
+                    className={cn("absolute inset-0 rounded-md transition-colors", active === i && "bg-muted/60")}
+                  />
                   {SERIES.map((s) => (
                     <span
                       key={s.key}
@@ -113,13 +123,17 @@ export function IncomeSpendingChart({
                       {SERIES.map((s) => (
                         <span key={s.key} className="flex items-center gap-2">
                           <span aria-hidden className={cn("h-0.5 w-3 rounded-full", s.className)} />
-                          <span className="tabular font-semibold text-foreground">{formatMoney(d[s.key], currency)}</span>
+                          <span className="tabular font-semibold text-foreground">
+                            {formatMoney(d[s.key], currency)}
+                          </span>
                           <span className="text-muted-foreground">{s.label}</span>
                         </span>
                       ))}
                       <span className="mt-0.5 border-t border-border pt-1 text-muted-foreground">
                         {left >= 0 ? "Left over" : "Overspent"}{" "}
-                        <span className="tabular font-semibold text-foreground">{formatMoney(Math.abs(left), currency)}</span>
+                        <span className="tabular font-semibold text-foreground">
+                          {formatMoney(Math.abs(left), currency)}
+                        </span>
                       </span>
                     </span>
                   )}
@@ -131,7 +145,11 @@ export function IncomeSpendingChart({
 
         {/* X axis */}
         <span aria-hidden />
-        <ol aria-hidden className="mt-2 grid text-center text-xs text-muted-foreground" style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}>
+        <ol
+          aria-hidden
+          className="mt-2 grid text-center text-xs text-muted-foreground"
+          style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}
+        >
           {data.map((d) => (
             <li key={d.month} className={cn(d.month === currentMonth && "font-medium text-foreground")}>
               {shortMonth(d.month)}
@@ -141,7 +159,9 @@ export function IncomeSpendingChart({
       </div>
 
       <details className="text-sm">
-        <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">Show as table</summary>
+        <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">
+          Show as table
+        </summary>
         <table className="mt-3 w-full text-left">
           <thead className="text-xs text-muted-foreground">
             <tr>

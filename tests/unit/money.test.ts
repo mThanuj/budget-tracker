@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  currencyExponent,
-  currencySymbol,
-  formatMoney,
-  isValidCurrency,
-  minorToInput,
-  parseMoney,
-} from "@/lib/money";
+import { currencyExponent, currencySymbol, formatMoney, isValidCurrency, minorToInput, parseMoney } from "@/lib/money";
 
 describe("currencyExponent", () => {
   it("uses each currency's own number of decimals", () => {
@@ -98,7 +91,9 @@ describe("whole amounts without zero decimals", () => {
   });
 
   it("keeps compact notation as it was", () => {
-    expect(formatMoney(1_25_000_00, "INR", { compact: true, trimWhole: true })).toBe(formatMoney(1_25_000_00, "INR", { compact: true }));
+    expect(formatMoney(1_25_000_00, "INR", { compact: true, trimWhole: true })).toBe(
+      formatMoney(1_25_000_00, "INR", { compact: true }),
+    );
   });
 
   it("trims input values the same way", () => {

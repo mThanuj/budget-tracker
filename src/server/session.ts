@@ -5,9 +5,7 @@ import { cache } from "react";
 import { auth, type CurrentUser } from "./auth";
 
 /** The current session, read once per request. */
-export const getSession = cache(async () =>
-  auth.api.getSession({ headers: await headers() }),
-);
+export const getSession = cache(async () => auth.api.getSession({ headers: await headers() }));
 
 /**
  * Data Access Layer entry point: every page, server action and route handler

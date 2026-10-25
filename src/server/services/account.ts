@@ -19,7 +19,18 @@ const TYPE_LABEL = { income: "Income", expense: "Expense", transfer: "Transfer" 
 /** Every entry, oldest first, as a spreadsheet-friendly CSV (UTF-8 with BOM for Excel). */
 export async function entriesCsv(db: Db, userId: string, currency: string) {
   const rows = (await listTransactions(db, userId, {}, 1_000_000)).reverse();
-  const header = ["Date", "Type", "Amount", "Currency", "Description", "Category", "Wallet", "To wallet", "Notes", "Added by"];
+  const header = [
+    "Date",
+    "Type",
+    "Amount",
+    "Currency",
+    "Description",
+    "Category",
+    "Wallet",
+    "To wallet",
+    "Notes",
+    "Added by",
+  ];
   const lines = rows.map((r) =>
     [
       csvCell(r.occurredOn, { text: false }),

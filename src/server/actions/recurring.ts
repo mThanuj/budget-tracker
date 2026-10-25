@@ -63,7 +63,13 @@ export async function confirmDue(_prev: ActionResult, formData: FormData): Promi
           .refine((d) => d <= today, "Pick a date that isn't in the future."),
       })
       .parse(formObject(formData));
-    await confirmOccurrence(db, user.id, fields.ruleId, { amountMinor: fields.amount, occurredOn: fields.occurredOn }, today);
+    await confirmOccurrence(
+      db,
+      user.id,
+      fields.ruleId,
+      { amountMinor: fields.amount, occurredOn: fields.occurredOn },
+      today,
+    );
     refresh();
   });
 }

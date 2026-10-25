@@ -16,15 +16,7 @@ const SHOWN = 5;
  * Where the money went: one hue for every bar (the categories are nominal, so
  * color would only repeat what bar length says). Icons and names carry identity.
  */
-export function CategoryBars({
-  rows,
-  currency,
-  month,
-}: {
-  rows: CategorySpend[];
-  currency: string;
-  month: string;
-}) {
+export function CategoryBars({ rows, currency, month }: { rows: CategorySpend[]; currency: string; month: string }) {
   const total = rows.reduce((s, r) => s + r.spentMinor, 0);
   if (total === 0) {
     return <p className="py-6 text-center text-sm text-muted-foreground">No spending recorded this month yet.</p>;
@@ -41,14 +33,16 @@ export function CategoryBars({
       href: `/transactions?month=${month}&type=expense&category=${r.categoryId ?? "none"}`,
     })),
     ...(rest.length > 0
-      ? [{
-          key: "rest",
-          name: `Everything else (${rest.length})`,
-          icon: "circle-ellipsis",
-          color: null,
-          spentMinor: rest.reduce((s, r) => s + r.spentMinor, 0),
-          href: `/transactions?month=${month}&type=expense`,
-        }]
+      ? [
+          {
+            key: "rest",
+            name: `Everything else (${rest.length})`,
+            icon: "circle-ellipsis",
+            color: null,
+            spentMinor: rest.reduce((s, r) => s + r.spentMinor, 0),
+            href: `/transactions?month=${month}&type=expense`,
+          },
+        ]
       : []),
   ];
   const max = Math.max(...items.map((i) => i.spentMinor));

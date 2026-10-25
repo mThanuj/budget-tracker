@@ -10,10 +10,12 @@ const schema = z.object({
   // Bearer token for /api/cron/* (set on the server; optional in development).
   // Optional, so a bad value disables only the cron job (logged) instead of
   // failing every request the way a missing required setting does.
-  CRON_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(24).optional()).catch(() => {
-    console.error("CRON_SECRET is shorter than 24 characters, so the recurring-entries job is off until it's fixed.");
-    return undefined;
-  }),
+  CRON_SECRET: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().min(24).optional())
+    .catch(() => {
+      console.error("CRON_SECRET is shorter than 24 characters, so the recurring-entries job is off until it's fixed.");
+      return undefined;
+    }),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -37,9 +39,7 @@ export function env(): Env {
 
   const parsed = schema.safeParse(process.env);
   if (!parsed.success) {
-    throw new Error(
-      `Invalid environment variables (see .env.example):\n${z.prettifyError(parsed.error)}`,
-    );
+    throw new Error(`Invalid environment variables (see .env.example):\n${z.prettifyError(parsed.error)}`);
   }
   cached = parsed.data;
   return cached;

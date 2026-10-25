@@ -106,28 +106,59 @@ describe("detectSubscriptions", () => {
 
   it("spots a monthly charge, even after a price change", () => {
     const found = detectSubscriptions(
-      [rec("Netflix", 649_00, "2026-07-12"), rec("NETFLIX.COM", 649_00, "2026-08-12"), rec("Netflix", 799_00, "2026-09-12")],
+      [
+        rec("Netflix", 649_00, "2026-07-12"),
+        rec("NETFLIX.COM", 649_00, "2026-08-12"),
+        rec("Netflix", 799_00, "2026-09-12"),
+      ],
       new Set(),
     );
     expect(found).toHaveLength(1);
-    expect(found[0]).toMatchObject({ merchantKey: "netflix", frequency: "monthly", amountMinor: 799_00, nextExpectedOn: "2026-10-12", occurrences: 3 });
+    expect(found[0]).toMatchObject({
+      merchantKey: "netflix",
+      frequency: "monthly",
+      amountMinor: 799_00,
+      nextExpectedOn: "2026-10-12",
+      occurrences: 3,
+    });
   });
 
   it("ignores irregular or wildly varying spending, and keys already tracked", () => {
-    const groceries = [rec("Big Bazaar", 2_380_00, "2026-07-03"), rec("Big Bazaar", 900_00, "2026-08-02"), rec("Big Bazaar", 4_100_00, "2026-09-01")];
-    const irregular = [rec("Spotify", 119_00, "2026-07-01"), rec("Spotify", 119_00, "2026-07-20"), rec("Spotify", 119_00, "2026-09-01")];
+    const groceries = [
+      rec("Big Bazaar", 2_380_00, "2026-07-03"),
+      rec("Big Bazaar", 900_00, "2026-08-02"),
+      rec("Big Bazaar", 4_100_00, "2026-09-01"),
+    ];
+    const irregular = [
+      rec("Spotify", 119_00, "2026-07-01"),
+      rec("Spotify", 119_00, "2026-07-20"),
+      rec("Spotify", 119_00, "2026-09-01"),
+    ];
     // Monthly, but a different amount every time (all within 25% of each other).
-    const shopping = [rec("Shopping", 7_700_00, "2026-07-24"), rec("Shopping", 9_400_00, "2026-08-24"), rec("Shopping", 11_100_00, "2026-09-23")];
+    const shopping = [
+      rec("Shopping", 7_700_00, "2026-07-24"),
+      rec("Shopping", 9_400_00, "2026-08-24"),
+      rec("Shopping", 11_100_00, "2026-09-23"),
+    ];
     expect(detectSubscriptions([...groceries, ...irregular, ...shopping], new Set())).toHaveLength(0);
 
-    const tracked = [rec("Hotstar", 299_00, "2026-07-05"), rec("Hotstar", 299_00, "2026-08-05"), rec("Hotstar", 299_00, "2026-09-05")];
+    const tracked = [
+      rec("Hotstar", 299_00, "2026-07-05"),
+      rec("Hotstar", 299_00, "2026-08-05"),
+      rec("Hotstar", 299_00, "2026-09-05"),
+    ];
     expect(detectSubscriptions(tracked, new Set(["hotstar"]))).toHaveLength(0);
   });
 
   it("needs enough history before suggesting", () => {
-    expect(detectSubscriptions([rec("Gym", 1_500_00, "2026-08-01"), rec("Gym", 1_500_00, "2026-09-01")], new Set())).toHaveLength(0);
     expect(
-      detectSubscriptions([rec("Amazon Prime", 1_499_00, "2025-10-01"), rec("Amazon Prime", 1_499_00, "2026-10-01")], new Set())[0]?.frequency,
+      detectSubscriptions([rec("Gym", 1_500_00, "2026-08-01"), rec("Gym", 1_500_00, "2026-09-01")], new Set()),
+    ).toHaveLength(0);
+    expect(
+      detectSubscriptions(
+        [rec("Amazon Prime", 1_499_00, "2025-10-01"), rec("Amazon Prime", 1_499_00, "2026-10-01")],
+        new Set(),
+      )[0]?.frequency,
     ).toBe("yearly");
   });
 });
@@ -137,7 +168,9 @@ describe("matchScore", () => {
     const { matchScore } = await import("@/server/services/merchant-rules");
     expect(matchScore("swiggy", "swiggy")).toBeGreaterThan(matchScore("swiggy", "swiggy order"));
     expect(matchScore("swiggy", "swiggy order")).toBeGreaterThan(0);
-    expect(matchScore("amazon prime", "amazon prime video")).toBeGreaterThan(matchScore("amazon", "amazon prime video"));
+    expect(matchScore("amazon prime", "amazon prime video")).toBeGreaterThan(
+      matchScore("amazon", "amazon prime video"),
+    );
     expect(matchScore("swiggy", "swiggyx")).toBe(0);
     expect(matchScore("uber", "auto to office")).toBe(0);
   });

@@ -77,10 +77,19 @@ export const REPEAT_OPTIONS = [
 
 export function describeRepeat(frequency: Frequency, interval: number, anchorDate: ISODate): string {
   const option = REPEAT_OPTIONS.find((o) => o.frequency === frequency && o.interval === interval);
-  const base = option?.label ?? `Every ${interval} ${frequency === "weekly" ? "weeks" : frequency === "monthly" ? "months" : "years"}`;
+  const base =
+    option?.label ??
+    `Every ${interval} ${frequency === "weekly" ? "weeks" : frequency === "monthly" ? "months" : "years"}`;
   if (frequency === "monthly") {
     const day = Number(anchorDate.slice(8, 10));
-    const suffix = day % 10 === 1 && day !== 11 ? "st" : day % 10 === 2 && day !== 12 ? "nd" : day % 10 === 3 && day !== 13 ? "rd" : "th";
+    const suffix =
+      day % 10 === 1 && day !== 11
+        ? "st"
+        : day % 10 === 2 && day !== 12
+          ? "nd"
+          : day % 10 === 3 && day !== 13
+            ? "rd"
+            : "th";
     return `${base} on the ${day}${suffix}`;
   }
   return base;

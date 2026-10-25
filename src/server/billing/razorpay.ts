@@ -6,7 +6,12 @@ import type { BillingInterval } from "@/config/plans";
 
 // A thin client for the few Razorpay endpoints we use (no SDK needed).
 
-export type RazorpayConfig = { keyId: string; keySecret: string; webhookSecret: string; plans: Record<BillingInterval, string> };
+export type RazorpayConfig = {
+  keyId: string;
+  keySecret: string;
+  webhookSecret: string;
+  plans: Record<BillingInterval, string>;
+};
 
 /** Null unless payments are switched on (BILLING_ENABLED) and the keys are set. */
 export function razorpayConfig(env: Record<string, string | undefined> = process.env): RazorpayConfig | null {
@@ -33,7 +38,10 @@ const sameHex = (a: string, b: string) => {
 const hmac = (secret: string, message: string) => createHmac("sha256", secret).update(message).digest("hex");
 
 /** Checkout success: HMAC(payment_id + "|" + the subscription id WE stored, key secret). */
-export function verifyCheckoutSignature(input: { paymentId: string; subscriptionId: string; signature: string }, keySecret: string) {
+export function verifyCheckoutSignature(
+  input: { paymentId: string; subscriptionId: string; signature: string },
+  keySecret: string,
+) {
   return sameHex(hmac(keySecret, `${input.paymentId}|${input.subscriptionId}`), input.signature);
 }
 
@@ -45,7 +53,13 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
 
 // Razorpay's answer decides who gets Pro (status, current_end), so it's checked
 // rather than trusted. Timestamps are Unix seconds; missing ones become null.
-const unixOrNull = z.number().int().nonnegative().nullable().optional().transform((v) => v ?? null);
+const unixOrNull = z
+  .number()
+  .int()
+  .nonnegative()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? null);
 export const razorpaySubscriptionSchema = z.object({
   id: z.string().min(1),
   plan_id: z.string(),
@@ -75,7 +89,8 @@ async function call(cfg: RazorpayConfig, method: "GET" | "POST", path: string, b
   return res.json();
 }
 
-const subscriptionCall = async (...args: Parameters<typeof call>) => razorpaySubscriptionSchema.parse(await call(...args));
+const subscriptionCall = async (...args: Parameters<typeof call>) =>
+  razorpaySubscriptionSchema.parse(await call(...args));
 
 export function createSubscription(cfg: RazorpayConfig, interval: BillingInterval, userId: string) {
   return subscriptionCall(cfg, "POST", "/subscriptions", {

@@ -35,14 +35,43 @@ const QUESTIONS = [
 async function seed(db: Db, userId: string, today: string) {
   await seedNewUser(db, userId);
   const [cash] = await listWallets(db, userId);
-  const sbi = await createWallet(db, userId, { name: "SBI Savings", kind: "bank", color: "#4a7fc1", openingBalanceMinor: 25_000_00 });
-  const card = await createWallet(db, userId, { name: "ICICI Credit Card", kind: "credit_card", color: "#8a64b8", openingBalanceMinor: 0 });
+  const sbi = await createWallet(db, userId, {
+    name: "SBI Savings",
+    kind: "bank",
+    color: "#4a7fc1",
+    openingBalanceMinor: 25_000_00,
+  });
+  const card = await createWallet(db, userId, {
+    name: "ICICI Credit Card",
+    kind: "credit_card",
+    color: "#8a64b8",
+    openingBalanceMinor: 0,
+  });
   const c = Object.fromEntries((await listCategories(db, userId)).map((x) => [x.name, x.id]));
-  const add = (type: "income" | "expense", amount: number, walletId: string, occurredOn: string, description: string, categoryId: string) =>
-    createTransaction(db, userId, { type, amount, occurredOn, description, notes: null, walletId, toWalletId: null, categoryId });
+  const add = (
+    type: "income" | "expense",
+    amount: number,
+    walletId: string,
+    occurredOn: string,
+    description: string,
+    categoryId: string,
+  ) =>
+    createTransaction(db, userId, {
+      type,
+      amount,
+      occurredOn,
+      description,
+      notes: null,
+      walletId,
+      toWalletId: null,
+      categoryId,
+    });
   const thisMonth = today.slice(0, 7);
   const lastMonth = addMonths(thisMonth, -1);
-  for (const [m, salary, groceries, swiggy] of [[lastMonth, 42_000_00, 5_400_00, 1_850_00], [thisMonth, 42_000_00, 3_100_00, 2_640_00]] as const) {
+  for (const [m, salary, groceries, swiggy] of [
+    [lastMonth, 42_000_00, 5_400_00, 1_850_00],
+    [thisMonth, 42_000_00, 3_100_00, 2_640_00],
+  ] as const) {
     await add("income", salary, sbi.id, `${m}-01`, "Salary", c.Salary);
     await add("expense", 15_000_00, sbi.id, `${m}-05`, "Rent", c["Rent & Housing"]);
     await add("expense", groceries, sbi.id, `${m}-08`, "Big Bazaar", c.Groceries);
@@ -52,12 +81,33 @@ async function seed(db: Db, userId: string, today: string) {
   await add("expense", 4_200_00, card.id, `${lastMonth}-20`, "Myntra shoes", c.Shopping);
   await createBudget(db, userId, { categoryId: null, amount: 30_000_00, rollover: false }, thisMonth);
   await createBudget(db, userId, { categoryId: c["Dining Out"], amount: 2_500_00, rollover: false }, thisMonth);
-  const trip = await createGoal(db, userId, { name: "Goa trip", target: 25_000_00, targetDate: null, icon: "plane", color: "#2f8f9d" });
+  const trip = await createGoal(db, userId, {
+    name: "Goa trip",
+    target: 25_000_00,
+    targetDate: null,
+    icon: "plane",
+    color: "#2f8f9d",
+  });
   await addContribution(db, userId, trip.id, { direction: "add", amount: 8_000_00, occurredOn: today, note: null });
-  await createRule(db, userId, {
-    type: "expense", amount: 1_500_00, description: "Gym", walletId: cash.id, toWalletId: null, categoryId: c.Health,
-    frequency: "monthly", interval: 1, anchorDate: addDays(today, 3), endDate: null, mode: "auto", isSubscription: true,
-  }, today);
+  await createRule(
+    db,
+    userId,
+    {
+      type: "expense",
+      amount: 1_500_00,
+      description: "Gym",
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId: c.Health,
+      frequency: "monthly",
+      interval: 1,
+      anchorDate: addDays(today, 3),
+      endDate: null,
+      mode: "auto",
+      isSubscription: true,
+    },
+    today,
+  );
 }
 
 async function main() {
@@ -76,8 +126,14 @@ async function main() {
   for (const q of QUESTIONS) {
     const start = performance.now();
     try {
-      const r = await answerWithModel(lane, { tools: moneyTools(db, user), instructions: chatInstructions(user), messages: [{ role: "user", content: q }] });
-      console.log(`Q: ${q}\nA: ${r.text}\n   [looked up: ${r.lookedUp.join(", ") || "nothing"} · ${Math.round(performance.now() - start)} ms]\n`);
+      const r = await answerWithModel(lane, {
+        tools: moneyTools(db, user),
+        instructions: chatInstructions(user),
+        messages: [{ role: "user", content: q }],
+      });
+      console.log(
+        `Q: ${q}\nA: ${r.text}\n   [looked up: ${r.lookedUp.join(", ") || "nothing"} · ${Math.round(performance.now() - start)} ms]\n`,
+      );
     } catch (err) {
       console.log(`Q: ${q}\n✗ ${err instanceof Error ? err.message.slice(0, 200) : err}\n`);
     }

@@ -14,7 +14,10 @@ test("keyboard users can skip past the navigation", async ({ signedIn: { page } 
 
 test("animations and transitions stop when the device asks for less motion", async ({ signedIn: { page } }) => {
   const duration = async () =>
-    page.getByRole("button", { name: "Add entry" }).first().evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
+    page
+      .getByRole("button", { name: "Add entry" })
+      .first()
+      .evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   expect(await duration()).toBeGreaterThan(0.05); // normal: buttons ease between states

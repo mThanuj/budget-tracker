@@ -30,7 +30,13 @@ export type WalletCardData = EditableWallet & {
   isDefault: boolean;
 };
 
-export function AddWalletButton({ currency, variant = "default" }: { currency: string; variant?: "default" | "outline" }) {
+export function AddWalletButton({
+  currency,
+  variant = "default",
+}: {
+  currency: string;
+  variant?: "default" | "outline";
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -110,7 +116,9 @@ export function WalletCard({ wallet, currency }: { wallet: WalletCardData; curre
                 </DropdownMenuItem>
               </>
             )}
-            <DropdownMenuItem render={<Link href={`/transactions?wallet=${wallet.id}`} />}>View entries</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href={`/transactions?wallet=${wallet.id}`} />}>
+              View entries
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             {!wallet.archived && <DropdownMenuItem onClick={() => setConfirm("archive")}>Archive</DropdownMenuItem>}
             {wallet.entryCount === 0 && (
@@ -124,11 +132,15 @@ export function WalletCard({ wallet, currency }: { wallet: WalletCardData; curre
 
       <div>
         <p className="text-sm text-muted-foreground">{balance.label}</p>
-        <p className={cn("mt-0.5 text-2xl font-semibold", balance.tone === "owed" && "text-warning")}>{balance.amount}</p>
+        <p className={cn("mt-0.5 text-2xl font-semibold", balance.tone === "owed" && "text-warning")}>
+          {balance.amount}
+        </p>
       </div>
 
       <p className="text-sm text-muted-foreground">
-        {wallet.entryCount === 0 ? "No entries yet" : `${wallet.entryCount} ${wallet.entryCount === 1 ? "entry" : "entries"}`}
+        {wallet.entryCount === 0
+          ? "No entries yet"
+          : `${wallet.entryCount} ${wallet.entryCount === 1 ? "entry" : "entries"}`}
       </p>
 
       <WalletFormDialog open={editing} onOpenChange={setEditing} wallet={wallet} currency={currency} />

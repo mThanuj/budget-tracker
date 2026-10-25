@@ -143,12 +143,7 @@ export const wallet = pgTable(
 );
 
 export const transactionType = pgEnum("transaction_type", ["income", "expense", "transfer"]);
-export const transactionSource = pgEnum("transaction_source", [
-  "manual",
-  "nl",
-  "recurring",
-  "onboarding",
-]);
+export const transactionSource = pgEnum("transaction_source", ["manual", "nl", "recurring", "onboarding"]);
 
 export const transaction = pgTable(
   "transaction",
@@ -236,10 +231,7 @@ export const goal = pgTable(
     archivedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
-  (t) => [
-    index("goal_user_idx").on(t.userId),
-    check("goal_target_positive", sql`${t.targetMinor} > 0`),
-  ],
+  (t) => [index("goal_user_idx").on(t.userId), check("goal_target_positive", sql`${t.targetMinor} > 0`)],
 );
 
 // Money set aside for a goal (positive) or taken back out (negative). It's an
@@ -310,7 +302,9 @@ export const recurringRule = pgTable(
     ...timestamps,
   },
   (t) => [
-    index("recurring_rule_due_idx").on(t.nextDueOn).where(sql`${t.active}`),
+    index("recurring_rule_due_idx")
+      .on(t.nextDueOn)
+      .where(sql`${t.active}`),
     index("recurring_rule_user_idx").on(t.userId),
     check("recurring_rule_amount_positive", sql`${t.amountMinor} > 0`),
     check("recurring_rule_interval", sql`${t.interval} between 1 and 52`),

@@ -8,7 +8,10 @@ const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 const refresh = router.refresh;
 vi.mock("@/server/actions/billing", () => ({ checkPaymentStatus }));
 // Like Next's, the router object is the same on every render.
-vi.mock("next/navigation", async (original) => ({ ...(await original<typeof import("next/navigation")>()), useRouter: () => router }));
+vi.mock("next/navigation", async (original) => ({
+  ...(await original<typeof import("next/navigation")>()),
+  useRouter: () => router,
+}));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 const { Activating } = await import("@/components/billing/activating");

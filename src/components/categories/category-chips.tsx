@@ -37,7 +37,12 @@ export function CategoryChips({
           {suggestedId && suggestedId === value ? "· suggested, tap another to change" : "(optional)"}
         </span>
       </legend>
-      <div ref={list} role="radiogroup" aria-label="Category" className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto p-0.5">
+      <div
+        ref={list}
+        role="radiogroup"
+        aria-label="Category"
+        className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto p-0.5"
+      >
         {categories.map((c) => {
           const selected = c.id === value;
           return (
@@ -55,7 +60,9 @@ export function CategoryChips({
             >
               <CategoryIcon icon={c.icon} color={c.color} size="sm" />
               {c.name}
-              {c.id === suggestedId && selected && <SparklesIcon className="size-3.5 text-primary" aria-label="Suggested" />}
+              {c.id === suggestedId && selected && (
+                <SparklesIcon className="size-3.5 text-primary" aria-label="Suggested" />
+              )}
             </button>
           );
         })}

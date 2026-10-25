@@ -19,7 +19,16 @@ describe("insight facts", () => {
   let cashId: string;
   let c: Record<string, string>;
   const add = (type: "income" | "expense", amount: number, occurredOn: string, description: string, cat: string) =>
-    createTransaction(t.db, userId, { type, amount, occurredOn, description, notes: null, walletId: cashId, toWalletId: null, categoryId: c[cat] });
+    createTransaction(t.db, userId, {
+      type,
+      amount,
+      occurredOn,
+      description,
+      notes: null,
+      walletId: cashId,
+      toWalletId: null,
+      categoryId: c[cat],
+    });
   const facts = (kind: "month" | "so_far") =>
     buildInsightFacts(t.db, userId, { kind, month: kind === "month" ? "2026-09" : "2026-10", today, currency: "INR" });
 
@@ -42,19 +51,56 @@ describe("insight facts", () => {
     await add("expense", 2_000_00, "2026-09-28", "Birthday dinner", "Dining Out");
 
     // Netflix went from 649 to 799.
-    const netflix = await createRule(t.db, userId, {
-      type: "expense", amount: 799_00, description: "Netflix", walletId: cashId, toWalletId: null, categoryId: c.Subscriptions,
-      frequency: "monthly", interval: 1, anchorDate: "2026-11-14", endDate: null, mode: "auto", isSubscription: true,
-    }, today);
-    for (const [amountMinor, occurredOn] of [[649_00, "2026-08-14"], [799_00, "2026-09-14"]] as const) {
+    const netflix = await createRule(
+      t.db,
+      userId,
+      {
+        type: "expense",
+        amount: 799_00,
+        description: "Netflix",
+        walletId: cashId,
+        toWalletId: null,
+        categoryId: c.Subscriptions,
+        frequency: "monthly",
+        interval: 1,
+        anchorDate: "2026-11-14",
+        endDate: null,
+        mode: "auto",
+        isSubscription: true,
+      },
+      today,
+    );
+    for (const [amountMinor, occurredOn] of [
+      [649_00, "2026-08-14"],
+      [799_00, "2026-09-14"],
+    ] as const) {
       await t.db.insert(transaction).values({
-        userId, type: "expense", amountMinor, occurredOn, description: "Netflix", merchantKey: "netflix",
-        walletId: cashId, categoryId: c.Subscriptions, recurringRuleId: netflix.id, source: "recurring",
+        userId,
+        type: "expense",
+        amountMinor,
+        occurredOn,
+        description: "Netflix",
+        merchantKey: "netflix",
+        walletId: cashId,
+        categoryId: c.Subscriptions,
+        recurringRuleId: netflix.id,
+        source: "recurring",
       });
     }
 
-    const phone = await createGoal(t.db, userId, { name: "Phone", target: 20_000_00, targetDate: "2027-03-15", icon: "smartphone", color: "#4a7fc1" });
-    await addContribution(t.db, userId, phone.id, { direction: "add", amount: 2_000_00, occurredOn: "2026-09-20", note: null });
+    const phone = await createGoal(t.db, userId, {
+      name: "Phone",
+      target: 20_000_00,
+      targetDate: "2027-03-15",
+      icon: "smartphone",
+      color: "#4a7fc1",
+    });
+    await addContribution(t.db, userId, phone.id, {
+      direction: "add",
+      amount: 2_000_00,
+      occurredOn: "2026-09-20",
+      note: null,
+    });
 
     await add("expense", 3_000_00, "2026-10-05", "Big Bazaar", "Groceries");
     await add("expense", 500_00, "2026-10-20", "Cafe", "Dining Out");
@@ -71,25 +117,56 @@ describe("insight facts", () => {
       spending: "₹23,699",
       kept: { amount: "₹16,301", shareOfIncome: "41%" },
       comparedWith: { period: "August 2026", spending: "₹5,649", change: "320% more" },
-      overallLimit: { limit: "₹20,000", spent: "₹23,699", used: "118%", left: null, over: "₹3,699", projectedMonthEnd: null, projectedOverLimit: false },
+      overallLimit: {
+        limit: "₹20,000",
+        spent: "₹23,699",
+        used: "118%",
+        left: null,
+        over: "₹3,699",
+        projectedMonthEnd: null,
+        projectedOverLimit: false,
+      },
       possibleDuplicates: [{ what: "Swiggy", amount: "₹450", dates: ["10 Sep", "11 Sep"] }],
       trackedSubscriptions: { count: 1, spent: "₹799" },
       priceChanges: [{ name: "Netflix", from: "₹649", to: "₹799" }],
       entriesWithoutCategory: 0,
     });
-    expect(f.categories[0]).toEqual({ name: "Rent & Housing", spent: "₹15,000", shareOfSpending: "63%", before: "₹0", change: "nothing before to compare" });
+    expect(f.categories[0]).toEqual({
+      name: "Rent & Housing",
+      spent: "₹15,000",
+      shareOfSpending: "63%",
+      before: "₹0",
+      change: "nothing before to compare",
+    });
     expect(f.categories.find((x) => x.name === "Groceries")).toMatchObject({ before: "₹4,000", change: "25% more" });
     expect(f.biggestExpenses.map((b) => b.what)).toEqual(["Rent", "Big Bazaar", "Birthday dinner"]);
     expect(f.goals).toEqual([
-      { name: "Phone", saved: "₹2,000", target: "₹20,000", addedInPeriod: "₹2,000", status: "needs ₹2,571.43 a month to reach by March 2027" },
+      {
+        name: "Phone",
+        saved: "₹2,000",
+        target: "₹20,000",
+        addedInPeriod: "₹2,000",
+        status: "needs ₹2,571.43 a month to reach by March 2027",
+      },
     ]);
   });
 
   it("keeps a finished month's facts stable when this month changes", async () => {
     const before = factsHash(await facts("month"));
     const [phone] = (await t.db.query.goal.findMany()).filter((g) => g.name === "Phone");
-    await addContribution(t.db, userId, phone.id, { direction: "add", amount: 1_000_00, occurredOn: "2026-10-10", note: null });
-    await createGoal(t.db, userId, { name: "Trip", target: 10_000_00, targetDate: null, icon: "plane", color: "#2f8f9d" });
+    await addContribution(t.db, userId, phone.id, {
+      direction: "add",
+      amount: 1_000_00,
+      occurredOn: "2026-10-10",
+      note: null,
+    });
+    await createGoal(t.db, userId, {
+      name: "Trip",
+      target: 10_000_00,
+      targetDate: null,
+      icon: "plane",
+      color: "#2f8f9d",
+    });
     expect(factsHash(await facts("month"))).toBe(before);
     // Editing September itself does change them.
     await add("expense", 100_00, "2026-09-29", "Tea", "Dining Out");
@@ -112,7 +189,10 @@ describe("insight facts", () => {
   });
 
   it("stores one report per period and counts rewrites per month", async () => {
-    const report = { headline: "A steady month.", items: [{ kind: "good" as const, title: "Kept 41%", detail: "You kept ₹16,301." }] };
+    const report = {
+      headline: "A steady month.",
+      items: [{ kind: "good" as const, title: "Kept 41%", detail: "You kept ₹16,301." }],
+    };
     await saveInsight(t.db, userId, { kind: "month", month: "2026-09", factsHash: "a", report, model: "groq" });
     await saveInsight(t.db, userId, { kind: "month", month: "2026-09", factsHash: "b", report, model: "groq" });
     expect(await getInsight(t.db, userId, "month", "2026-09")).toMatchObject({ factsHash: "b", report });

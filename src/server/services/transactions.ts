@@ -71,8 +71,14 @@ export async function listTransactions(db: Db, userId: string, filters: Transact
 export async function summarizeTransactions(db: Db, userId: string, filters: TransactionFilters = {}) {
   const [row] = await db
     .select({
-      incomeMinor: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'income'), 0)`.mapWith(Number),
-      expenseMinor: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense'), 0)`.mapWith(Number),
+      incomeMinor:
+        sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'income'), 0)`.mapWith(
+          Number,
+        ),
+      expenseMinor:
+        sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense'), 0)`.mapWith(
+          Number,
+        ),
       count: sql<number>`count(*)`.mapWith(Number),
     })
     .from(transaction)
@@ -122,10 +128,7 @@ export async function assertEntryReferences(
   if (input.categoryId) {
     const c = await getOwnedCategory(db, userId, input.categoryId);
     if (c.kind !== input.type) {
-      throw new UserError(
-        `“${c.name}” is ${c.kind === "income" ? "an income" : "a spending"} category.`,
-        "categoryId",
-      );
+      throw new UserError(`“${c.name}” is ${c.kind === "income" ? "an income" : "a spending"} category.`, "categoryId");
     }
     if (c.archivedAt && c.id !== existing?.categoryId) {
       throw new UserError("That category is archived. Restore it first.", "categoryId");

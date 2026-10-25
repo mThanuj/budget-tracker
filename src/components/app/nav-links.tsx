@@ -82,7 +82,11 @@ export function MobileMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {items.map(({ href, label, icon: Icon }) => (
-          <DropdownMenuItem key={href} render={<Link href={href} />} aria-current={isActive(pathname, href) ? "page" : undefined}>
+          <DropdownMenuItem
+            key={href}
+            render={<Link href={href} />}
+            aria-current={isActive(pathname, href) ? "page" : undefined}
+          >
             <Icon aria-hidden />
             {label}
           </DropdownMenuItem>

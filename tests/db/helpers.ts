@@ -12,10 +12,7 @@ export async function createTestDb() {
   return { db, close: () => client.close() };
 }
 
-export async function createTestUser(
-  db: Db,
-  overrides: Partial<typeof schema.user.$inferInsert> = {},
-) {
+export async function createTestUser(db: Db, overrides: Partial<typeof schema.user.$inferInsert> = {}) {
   const id = overrides.id ?? crypto.randomUUID();
   const [row] = await db
     .insert(schema.user)

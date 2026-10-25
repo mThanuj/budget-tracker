@@ -69,7 +69,9 @@ export function providerChain(env: Env = process.env, chainVar = "LLM_CHAIN_FREE
     const body = json(env, `${prefix}BODY`);
     if (options === "invalid" || body === "invalid") {
       const bad = options === "invalid" ? `${prefix}OPTIONS` : `${prefix}BODY`;
-      reportOnce(`[ai] ${bad} must be a JSON object, like {"reasoningEffort":"low"}; the "${name}" provider is skipped until it's fixed.`);
+      reportOnce(
+        `[ai] ${bad} must be a JSON object, like {"reasoningEffort":"low"}; the "${name}" provider is skipped until it's fixed.`,
+      );
       return [];
     }
     return [

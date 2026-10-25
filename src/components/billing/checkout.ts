@@ -11,7 +11,10 @@ type CheckoutOptions = {
   handler: (response: CheckoutResponse) => void;
   modal: { ondismiss: () => void };
 };
-type RazorpayInstance = { open: () => void; on: (event: "payment.failed", cb: (r: { error?: { description?: string } }) => void) => void };
+type RazorpayInstance = {
+  open: () => void;
+  on: (event: "payment.failed", cb: (r: { error?: { description?: string } }) => void) => void;
+};
 
 declare global {
   interface Window {

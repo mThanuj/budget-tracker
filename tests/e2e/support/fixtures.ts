@@ -12,7 +12,13 @@ process.loadEnvFile(".env.local");
 
 // Same timeouts as the app: a dropped connection fails the test with a clear
 // error instead of hanging silently until the test timeout.
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 4, connectionTimeoutMillis: 10_000, query_timeout: 20_000, keepAlive: true });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 4,
+  connectionTimeoutMillis: 10_000,
+  query_timeout: 20_000,
+  keepAlive: true,
+});
 export const db = drizzle({ client: pool, schema, casing: "snake_case" });
 
 // A test-only auth instance with the same database and secret as the app, so

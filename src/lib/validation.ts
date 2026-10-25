@@ -16,11 +16,7 @@ const optionalId = z
 const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i, "Pick a color.");
 
 const name = (what: string) =>
-  z
-    .string()
-    .trim()
-    .min(1, `Give the ${what} a name.`)
-    .max(40, `Keep the ${what} name under 40 characters.`);
+  z.string().trim().min(1, `Give the ${what} a name.`).max(40, `Keep the ${what} name under 40 characters.`);
 
 export function moneyField(currency: string, { allowZero = false } = {}) {
   return z.string().transform((raw, ctx) => {
@@ -57,7 +53,8 @@ export function transactionSchema(currency: string, today: ISODate) {
     })
     .superRefine((v, ctx) => {
       if (v.type === "transfer") {
-        if (!v.toWalletId) ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Choose where the money goes." });
+        if (!v.toWalletId)
+          ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Choose where the money goes." });
         else if (v.toWalletId === v.walletId)
           ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Pick two different wallets." });
       }
@@ -78,7 +75,11 @@ export function walletSchema(currency: string) {
       kind: z.enum(["cash", "bank", "credit_card", "other"]),
       color: hexColor,
       // For credit cards the form asks for the amount currently owed.
-      openingBalance: z.string().optional().transform((v) => (v?.trim() ? v : "0")).pipe(moneyField(currency, { allowZero: true })),
+      openingBalance: z
+        .string()
+        .optional()
+        .transform((v) => (v?.trim() ? v : "0"))
+        .pipe(moneyField(currency, { allowZero: true })),
     })
     .transform(({ openingBalance, ...v }) => ({
       ...v,
@@ -178,7 +179,11 @@ export function recurringSchema(currency: string, today: ISODate) {
     .object({
       type: z.enum(["income", "expense", "transfer"]),
       amount: moneyField(currency),
-      description: z.string().trim().min(1, "Give it a name, like Rent or Netflix.").max(60, "Keep the name under 60 characters."),
+      description: z
+        .string()
+        .trim()
+        .min(1, "Give it a name, like Rent or Netflix.")
+        .max(60, "Keep the name under 60 characters."),
       walletId: z.uuid("Choose a wallet."),
       toWalletId: optionalId,
       categoryId: optionalId,
@@ -194,7 +199,8 @@ export function recurringSchema(currency: string, today: ISODate) {
     })
     .superRefine((v, ctx) => {
       if (v.type === "transfer") {
-        if (!v.toWalletId) ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Choose where the money goes." });
+        if (!v.toWalletId)
+          ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Choose where the money goes." });
         else if (v.toWalletId === v.walletId)
           ctx.addIssue({ code: "custom", path: ["toWalletId"], message: "Pick two different wallets." });
       }
@@ -232,9 +238,13 @@ export function setupSchema(currency: string, today: ISODate) {
     .pipe(z.number().int().min(1, "Pick a day from 1 to 31.").max(31, "Pick a day from 1 to 31.").nullable());
   const label = z.string().trim().min(1, "Every row needs a name.").max(40, "Keep names under 40 characters.");
   return z.object({
-    wallets: z.array(z.object({ name: label, kind: z.enum(["cash", "bank", "credit_card", "other"]), balance: optionalAmount })).max(12),
+    wallets: z
+      .array(z.object({ name: label, kind: z.enum(["cash", "bank", "credit_card", "other"]), balance: optionalAmount }))
+      .max(12),
     incomes: z.array(z.object({ name: label, amount, day })).max(12),
-    bills: z.array(z.object({ name: label, amount, day, subscription: z.boolean(), categoryId: z.uuid().nullable() })).max(20),
+    bills: z
+      .array(z.object({ name: label, amount, day, subscription: z.boolean(), categoryId: z.uuid().nullable() }))
+      .max(20),
     goals: z
       .array(
         z.object({
@@ -244,7 +254,13 @@ export function setupSchema(currency: string, today: ISODate) {
             .string()
             .optional()
             .transform((v) => (v ? v : null))
-            .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d > today, "Goal dates must be in the future.").nullable()),
+            .pipe(
+              z
+                .string()
+                .regex(/^\d{4}-\d{2}-\d{2}$/)
+                .refine((d) => d > today, "Goal dates must be in the future.")
+                .nullable(),
+            ),
         }),
       )
       .max(12),

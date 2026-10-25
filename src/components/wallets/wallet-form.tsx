@@ -95,10 +95,18 @@ function WalletForm({ wallet, currency, onDone }: { wallet?: EditableWallet; cur
         id="openingBalance"
         label={
           wallet
-            ? isCard ? "Amount owed before your first entry" : "Balance before your first entry"
-            : isCard ? "How much do you owe on it right now?" : "How much is in it right now?"
+            ? isCard
+              ? "Amount owed before your first entry"
+              : "Balance before your first entry"
+            : isCard
+              ? "How much do you owe on it right now?"
+              : "How much is in it right now?"
         }
-        hint={wallet ? "Changing this shifts the current balance by the same amount." : "You can leave this at 0 and adjust later."}
+        hint={
+          wallet
+            ? "Changing this shifts the current balance by the same amount."
+            : "You can leave this at 0 and adjust later."
+        }
         error={errors.openingBalance}
       >
         <Input
@@ -146,7 +154,9 @@ export function WalletFormDialog({
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">{wallet ? "Edit wallet" : "Add a wallet"}</DialogTitle>
           <DialogDescription>
-            {wallet ? "Rename it, change its type or fix its starting balance." : "A bank account, card, cash, or anywhere else you keep money."}
+            {wallet
+              ? "Rename it, change its type or fix its starting balance."
+              : "A bank account, card, cash, or anywhere else you keep money."}
           </DialogDescription>
         </DialogHeader>
         {open && <WalletForm wallet={wallet} currency={currency} onDone={() => onOpenChange(false)} />}

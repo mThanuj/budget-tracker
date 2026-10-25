@@ -84,7 +84,9 @@ export function PassbookDemo() {
       className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_0_0_var(--border),0_24px_48px_-24px_rgb(15_110_102/0.25)] ring-1 ring-foreground/10"
     >
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-        <span aria-hidden className="text-primary">›</span>
+        <span aria-hidden className="text-primary">
+          ›
+        </span>
         <p className="min-h-5 flex-1 text-sm">
           {text}
           {!showAll && (

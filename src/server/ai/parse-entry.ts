@@ -112,7 +112,10 @@ export function toPrefill(ctx: EntryContext, raw: RawEntry): EntryPrefill | null
   const category =
     raw.type === "transfer"
       ? undefined
-      : byName(ctx.categories.filter((c) => c.kind === raw.type), raw.category);
+      : byName(
+          ctx.categories.filter((c) => c.kind === raw.type),
+          raw.category,
+        );
   return {
     type: raw.type,
     amountMinor,

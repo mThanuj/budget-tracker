@@ -137,7 +137,15 @@ export async function withoutDismissed(db: Db, userId: string, alerts: Alert[]) 
   const dismissed = await db
     .select({ key: alertDismissal.alertKey })
     .from(alertDismissal)
-    .where(and(eq(alertDismissal.userId, userId), inArray(alertDismissal.alertKey, alerts.map((a) => a.key))));
+    .where(
+      and(
+        eq(alertDismissal.userId, userId),
+        inArray(
+          alertDismissal.alertKey,
+          alerts.map((a) => a.key),
+        ),
+      ),
+    );
   const hidden = new Set(dismissed.map((d) => d.key));
   return alerts.filter((a) => !hidden.has(a.key));
 }

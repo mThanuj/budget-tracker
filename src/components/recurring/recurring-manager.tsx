@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeftRightIcon, MoreHorizontalIcon, PlusIcon, SparklesIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import {
+  ArrowLeftRightIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  SparklesIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -71,7 +78,10 @@ function RuleRow({ r, data }: { r: RuleItem; data: RuleFormData }) {
   return (
     <li className={cn("flex items-center gap-3 px-4 py-3.5 sm:px-5", !r.active && "opacity-70")}>
       {r.type === "transfer" ? (
-        <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+        <span
+          aria-hidden
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"
+        >
           <ArrowLeftRightIcon className="size-4" />
         </span>
       ) : (
@@ -88,16 +98,32 @@ function RuleRow({ r, data }: { r: RuleItem; data: RuleFormData }) {
           {r.type === "transfer" ? `${r.walletName} → ${r.toWalletName}` : r.walletName}
         </p>
         <p className="text-xs text-muted-foreground">
-          {r.active && r.nextDueOn ? `Next: ${relativeDay(r.nextDueOn, data.today)}` : r.nextDueOn ? "Paused" : "Finished"}
+          {r.active && r.nextDueOn
+            ? `Next: ${relativeDay(r.nextDueOn, data.today)}`
+            : r.nextDueOn
+              ? "Paused"
+              : "Finished"}
           {priceChange && (
-            <span className={cn("ml-2 inline-flex items-center gap-1", priceChange.up ? "text-warning" : "text-primary")}>
-              {priceChange.up ? <TrendingUpIcon className="size-3.5" aria-hidden /> : <TrendingDownIcon className="size-3.5" aria-hidden />}
+            <span
+              className={cn("ml-2 inline-flex items-center gap-1", priceChange.up ? "text-warning" : "text-primary")}
+            >
+              {priceChange.up ? (
+                <TrendingUpIcon className="size-3.5" aria-hidden />
+              ) : (
+                <TrendingDownIcon className="size-3.5" aria-hidden />
+              )}
               {priceChange.up ? "Up" : "Down"} from {formatMoney(priceChange.from, data.currency)}
             </span>
           )}
         </p>
       </div>
-      <span className={cn("tabular shrink-0 text-right text-sm", r.type === "income" && "text-primary", r.type === "transfer" && "text-muted-foreground")}>
+      <span
+        className={cn(
+          "tabular shrink-0 text-right text-sm",
+          r.type === "income" && "text-primary",
+          r.type === "transfer" && "text-muted-foreground",
+        )}
+      >
         {signed(r, data.currency)}
       </span>
       <DropdownMenu>
@@ -112,7 +138,9 @@ function RuleRow({ r, data }: { r: RuleItem; data: RuleFormData }) {
           {r.active ? (
             <DropdownMenuItem onClick={() => run("pause", `${r.description} paused`)}>Pause</DropdownMenuItem>
           ) : (
-            r.nextDueOn !== null && <DropdownMenuItem onClick={() => run("resume", `${r.description} resumed`)}>Resume</DropdownMenuItem>
+            r.nextDueOn !== null && (
+              <DropdownMenuItem onClick={() => run("resume", `${r.description} resumed`)}>Resume</DropdownMenuItem>
+            )
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
@@ -154,7 +182,8 @@ function SuggestionRow({ s, currency, today }: { s: Suggestion; currency: string
           <span className="text-muted-foreground">looks like a {FREQUENCY_WORD[s.frequency]} subscription</span>
         </p>
         <p className="text-xs text-muted-foreground">
-          {formatMoney(s.amountMinor, currency)} · charged {s.occurrences} times · last charged {relativeDay(s.lastOn, today)}
+          {formatMoney(s.amountMinor, currency)} · charged {s.occurrences} times · last charged{" "}
+          {relativeDay(s.lastOn, today)}
         </p>
       </div>
       <div className="flex gap-2">
@@ -196,7 +225,10 @@ export function RecurringManager({
           onChange={setView}
           options={[
             { value: "all", label: "Everything" },
-            { value: "subscriptions", label: `Subscriptions${subscriptions.length ? ` (${subscriptions.length})` : ""}` },
+            {
+              value: "subscriptions",
+              label: `Subscriptions${subscriptions.length ? ` (${subscriptions.length})` : ""}`,
+            },
           ]}
         />
         <Button onClick={() => setCreating(view === "subscriptions" ? { type: "expense", isSubscription: true } : {})}>
@@ -206,7 +238,10 @@ export function RecurringManager({
       </div>
 
       {view === "subscriptions" && (
-        <section aria-labelledby="subs-total" className="flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-card p-5 ring-1 ring-foreground/10">
+        <section
+          aria-labelledby="subs-total"
+          className="flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-card p-5 ring-1 ring-foreground/10"
+        >
           <div>
             <p id="subs-total" className="text-sm text-muted-foreground">
               Subscriptions cost you
@@ -224,7 +259,10 @@ export function RecurringManager({
       )}
 
       {(view === "subscriptions" || subscriptions.length === 0) && suggestions.length > 0 && (
-        <section aria-labelledby="suggestions-title" className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
+        <section
+          aria-labelledby="suggestions-title"
+          className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10"
+        >
           <h2 id="suggestions-title" className="border-b border-border px-4 py-3 font-medium sm:px-5">
             Found in your entries
           </h2>
@@ -258,7 +296,12 @@ export function RecurringManager({
         like anything else, so you can edit or delete them there.
       </p>
 
-      <RuleDialog open={creating !== null} onOpenChange={(o) => !o && setCreating(null)} data={data} preset={creating ?? undefined} />
+      <RuleDialog
+        open={creating !== null}
+        onOpenChange={(o) => !o && setCreating(null)}
+        data={data}
+        preset={creating ?? undefined}
+      />
     </div>
   );
 }

@@ -19,7 +19,8 @@ export function TransactionRowButton({ row, currency }: { row: TransactionRow; c
   const { openEdit } = useEntryDialog();
   const isTransfer = row.type === "transfer";
   const title =
-    row.description || (isTransfer ? "Moved money" : (row.categoryName ?? (row.type === "income" ? "Money received" : "Spending")));
+    row.description ||
+    (isTransfer ? "Moved money" : (row.categoryName ?? (row.type === "income" ? "Money received" : "Spending")));
   const detail = isTransfer
     ? `${row.walletName} → ${row.toWalletName}`
     : [row.description ? (row.categoryName ?? "No category") : null, row.walletName].filter(Boolean).join(" · ");
@@ -43,7 +44,10 @@ export function TransactionRowButton({ row, currency }: { row: TransactionRow; c
       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/60 focus-visible:bg-muted sm:px-5"
     >
       {isTransfer ? (
-        <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+        <span
+          aria-hidden
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"
+        >
           <ArrowLeftRightIcon className="size-4" />
         </span>
       ) : (

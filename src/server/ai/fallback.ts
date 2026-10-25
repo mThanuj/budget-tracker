@@ -16,12 +16,19 @@ export function resetCooldowns() {
  * Usage counters feed the admin page. Failing to write one is logged, and never
  * changes the answer, marks a working provider as down, or skips a fallback.
  */
-async function note(record: ((provider: string, outcome: AiOutcome) => Promise<void>) | undefined, provider: string, outcome: AiOutcome) {
+async function note(
+  record: ((provider: string, outcome: AiOutcome) => Promise<void>) | undefined,
+  provider: string,
+  outcome: AiOutcome,
+) {
   if (!record) return;
   try {
     await record(provider, outcome);
   } catch (err) {
-    console.error(`[ai] couldn't record a ${outcome} result for ${provider}:`, err instanceof Error ? err.message : err);
+    console.error(
+      `[ai] couldn't record a ${outcome} result for ${provider}:`,
+      err instanceof Error ? err.message : err,
+    );
   }
 }
 

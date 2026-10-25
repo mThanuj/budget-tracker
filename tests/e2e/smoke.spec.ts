@@ -94,7 +94,9 @@ test("a save that doesn't reach the server can be retried without retyping", asy
 
   // Server actions are POSTs carrying a Next-Action header: drop them, as a lost connection would.
   const offline = (route: Route) =>
-    route.request().method() === "POST" && route.request().headers()["next-action"] ? route.abort("internetdisconnected") : route.fallback();
+    route.request().method() === "POST" && route.request().headers()["next-action"]
+      ? route.abort("internetdisconnected")
+      : route.fallback();
   await page.route("**/*", offline);
   await dialog.getByRole("button", { name: "Save entry" }).click();
   await expect(dialog.getByRole("alert")).toHaveText("That didn't go through. Check your connection and try again.");

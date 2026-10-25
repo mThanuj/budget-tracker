@@ -11,7 +11,10 @@ export async function listGoals(db: Db, userId: string, { includeArchived = fals
   return db
     .select({
       ...getTableColumns(goal),
-      savedMinor: sql<number>`coalesce((select sum(c.amount_minor) from "goal_contribution" c where c.goal_id = "goal"."id"), 0)`.mapWith(Number),
+      savedMinor:
+        sql<number>`coalesce((select sum(c.amount_minor) from "goal_contribution" c where c.goal_id = "goal"."id"), 0)`.mapWith(
+          Number,
+        ),
     })
     .from(goal)
     .where(and(eq(goal.userId, userId), includeArchived ? undefined : isNull(goal.archivedAt)))
@@ -19,7 +22,10 @@ export async function listGoals(db: Db, userId: string, { includeArchived = fals
 }
 
 export async function getOwnedGoal(db: Db, userId: string, id: string) {
-  const [row] = await db.select().from(goal).where(and(eq(goal.id, id), eq(goal.userId, userId)));
+  const [row] = await db
+    .select()
+    .from(goal)
+    .where(and(eq(goal.id, id), eq(goal.userId, userId)));
   if (!row) throw new UserError("That goal doesn't exist.");
   return row;
 }
@@ -36,7 +42,14 @@ export async function createGoal(db: Db, userId: string, input: GoalInput) {
   await assertRoomFor(db, userId, "goals");
   const [row] = await db
     .insert(goal)
-    .values({ userId, name: input.name, targetMinor: input.target, targetDate: input.targetDate, icon: input.icon, color: input.color })
+    .values({
+      userId,
+      name: input.name,
+      targetMinor: input.target,
+      targetDate: input.targetDate,
+      icon: input.icon,
+      color: input.color,
+    })
     .returning();
   return row;
 }
@@ -45,7 +58,13 @@ export async function updateGoal(db: Db, userId: string, id: string, input: Goal
   await getOwnedGoal(db, userId, id);
   const [row] = await db
     .update(goal)
-    .set({ name: input.name, targetMinor: input.target, targetDate: input.targetDate, icon: input.icon, color: input.color })
+    .set({
+      name: input.name,
+      targetMinor: input.target,
+      targetDate: input.targetDate,
+      icon: input.icon,
+      color: input.color,
+    })
     .where(and(eq(goal.id, id), eq(goal.userId, userId)))
     .returning();
   return row;

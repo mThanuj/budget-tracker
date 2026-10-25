@@ -19,11 +19,11 @@ You need `openssl` (version 3) and the PostgreSQL 18 client tools (`pg_restore`,
 `psql`). They must be version 18 or newer, because the backups are made with
 PostgreSQL 18.
 
-| | OpenSSL 3 | PostgreSQL 18 client |
-|---|---|---|
-| **macOS** | `brew install openssl@3` (the built-in LibreSSL may not support the options used) | `brew install libpq`, then use `$(brew --prefix libpq)/bin/pg_restore` and `.../psql` |
-| **Linux** (Debian/Ubuntu) | already installed (`openssl version`) | `sudo apt install -y postgresql-common && sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh`, then `sudo apt install -y postgresql-client-18` |
-| **Windows** | comes with [Git for Windows](https://git-scm.com/download/win); run the commands in **Git Bash** | the [PostgreSQL 18 installer](https://www.postgresql.org/download/windows/), ticking only **Command Line Tools**; the programs are in `C:\Program Files\PostgreSQL\18\bin` |
+|                           | OpenSSL 3                                                                                        | PostgreSQL 18 client                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **macOS**                 | `brew install openssl@3` (the built-in LibreSSL may not support the options used)                | `brew install libpq`, then use `$(brew --prefix libpq)/bin/pg_restore` and `.../psql`                                                                                      |
+| **Linux** (Debian/Ubuntu) | already installed (`openssl version`)                                                            | `sudo apt install -y postgresql-common && sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh`, then `sudo apt install -y postgresql-client-18`                   |
+| **Windows**               | comes with [Git for Windows](https://git-scm.com/download/win); run the commands in **Git Bash** | the [PostgreSQL 18 installer](https://www.postgresql.org/download/windows/), ticking only **Command Line Tools**; the programs are in `C:\Program Files\PostgreSQL\18\bin` |
 
 The commands below are for a bash-style shell (macOS/Linux Terminal, Git Bash on
 Windows). If `pg_restore` or `psql` isn't found, use its full path from the table.

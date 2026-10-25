@@ -28,10 +28,7 @@ function parsePreferences(formData: FormData) {
 
 const INVALID = { error: "Choose a currency and a time zone from the lists." };
 
-export async function savePreferences(
-  _prev: PreferencesState,
-  formData: FormData,
-): Promise<PreferencesState> {
+export async function savePreferences(_prev: PreferencesState, formData: FormData): Promise<PreferencesState> {
   const user = await requireUser();
   const parsed = parsePreferences(formData);
   if (!parsed.success) return INVALID;
@@ -41,10 +38,7 @@ export async function savePreferences(
   return { ok: true };
 }
 
-export async function completeWelcome(
-  _prev: PreferencesState,
-  formData: FormData,
-): Promise<PreferencesState> {
+export async function completeWelcome(_prev: PreferencesState, formData: FormData): Promise<PreferencesState> {
   const user = await requireUser();
   const parsed = parsePreferences(formData);
   if (!parsed.success) return INVALID;
@@ -61,7 +55,10 @@ export async function completeWelcome(
 
 export async function setAiEnabled(enabled: boolean): Promise<PreferencesState> {
   const user = await requireUser();
-  await db.update(userTable).set({ aiEnabled: enabled === true }).where(eq(userTable.id, user.id));
+  await db
+    .update(userTable)
+    .set({ aiEnabled: enabled === true })
+    .where(eq(userTable.id, user.id));
   refresh();
   return { ok: true };
 }

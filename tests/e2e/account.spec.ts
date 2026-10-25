@@ -9,7 +9,14 @@ async function addEntry(userId: string, description: string) {
   const [cash] = await listWallets(db, userId);
   const groceries = (await listCategories(db, userId)).find((c) => c.name === "Groceries")!;
   await createTransaction(db, userId, {
-    type: "expense", amount: 1_250_50, occurredOn: "2026-10-02", description, notes: null, walletId: cash.id, toWalletId: null, categoryId: groceries.id,
+    type: "expense",
+    amount: 1_250_50,
+    occurredOn: "2026-10-02",
+    description,
+    notes: null,
+    walletId: cash.id,
+    toWalletId: null,
+    categoryId: groceries.id,
   });
 }
 
@@ -18,7 +25,9 @@ const paymentsOn = process.env.BILLING_ENABLED?.trim() === "true";
 test("the policy pages are public and linked from the home page", async ({ page }) => {
   await page.goto("/");
   // Pricing and the refund policy only exist while payments are switched on.
-  await expect(page.getByRole("heading", { name: "Free to use. Pro if you want more AI help." })).toHaveCount(paymentsOn ? 1 : 0);
+  await expect(page.getByRole("heading", { name: "Free to use. Pro if you want more AI help." })).toHaveCount(
+    paymentsOn ? 1 : 0,
+  );
   const policies = page.getByRole("navigation", { name: "Policies" });
   const pages: [string, string][] = [
     ["Privacy", "Privacy policy"],
@@ -73,7 +82,8 @@ test("signing out ends the session on the server", async ({ signedIn: { page, us
   await page.goto("/settings");
   // Retried until the page has hydrated (a click before that does nothing).
   await expect(async () => {
-    if (new URL(page.url()).pathname !== "/") await page.getByRole("button", { name: "Sign out" }).click({ timeout: 1_000 });
+    if (new URL(page.url()).pathname !== "/")
+      await page.getByRole("button", { name: "Sign out" }).click({ timeout: 1_000 });
     await expect(page).toHaveURL(/localhost:3000\/$/, { timeout: 3_000 });
   }).toPass();
   await expect(page.getByRole("heading", { name: "Know where your money goes." })).toBeVisible();

@@ -41,7 +41,8 @@ export async function buildInsightFacts(
   const full = monthRange(month);
   const daysInMonth = Number(addDays(full.end, -1).slice(8, 10));
   const day = kind === "so_far" ? Number(today.slice(8, 10)) : daysInMonth;
-  const span: Span = kind === "so_far" ? { from: full.start, to: addDays(today, 1) } : { from: full.start, to: full.end };
+  const span: Span =
+    kind === "so_far" ? { from: full.start, to: addDays(today, 1) } : { from: full.start, to: full.end };
   const prevFull = monthRange(prevMonth);
   const sameDays = sameDaysLastMonth(today);
   const before: Span =
@@ -53,10 +54,22 @@ export async function buildInsightFacts(
     db
       .select({
         entries: count(),
-        income: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'income'), 0)`.mapWith(Number),
-        spending: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense'), 0)`.mapWith(Number),
-        recurringSpending: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense' and ${transaction.recurringRuleId} is not null), 0)`.mapWith(Number),
-        uncategorized: sql<number>`count(*) filter (where ${transaction.type} = 'expense' and ${transaction.categoryId} is null)`.mapWith(Number),
+        income:
+          sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'income'), 0)`.mapWith(
+            Number,
+          ),
+        spending:
+          sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense'), 0)`.mapWith(
+            Number,
+          ),
+        recurringSpending:
+          sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense' and ${transaction.recurringRuleId} is not null), 0)`.mapWith(
+            Number,
+          ),
+        uncategorized:
+          sql<number>`count(*) filter (where ${transaction.type} = 'expense' and ${transaction.categoryId} is null)`.mapWith(
+            Number,
+          ),
       })
       .from(transaction)
       .where(and(mine, inSpan(s), sql`${transaction.type} <> 'transfer'`))
@@ -71,7 +84,12 @@ export async function buildInsightFacts(
     kind === "month" ? monthlyTotals(db, userId, addMonths(month, -3), prevMonth) : Promise.resolve([]),
     getBudgetOverview(db, userId, month),
     db
-      .select({ description: transaction.description, amountMinor: transaction.amountMinor, occurredOn: transaction.occurredOn, category: category.name })
+      .select({
+        description: transaction.description,
+        amountMinor: transaction.amountMinor,
+        occurredOn: transaction.occurredOn,
+        category: category.name,
+      })
       .from(transaction)
       .leftJoin(category, eq(category.id, transaction.categoryId))
       .where(and(mine, inSpan(span), eq(transaction.type, "expense")))
@@ -79,7 +97,12 @@ export async function buildInsightFacts(
       .limit(3),
     // Same merchant and amount within two days, not from a schedule: often a double charge.
     db
-      .select({ description: transaction.description, amountMinor: transaction.amountMinor, first: transaction.occurredOn, second: twin.occurredOn })
+      .select({
+        description: transaction.description,
+        amountMinor: transaction.amountMinor,
+        first: transaction.occurredOn,
+        second: twin.occurredOn,
+      })
       .from(transaction)
       .innerJoin(
         twin,
@@ -111,19 +134,36 @@ export async function buildInsightFacts(
         name: recurringRule.description,
         occurredOn: transaction.occurredOn,
         amountMinor: transaction.amountMinor,
-        previousMinor: sql<number | null>`lag(${transaction.amountMinor}) over (partition by ${transaction.recurringRuleId} order by ${transaction.occurredOn}, ${transaction.createdAt})`.mapWith((v) => (v === null ? null : Number(v))),
+        previousMinor: sql<
+          number | null
+        >`lag(${transaction.amountMinor}) over (partition by ${transaction.recurringRuleId} order by ${transaction.occurredOn}, ${transaction.createdAt})`.mapWith(
+          (v) => (v === null ? null : Number(v)),
+        ),
       })
       .from(transaction)
       .innerJoin(recurringRule, eq(recurringRule.id, transaction.recurringRuleId))
-      .where(and(mine, lt(transaction.occurredOn, span.to), eq(transaction.type, "expense"), eq(recurringRule.isSubscription, true))),
+      .where(
+        and(
+          mine,
+          lt(transaction.occurredOn, span.to),
+          eq(transaction.type, "expense"),
+          eq(recurringRule.isSubscription, true),
+        ),
+      ),
     db
       .select({
         name: goal.name,
         createdAt: goal.createdAt,
         targetMinor: goal.targetMinor,
         targetDate: goal.targetDate,
-        savedMinor: sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(Number),
-        addedMinor: sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} >= ${span.from} and ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(Number),
+        savedMinor:
+          sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(
+            Number,
+          ),
+        addedMinor:
+          sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} >= ${span.from} and ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(
+            Number,
+          ),
       })
       .from(goal)
       .leftJoin(goalContribution, eq(goalContribution.goalId, goal.id))
@@ -144,7 +184,9 @@ export async function buildInsightFacts(
     // Day-to-day spending at its current pace, plus scheduled bills still to come.
     if (kind === "so_far" && day >= 7 && day < daysInMonth) {
       const upcoming = await listUpcoming(db, userId, today, daysInMonth - day);
-      const billsLeft = upcoming.filter((u) => u.rule.type === "expense" && monthOf(u.date) === month).reduce((s, u) => s + u.rule.amountMinor, 0);
+      const billsLeft = upcoming
+        .filter((u) => u.rule.type === "expense" && monthOf(u.date) === month)
+        .reduce((s, u) => s + u.rule.amountMinor, 0);
       const dayToDay = now.spending - now.recurringSpending;
       const projected = now.spending + (dayToDay / day) * (daysInMonth - day) + billsLeft;
       const unit = 100 * 10 ** currencyExponent(currency);
@@ -180,13 +222,18 @@ export async function buildInsightFacts(
     comparedWith:
       then.entries > 0
         ? {
-            period: kind === "so_far" ? `1–${Number(addDays(before.to, -1).slice(8, 10))} ${formatMonth(prevMonth)}` : formatMonth(prevMonth),
+            period:
+              kind === "so_far"
+                ? `1–${Number(addDays(before.to, -1).slice(8, 10))} ${formatMonth(prevMonth)}`
+                : formatMonth(prevMonth),
             spending: money(then.spending),
             change: change(now.spending, then.spending),
           }
         : null,
     averageMonthlySpendingBefore:
-      pastMonths.length >= 2 ? money(Math.round(pastMonths.reduce((s, m) => s + m.expenseMinor, 0) / pastMonths.length)) : null,
+      pastMonths.length >= 2
+        ? money(Math.round(pastMonths.reduce((s, m) => s + m.expenseMinor, 0) / pastMonths.length))
+        : null,
     categories: cats.slice(0, 6).map((c) => ({
       name: c.name ?? "No category",
       spent: money(c.spentMinor),
@@ -197,32 +244,59 @@ export async function buildInsightFacts(
     overallLimit,
     budgetsOver: overview.categories
       .filter((b) => b.level === "over")
-      .map((b) => ({ category: b.categoryName ?? "", limit: money(b.availableMinor), spent: money(b.spentMinor), over: money(-b.remainingMinor) })),
+      .map((b) => ({
+        category: b.categoryName ?? "",
+        limit: money(b.availableMinor),
+        spent: money(b.spentMinor),
+        over: money(-b.remainingMinor),
+      })),
     budgetsNearLimit: overview.categories
       .filter((b) => b.level === "warning")
-      .map((b) => ({ category: b.categoryName ?? "", limit: money(b.availableMinor), spent: money(b.spentMinor), used: pct(b.spentMinor, b.availableMinor) })),
+      .map((b) => ({
+        category: b.categoryName ?? "",
+        limit: money(b.availableMinor),
+        spent: money(b.spentMinor),
+        used: pct(b.spentMinor, b.availableMinor),
+      })),
     biggestExpenses: biggest.map((b) => ({
       what: b.description || b.category || "Untitled entry",
       amount: money(b.amountMinor),
       date: shortDate(b.occurredOn),
       category: b.category ?? "No category",
     })),
-    possibleDuplicates: dupes.map((d) => ({ what: d.description || "Untitled entry", amount: money(d.amountMinor), dates: [shortDate(d.first), shortDate(d.second)] })),
+    possibleDuplicates: dupes.map((d) => ({
+      what: d.description || "Untitled entry",
+      amount: money(d.amountMinor),
+      dates: [shortDate(d.first), shortDate(d.second)],
+    })),
     trackedSubscriptions: subs.rules > 0 ? { count: subs.rules, spent: money(subs.spent) } : null,
     priceChanges,
     // Goals that didn't exist yet and had nothing saved by then don't belong in
     // the period (keeps a finished month's facts stable).
-    goals: goals.filter((g) => g.savedMinor > 0 || g.createdAt < new Date(`${span.to}T00:00:00Z`)).map((g) => {
-      const p = goalProgress({ targetMinor: g.targetMinor, savedMinor: g.savedMinor, targetDate: g.targetDate, today: asOf });
-      const status = p.reached
-        ? "reached"
-        : p.overdue
-          ? "past its target date"
-          : p.perMonthMinor !== null && g.targetDate
-            ? `needs ${money(p.perMonthMinor)} a month to reach by ${formatMonth(g.targetDate.slice(0, 7))}`
-            : "no target date";
-      return { name: g.name, saved: money(g.savedMinor), target: money(g.targetMinor), addedInPeriod: money(g.addedMinor), status };
-    }),
+    goals: goals
+      .filter((g) => g.savedMinor > 0 || g.createdAt < new Date(`${span.to}T00:00:00Z`))
+      .map((g) => {
+        const p = goalProgress({
+          targetMinor: g.targetMinor,
+          savedMinor: g.savedMinor,
+          targetDate: g.targetDate,
+          today: asOf,
+        });
+        const status = p.reached
+          ? "reached"
+          : p.overdue
+            ? "past its target date"
+            : p.perMonthMinor !== null && g.targetDate
+              ? `needs ${money(p.perMonthMinor)} a month to reach by ${formatMonth(g.targetDate.slice(0, 7))}`
+              : "no target date";
+        return {
+          name: g.name,
+          saved: money(g.savedMinor),
+          target: money(g.targetMinor),
+          addedInPeriod: money(g.addedMinor),
+          status,
+        };
+      }),
     entriesWithoutCategory: now.uncategorized,
   };
 }

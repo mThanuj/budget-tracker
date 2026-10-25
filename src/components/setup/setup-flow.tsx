@@ -33,12 +33,36 @@ export type SetupContextProps = {
 type StepKey = SetupStep | "watch" | "review";
 
 const STEPS: { key: StepKey; title: string; hint: string }[] = [
-  { key: "wallets", title: "Where do you keep your money?", hint: "For example: “SBI savings with about 20k, an ICICI credit card with 3k due, and 2,000 cash.”" },
-  { key: "incomes", title: "How much money comes in each month?", hint: "For example: “Salary 42k on the 1st, and about 5k from freelancing.”" },
-  { key: "bills", title: "What do you pay every month, no matter what?", hint: "For example: “Rent 15,000 on the 5th, phone 299, Netflix 649, gym 1,500.”" },
-  { key: "watch", title: "Where does money tend to slip away?", hint: "Pick the categories you'd like to keep an eye on. We'll suggest a monthly budget for each." },
-  { key: "goals", title: "Anything you're saving up for?", hint: "For example: “A new phone for 60k by March, and an emergency fund of 1 lakh.”" },
-  { key: "review", title: "Here's your starter plan", hint: "Check it, change anything you like, then apply. You can edit everything later." },
+  {
+    key: "wallets",
+    title: "Where do you keep your money?",
+    hint: "For example: “SBI savings with about 20k, an ICICI credit card with 3k due, and 2,000 cash.”",
+  },
+  {
+    key: "incomes",
+    title: "How much money comes in each month?",
+    hint: "For example: “Salary 42k on the 1st, and about 5k from freelancing.”",
+  },
+  {
+    key: "bills",
+    title: "What do you pay every month, no matter what?",
+    hint: "For example: “Rent 15,000 on the 5th, phone 299, Netflix 649, gym 1,500.”",
+  },
+  {
+    key: "watch",
+    title: "Where does money tend to slip away?",
+    hint: "Pick the categories you'd like to keep an eye on. We'll suggest a monthly budget for each.",
+  },
+  {
+    key: "goals",
+    title: "Anything you're saving up for?",
+    hint: "For example: “A new phone for 60k by March, and an emergency fund of 1 lakh.”",
+  },
+  {
+    key: "review",
+    title: "Here's your starter plan",
+    hint: "Check it, change anything you like, then apply. You can edit everything later.",
+  },
 ];
 
 const PARSE_MESSAGES: Record<Exclude<SetupParseResult, { ok: true }>["reason"], string> = {
@@ -66,7 +90,11 @@ function AnswerBox({ step, onRows }: { step: SetupStep; onRows: (rows: SetupRows
           else if (result.ok) {
             onRows(result.rows);
             setText("");
-            setMessage(result.rows.length ? "Added below. Check the rows, then continue." : "Didn't find anything to add. Try adding more detail.");
+            setMessage(
+              result.rows.length
+                ? "Added below. Check the rows, then continue."
+                : "Didn't find anything to add. Try adding more detail.",
+            );
           } else setMessage(PARSE_MESSAGES[result.reason]);
         });
       }}
@@ -113,7 +141,12 @@ export function SetupFlow(props: SetupContextProps) {
   const step = STEPS[index];
   const walletNames = [
     ...props.existingWallets.map((w) => ({ name: w.name, kind: w.kind })),
-    ...rows.wallets.filter((w) => w.name.trim() && !props.existingWallets.some((e) => e.name.toLowerCase() === w.name.trim().toLowerCase())).map((w) => ({ name: w.name.trim(), kind: w.kind })),
+    ...rows.wallets
+      .filter(
+        (w) =>
+          w.name.trim() && !props.existingWallets.some((e) => e.name.toLowerCase() === w.name.trim().toLowerCase()),
+      )
+      .map((w) => ({ name: w.name.trim(), kind: w.kind })),
   ];
   const preferredWallet = (walletNames.find((w) => w.kind === "bank") ?? walletNames[0])?.name ?? "";
   const income = total(rows.incomes, currency);
@@ -133,7 +166,12 @@ export function SetupFlow(props: SetupContextProps) {
     if (STEPS[next]?.key === "review") {
       // Work out the suggested plan from the answers so far.
       const watched = props.expenseCategories.filter((c) => watch.includes(c.id));
-      const plan = buildPlan({ monthlyIncomeMinor: income, monthlyBillsMinor: bills, watchCategories: watched.map((c) => c.name), currency });
+      const plan = buildPlan({
+        monthlyIncomeMinor: income,
+        monthlyBillsMinor: bills,
+        watchCategories: watched.map((c) => c.name),
+        currency,
+      });
       setLimit(plan.limitMinor ? minorToInput(plan.limitMinor, currency, { trimWhole: true }) : "");
       setBudgets(
         plan.categories.map((c) => ({
@@ -151,23 +189,35 @@ export function SetupFlow(props: SetupContextProps) {
   function apply() {
     startApply(async () => {
       const clean = <T extends { name: string }>(list: T[]) => list.filter((r) => r.name.trim());
-      const result = await callAction(() => applySetupAction({
-        wallets: clean(rows.wallets),
-        incomes: clean(rows.incomes),
-        bills: clean(rows.bills),
-        goals: clean(rows.goals),
-        incomeWallet,
-        billsWallet,
-        limit,
-        categoryBudgets: budgets.filter((b) => b.amount.trim()),
-      }), { notify: false });
+      const result = await callAction(
+        () =>
+          applySetupAction({
+            wallets: clean(rows.wallets),
+            incomes: clean(rows.incomes),
+            bills: clean(rows.bills),
+            goals: clean(rows.goals),
+            incomeWallet,
+            billsWallet,
+            limit,
+            categoryBudgets: budgets.filter((b) => b.amount.trim()),
+          }),
+        { notify: false },
+      );
       if (result === NOT_SENT) setError(NOT_SENT_MESSAGE);
       else if (result.ok) {
         toast.success("Your plan is ready");
         router.push("/dashboard");
       } else {
         const first = result.fieldErrors ? Object.entries(result.fieldErrors)[0] : null;
-        const where = { wallets: "accounts", incomes: "income", bills: "bills", goals: "goals", limit: "monthly limit", categoryBudgets: "category budgets" }[first?.[0] ?? ""] ?? "";
+        const where =
+          {
+            wallets: "accounts",
+            incomes: "income",
+            bills: "bills",
+            goals: "goals",
+            limit: "monthly limit",
+            categoryBudgets: "category budgets",
+          }[first?.[0] ?? ""] ?? "";
         setError(first ? `Check your ${where}: ${first[1]}` : (result.error ?? "Something went wrong. Try again."));
       }
     });
@@ -202,7 +252,8 @@ export function SetupFlow(props: SetupContextProps) {
         <section className="grid gap-4">
           {props.existingWallets.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              You already have: {props.existingWallets.map((w) => w.name).join(", ")}. Mention them to set their balance.
+              You already have: {props.existingWallets.map((w) => w.name).join(", ")}. Mention them to set their
+              balance.
             </p>
           )}
           {ai && <AnswerBox step="wallets" onRows={(r) => appendRows("wallets", r)} />}
@@ -218,7 +269,11 @@ export function SetupFlow(props: SetupContextProps) {
       {step.key === "bills" && (
         <section className="grid gap-4">
           {ai && <AnswerBox step="bills" onRows={(r) => appendRows("bills", r)} />}
-          <BillRows rows={rows.bills} onChange={(r) => setStepRows("bills", r)} expenseCategories={props.expenseCategories} />
+          <BillRows
+            rows={rows.bills}
+            onChange={(r) => setStepRows("bills", r)}
+            expenseCategories={props.expenseCategories}
+          />
         </section>
       )}
       {step.key === "watch" && (
@@ -260,7 +315,12 @@ export function SetupFlow(props: SetupContextProps) {
               {income > 0 ? (
                 <span className="flex flex-wrap items-center gap-2">
                   {formatMoney(income, currency)} into
-                  <WalletPicker value={incomeWallet} onChange={setIncomeWallet} names={walletNames.map((w) => w.name)} label="Income goes into" />
+                  <WalletPicker
+                    value={incomeWallet}
+                    onChange={setIncomeWallet}
+                    names={walletNames.map((w) => w.name)}
+                    label="Income goes into"
+                  />
                 </span>
               ) : (
                 "Nothing added. You can add income later."
@@ -269,8 +329,18 @@ export function SetupFlow(props: SetupContextProps) {
             <ReviewLine label="Goes out every month">
               {bills > 0 ? (
                 <span className="flex flex-wrap items-center gap-2">
-                  {formatMoney(bills, currency)} ({rows.bills.filter((b) => b.name.trim()).map((b) => b.name.trim()).join(", ")}) from
-                  <WalletPicker value={billsWallet} onChange={setBillsWallet} names={walletNames.map((w) => w.name)} label="Bills are paid from" />
+                  {formatMoney(bills, currency)} (
+                  {rows.bills
+                    .filter((b) => b.name.trim())
+                    .map((b) => b.name.trim())
+                    .join(", ")}
+                  ) from
+                  <WalletPicker
+                    value={billsWallet}
+                    onChange={setBillsWallet}
+                    names={walletNames.map((w) => w.name)}
+                    label="Bills are paid from"
+                  />
                 </span>
               ) : (
                 "No fixed bills added."
@@ -278,7 +348,14 @@ export function SetupFlow(props: SetupContextProps) {
             </ReviewLine>
             <ReviewLine label="Monthly spending limit">
               <div className="grid gap-1">
-                <Input aria-label="Monthly spending limit" value={limit} onChange={(e) => setLimit(e.target.value)} inputMode="decimal" placeholder="No limit" className="tabular h-9 w-40" />
+                <Input
+                  aria-label="Monthly spending limit"
+                  value={limit}
+                  onChange={(e) => setLimit(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="No limit"
+                  className="tabular h-9 w-40"
+                />
                 <span className="text-sm text-muted-foreground">
                   {income > 0 && limitMinor > 0
                     ? `Bills included. That leaves ${formatMoney(Math.max(income - limitMinor, 0), currency)} a month to save.`
@@ -298,7 +375,9 @@ export function SetupFlow(props: SetupContextProps) {
                         <Input
                           aria-label={`${c?.name} budget`}
                           value={b.amount}
-                          onChange={(e) => setBudgets((all) => all.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))}
+                          onChange={(e) =>
+                            setBudgets((all) => all.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))
+                          }
                           inputMode="decimal"
                           className="tabular h-8 w-28"
                         />
@@ -311,22 +390,27 @@ export function SetupFlow(props: SetupContextProps) {
             {rows.goals.some((g) => g.name.trim()) && (
               <ReviewLine label="Saving for">
                 <ul className="grid gap-1 text-sm">
-                  {rows.goals.filter((g) => g.name.trim()).map((g) => {
-                    const target = parseMoney(g.target, currency) ?? 0;
-                    const p = goalProgress({ targetMinor: target, savedMinor: 0, targetDate: g.by || null, today });
-                    return (
-                      <li key={g.name}>
-                        {g.name}: {formatMoney(target, currency)}
-                        {g.by && p.perMonthMinor ? ` by ${formatMonth(g.by.slice(0, 7))}, about ${formatMoney(p.perMonthMinor, currency)} a month` : ""}
-                      </li>
-                    );
-                  })}
+                  {rows.goals
+                    .filter((g) => g.name.trim())
+                    .map((g) => {
+                      const target = parseMoney(g.target, currency) ?? 0;
+                      const p = goalProgress({ targetMinor: target, savedMinor: 0, targetDate: g.by || null, today });
+                      return (
+                        <li key={g.name}>
+                          {g.name}: {formatMoney(target, currency)}
+                          {g.by && p.perMonthMinor
+                            ? ` by ${formatMonth(g.by.slice(0, 7))}, about ${formatMoney(p.perMonthMinor, currency)} a month`
+                            : ""}
+                        </li>
+                      );
+                    })}
                 </ul>
               </ReviewLine>
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Recurring income and bills start on their next date, so nothing is added today. You can change or remove anything later.
+            Recurring income and bills start on their next date, so nothing is added today. You can change or remove
+            anything later.
           </p>
           {error && (
             <p role="alert" className="text-sm text-destructive">
@@ -368,7 +452,17 @@ function ReviewLine({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-function WalletPicker({ value, onChange, names, label }: { value: string; onChange: (v: string) => void; names: string[]; label: string }) {
+function WalletPicker({
+  value,
+  onChange,
+  names,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  names: string[];
+  label: string;
+}) {
   return (
     <NativeSelect aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} size="sm">
       {names.map((n) => (

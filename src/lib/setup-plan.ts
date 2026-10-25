@@ -65,9 +65,13 @@ export function buildPlan(input: PlanInput): Plan {
   if (bills > limit) {
     // Bills alone eat into savings: keep a small cushion above them.
     limit = Math.max(Math.min(income, niceDown(bills * 1.1, currency)), bills);
-    notes.push("Your fixed bills take most of your income, so there's less room to save. Even a small amount each month helps.");
+    notes.push(
+      "Your fixed bills take most of your income, so there's less room to save. Even a small amount each month helps.",
+    );
   } else {
-    notes.push("About 20% of your income is kept aside to save. The rest is your monthly spending limit, bills included.");
+    notes.push(
+      "About 20% of your income is kept aside to save. The rest is your monthly spending limit, bills included.",
+    );
   }
   const save = Math.max(income - limit, 0);
   const flexible = Math.max(limit - bills, 0);

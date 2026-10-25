@@ -11,9 +11,21 @@ import { callAction, NOT_SENT } from "@/lib/call-action";
 
 const TONE = {
   info: { Icon: CalendarClockIcon, className: "text-muted-foreground", ring: "ring-foreground/10" },
-  warning: { Icon: TriangleAlertIcon, className: "text-warning", ring: "ring-[color-mix(in_oklab,var(--warning)_35%,transparent)]" },
-  over: { Icon: OctagonAlertIcon, className: "text-destructive", ring: "ring-[color-mix(in_oklab,var(--destructive)_35%,transparent)]" },
-  success: { Icon: PartyPopperIcon, className: "text-primary", ring: "ring-[color-mix(in_oklab,var(--primary)_30%,transparent)]" },
+  warning: {
+    Icon: TriangleAlertIcon,
+    className: "text-warning",
+    ring: "ring-[color-mix(in_oklab,var(--warning)_35%,transparent)]",
+  },
+  over: {
+    Icon: OctagonAlertIcon,
+    className: "text-destructive",
+    ring: "ring-[color-mix(in_oklab,var(--destructive)_35%,transparent)]",
+  },
+  success: {
+    Icon: PartyPopperIcon,
+    className: "text-primary",
+    ring: "ring-[color-mix(in_oklab,var(--primary)_30%,transparent)]",
+  },
 } as const;
 
 const COLLAPSED = 2;
@@ -51,7 +63,8 @@ export function AlertList({ alerts }: { alerts: Alert[] }) {
                   startTransition(async () => {
                     hide(a.key);
                     const result = await callAction(() => dismissAlert(a.key));
-                    if (result !== NOT_SENT && !result?.ok) toast.error(result?.error ?? "Couldn't dismiss that. Try again.");
+                    if (result !== NOT_SENT && !result?.ok)
+                      toast.error(result?.error ?? "Couldn't dismiss that. Try again.");
                   })
                 }
                 className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"

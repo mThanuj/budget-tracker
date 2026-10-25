@@ -41,7 +41,10 @@ export function Meter({
       aria-valuetext={valueText}
       className={cn("h-2 w-full overflow-hidden rounded-full", TRACK[level], className)}
     >
-      <div className={cn("h-full rounded-full transition-[width] duration-500", FILL[level])} style={{ width: `${pct}%` }} />
+      <div
+        className={cn("h-full rounded-full transition-[width] duration-500", FILL[level])}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }

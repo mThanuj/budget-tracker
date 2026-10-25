@@ -79,9 +79,12 @@ async function InsightsContent() {
       <Section id="last-month" title={formatMonth(lastMonth)}>
         {!enough(last.entries) ? (
           <p className="text-muted-foreground">
-            {last.entries === 0 ? "Nothing was recorded" : `Only ${last.entries} ${last.entries === 1 ? "entry was" : "entries were"} recorded`}{" "}
-            in {formatMonth(lastMonth)}. Reports start once a month has at least {MIN_ENTRIES_FOR_INSIGHTS} entries; your
-            report for {formatMonth(thisMonth)} will be here on 1 {formatMonth(addMonths(thisMonth, 1)).split(" ")[0]}.
+            {last.entries === 0
+              ? "Nothing was recorded"
+              : `Only ${last.entries} ${last.entries === 1 ? "entry was" : "entries were"} recorded`}{" "}
+            in {formatMonth(lastMonth)}. Reports start once a month has at least {MIN_ENTRIES_FOR_INSIGHTS} entries;
+            your report for {formatMonth(thisMonth)} will be here on 1{" "}
+            {formatMonth(addMonths(thisMonth, 1)).split(" ")[0]}.
           </p>
         ) : (
           <>
@@ -112,9 +115,15 @@ async function InsightsContent() {
           </p>
         ) : (
           <>
-            {pro && ai && checkIn && <ReportView report={checkIn.report} footnote={`Checked in ${writtenOn(checkIn.createdAt)}.`} />}
+            {pro && ai && checkIn && (
+              <ReportView report={checkIn.report} footnote={`Checked in ${writtenOn(checkIn.createdAt)}.`} />
+            )}
             {pro && ai && (
-              <ReportWriter kind="so_far" label={checkIn ? "Check in again" : "Check in on this month"} note={rewritesNote} />
+              <ReportWriter
+                kind="so_far"
+                label={checkIn ? "Check in again" : "Check in on this month"}
+                note={rewritesNote}
+              />
             )}
             <FactsView facts={soFar} />
           </>

@@ -19,7 +19,10 @@ import type { ModelChoice } from "./providers";
 
 export type ChatUser = { id: string; currency: string; today: ISODate };
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("YYYY-MM-DD");
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .describe("YYYY-MM-DD");
 
 /** Plain-language names for the tools, shown under answers ("Looked up: …"). */
 export const TOOL_LABELS: Record<string, string> = {
@@ -61,7 +64,8 @@ export function moneyTools(db: Db, u: ChatUser) {
           wallets: wallets.map((w) => ({
             name: w.name,
             kind: w.kind,
-            balance: w.kind === "credit_card" && w.balanceMinor < 0 ? `${money(-w.balanceMinor)} owed` : money(w.balanceMinor),
+            balance:
+              w.kind === "credit_card" && w.balanceMinor < 0 ? `${money(-w.balanceMinor)} owed` : money(w.balanceMinor),
           })),
           total: money(total),
           setAsideForGoals: money(setAside),
@@ -71,7 +75,8 @@ export function moneyTools(db: Db, u: ChatUser) {
     }),
 
     getSpending: tool({
-      description: "Spending and income between two dates (inclusive), by category. Pass categories to get one combined total for them.",
+      description:
+        "Spending and income between two dates (inclusive), by category. Pass categories to get one combined total for them.",
       inputSchema: z.object({
         from: isoDate,
         to: isoDate,
@@ -98,13 +103,16 @@ export function moneyTools(db: Db, u: ChatUser) {
             notCategories: unknown,
             hint: "These aren't categories. For a shop, app or person, use findEntries with search instead.",
           }),
-          byCategory: (picked ?? byCategory).slice(0, 12).map((c) => ({ category: c.name ?? "No category", spent: money(c.spentMinor) })),
+          byCategory: (picked ?? byCategory)
+            .slice(0, 12)
+            .map((c) => ({ category: c.name ?? "No category", spent: money(c.spentMinor) })),
         };
       },
     }),
 
     findEntries: tool({
-      description: "Individual entries, newest first, with optional filters. Also gives the total spent on the matches.",
+      description:
+        "Individual entries, newest first, with optional filters. Also gives the total spent on the matches.",
       inputSchema: z.object({
         from: isoDate.nullable(),
         to: isoDate.nullable(),
@@ -115,7 +123,12 @@ export function moneyTools(db: Db, u: ChatUser) {
       }),
       execute: async ({ from, to, search, category, type, limit }) => {
         const range = clampRange(from ?? addDays(u.today, -365), to ?? u.today);
-        const rows = await listTransactions(db, u.id, { ...range, q: search ?? undefined, type: type ?? undefined }, 200);
+        const rows = await listTransactions(
+          db,
+          u.id,
+          { ...range, q: search ?? undefined, type: type ?? undefined },
+          200,
+        );
         const filtered = category ? rows.filter((r) => r.categoryName?.toLowerCase() === category.toLowerCase()) : rows;
         return {
           count: filtered.length,
@@ -147,8 +160,15 @@ export function moneyTools(db: Db, u: ChatUser) {
     }),
 
     getBudgets: tool({
-      description: "The limits the user has set (monthly limit, category budgets): spent, left, status. Empty if none are set; not for general spending questions.",
-      inputSchema: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).nullable().describe("YYYY-MM; null for this month") }),
+      description:
+        "The limits the user has set (monthly limit, category budgets): spent, left, status. Empty if none are set; not for general spending questions.",
+      inputSchema: z.object({
+        month: z
+          .string()
+          .regex(/^\d{4}-\d{2}$/)
+          .nullable()
+          .describe("YYYY-MM; null for this month"),
+      }),
       execute: async ({ month }) => {
         const m = month ?? monthOf(u.today);
         const o = await getBudgetOverview(db, u.id, m);
@@ -186,7 +206,12 @@ export function moneyTools(db: Db, u: ChatUser) {
       inputSchema: z.object({}),
       execute: async () =>
         (await listGoals(db, u.id)).map((g) => {
-          const p = goalProgress({ targetMinor: g.targetMinor, savedMinor: g.savedMinor, targetDate: g.targetDate, today: u.today });
+          const p = goalProgress({
+            targetMinor: g.targetMinor,
+            savedMinor: g.savedMinor,
+            targetDate: g.targetDate,
+            today: u.today,
+          });
           return {
             name: g.name,
             saved: money(g.savedMinor),

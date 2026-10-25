@@ -75,7 +75,9 @@ function BudgetMenu({ b, onEdit, label }: { b: BudgetRowData; onEdit: () => void
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
           {b.categoryId && (
-            <DropdownMenuItem render={<Link href={`/transactions?category=${b.categoryId}`} />}>View entries</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href={`/transactions?category=${b.categoryId}`} />}>
+              View entries
+            </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setConfirm(true)}>
@@ -134,10 +136,12 @@ export function OverallBudgetCard({
             </span>
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {formatMoney(overall.spentMinor, shared.currency)} spent of {formatMoney(overall.amountMinor, shared.currency)}
+            {formatMoney(overall.spentMinor, shared.currency)} spent of{" "}
+            {formatMoney(overall.amountMinor, shared.currency)}
             {daysLeft !== null && overall.remainingMinor > 0 && (
               <>
-                {" "}· {daysLeft} {daysLeft === 1 ? "day" : "days"} left, about{" "}
+                {" "}
+                · {daysLeft} {daysLeft === 1 ? "day" : "days"} left, about{" "}
                 {formatMoney(Math.floor(overall.remainingMinor / daysLeft), shared.currency)} a day
               </>
             )}
@@ -214,7 +218,13 @@ function CategoryBudgetRow({ b, ...shared }: Shared & { b: BudgetRowData }) {
         onOpenChange={setEditing}
         target={{
           mode: "category",
-          budget: { id: b.id, amountMinor: b.amountMinor, rollover: b.rollover, categoryId: b.categoryId!, categoryName: name },
+          budget: {
+            id: b.id,
+            amountMinor: b.amountMinor,
+            rollover: b.rollover,
+            categoryId: b.categoryId!,
+            categoryName: name,
+          },
         }}
         categories={shared.unbudgeted}
         suggestions={shared.suggestions}
@@ -243,7 +253,8 @@ export function CategoryBudgets({
       </div>
       {budgets.length === 0 ? (
         <EmptyState headingLevel={3} title="No category budgets yet">
-          Pick the categories where money tends to slip away, like Dining Out or Shopping, and give each a monthly limit.
+          Pick the categories where money tends to slip away, like Dining Out or Shopping, and give each a monthly
+          limit.
         </EmptyState>
       ) : (
         <ul className="divide-y divide-dashed divide-border overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">

@@ -42,8 +42,8 @@ export default function LandingPage() {
               Know where your money goes.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-pretty text-muted-foreground">
-              Type what you spent the way you&apos;d text a friend. The app sorts it, adds it up and answers your questions, so
-              you can stick to a budget without a spreadsheet.
+              Type what you spent the way you&apos;d text a friend. The app sorts it, adds it up and answers your
+              questions, so you can stick to a budget without a spreadsheet.
             </p>
             <div className="mt-9 flex flex-col items-start gap-3">
               <GoogleSignInButton className="h-11 px-5 text-base" />
@@ -56,7 +56,10 @@ export default function LandingPage() {
           <PassbookDemo />
         </section>
 
-        <section aria-label="What you can do" className="grid gap-x-10 gap-y-8 border-t border-border py-14 md:grid-cols-3">
+        <section
+          aria-label="What you can do"
+          className="grid gap-x-10 gap-y-8 border-t border-border py-14 md:grid-cols-3"
+        >
           {FEATURES.map((f) => (
             <div key={f.title}>
               <h2 className="font-heading text-xl">{f.title}</h2>

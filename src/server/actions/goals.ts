@@ -4,17 +4,9 @@ import { refresh } from "next/cache";
 import { contributionSchema, goalSchema } from "@/lib/validation";
 import { type ActionResult, formObject, idSchema, runAction } from "@/server/action-utils";
 import { db } from "@/server/db";
-import {
-  addContribution,
-  archiveGoal,
-  createGoal,
-  deleteGoal,
-  restoreGoal,
-  updateGoal,
-} from "@/server/services/goals";
+import { addContribution, archiveGoal, createGoal, deleteGoal, restoreGoal, updateGoal } from "@/server/services/goals";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";
-
 
 export async function saveGoal(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();

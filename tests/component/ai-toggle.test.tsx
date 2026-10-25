@@ -26,7 +26,9 @@ describe("AI features switch", () => {
     render(<AiToggle enabled />);
     const toggle = screen.getByRole("switch", { name: "AI features" });
     await userEvent.setup().click(toggle);
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("That didn't go through. Check your connection and try again."));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("That didn't go through. Check your connection and try again."),
+    );
     expect(toast.success).not.toHaveBeenCalled();
     await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true")); // still on
   });

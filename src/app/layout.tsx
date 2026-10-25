@@ -9,8 +9,7 @@ import { APP_NAME } from "@/config/app";
 
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
-  description:
-    "Track your spending, set budgets and ask questions about your money in plain words.",
+  description: "Track your spending, set budgets and ask questions about your money in plain words.",
 };
 
 export const viewport: Viewport = {

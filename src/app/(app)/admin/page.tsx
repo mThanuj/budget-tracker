@@ -173,7 +173,9 @@ async function AdminContent() {
               </table>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">Every non-OK result moved the request on to the next model or provider.</p>
+          <p className="text-xs text-muted-foreground">
+            Every non-OK result moved the request on to the next model or provider.
+          </p>
         </Card>
 
         <Card title="Setup checks">
@@ -182,7 +184,8 @@ async function AdminContent() {
               AI chain: {chain.length > 0 ? chain.map((p) => p.name).join(" → ") : "no provider has a key"}
             </Check>
             <Check ok>
-              Pro chain: {proChain.length > 0 ? proChain.map((p) => p.name).join(" → ") : "not set (Pro uses the free chain)"}
+              Pro chain:{" "}
+              {proChain.length > 0 ? proChain.map((p) => p.name).join(" → ") : "not set (Pro uses the free chain)"}
             </Check>
             {!billingEnabled() ? (
               <Check ok>Payments: switched off (BILLING_ENABLED); everyone is on Free</Check>
@@ -190,19 +193,27 @@ async function AdminContent() {
               <>
                 <Check ok={rzp !== null}>
                   Razorpay:{" "}
-                  {rzp ? (rzp.keyId.startsWith("rzp_live_") ? "live mode" : "test mode") : "keys missing (Pro shows as coming soon)"}
+                  {rzp
+                    ? rzp.keyId.startsWith("rzp_live_")
+                      ? "live mode"
+                      : "test mode"
+                    : "keys missing (Pro shows as coming soon)"}
                 </Check>
                 <Check ok={s.pro.doubleBilled === 0}>
                   {s.pro.doubleBilled === 0
                     ? "No one is paying for two subscriptions"
                     : `${s.pro.doubleBilled} ${s.pro.doubleBilled === 1 ? "user has" : "users have"} two renewing subscriptions: cancel and refund one in Razorpay`}
                 </Check>
-                <Check ok={Boolean(rzp?.webhookSecret)}>Razorpay webhook secret {rzp?.webhookSecret ? "set" : "missing"}</Check>
+                <Check ok={Boolean(rzp?.webhookSecret)}>
+                  Razorpay webhook secret {rzp?.webhookSecret ? "set" : "missing"}
+                </Check>
               </>
             )}
             <Check ok={Boolean(process.env.CRON_SECRET?.trim())}>
               CRON_SECRET{" "}
-              {process.env.CRON_SECRET?.trim() ? "set" : "missing (recurring entries only record when someone opens the app)"}
+              {process.env.CRON_SECRET?.trim()
+                ? "set"
+                : "missing (recurring entries only record when someone opens the app)"}
             </Check>
             <Check ok={legalMissing.length === 0}>
               Legal pages: {legalMissing.length === 0 ? "all details set" : `missing ${legalMissing.join(", ")}`}

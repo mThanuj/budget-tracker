@@ -6,9 +6,15 @@ import { Fragment, type ReactNode } from "react";
  * output can never inject HTML.
  */
 function inline(text: string): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**") && part.length > 4 ? <strong key={i}>{part.slice(2, -2)}</strong> : <Fragment key={i}>{part}</Fragment>,
-  );
+  return text
+    .split(/(\*\*[^*]+\*\*)/g)
+    .map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") && part.length > 4 ? (
+        <strong key={i}>{part.slice(2, -2)}</strong>
+      ) : (
+        <Fragment key={i}>{part}</Fragment>
+      ),
+    );
 }
 
 export function SimpleMarkdown({ text }: { text: string }) {

@@ -56,14 +56,7 @@ export function GoogleSignInButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant={variant}
-      size={size}
-      onClick={signIn}
-      disabled={pending}
-      className={className}
-    >
+    <Button type="button" variant={variant} size={size} onClick={signIn} disabled={pending} className={className}>
       <span className="grid size-5 place-items-center rounded-full bg-white">
         <GoogleLogo />
       </span>

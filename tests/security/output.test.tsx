@@ -18,7 +18,9 @@ const PAYLOADS = [
 // Real elements only: escaped text ("&lt;img …") never matches.
 const tagsIn = (html: string) => new Set([...html.matchAll(/<([a-z0-9]+)[\s>]/g)].map((m) => m[1]));
 const dangerousAttrs = (html: string) =>
-  [...html.matchAll(/<[a-z0-9]+([^>]*)>/g)].flatMap((m) => [...m[1].matchAll(/\s([a-z:-]+)=/gi)].map((a) => a[1])).filter((a) => /^(href|src|srcdoc|on\w+|formaction|xlink:href)$/i.test(a));
+  [...html.matchAll(/<[a-z0-9]+([^>]*)>/g)]
+    .flatMap((m) => [...m[1].matchAll(/\s([a-z:-]+)=/gi)].map((a) => a[1]))
+    .filter((a) => /^(href|src|srcdoc|on\w+|formaction|xlink:href)$/i.test(a));
 
 describe("chat answers (SimpleMarkdown)", () => {
   it("render only paragraphs, lists and bold, with any markup shown as text", () => {
@@ -36,7 +38,11 @@ describe("the insights report (ReportView)", () => {
       <ReportView
         report={{
           headline: PAYLOADS[0],
-          items: PAYLOADS.slice(1).map((p, i) => ({ kind: (["good", "watch", "tip"] as const)[i % 3], title: p, detail: p })),
+          items: PAYLOADS.slice(1).map((p, i) => ({
+            kind: (["good", "watch", "tip"] as const)[i % 3],
+            title: p,
+            detail: p,
+          })),
         }}
       />,
     );

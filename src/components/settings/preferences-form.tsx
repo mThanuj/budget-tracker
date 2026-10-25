@@ -4,17 +4,9 @@ import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  NativeSelect,
-  NativeSelectOptGroup,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
 import { detectTimeZone, timeZoneLabel, type Option } from "@/lib/preferences-options";
-import {
-  completeWelcome,
-  savePreferences,
-  type PreferencesState,
-} from "@/server/actions/settings";
+import { completeWelcome, savePreferences, type PreferencesState } from "@/server/actions/settings";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 import { useFormAction } from "@/components/ui-extra/use-form-action";
 
@@ -37,21 +29,19 @@ export function PreferencesForm({
   const detected = useSyncExternalStore(noopSubscribe, detectTimeZone, () => null);
   const [chosenZone, setChosenZone] = useState<string | null>(null);
   const zone = chosenZone ?? (mode === "welcome" && detected ? detected : timezone);
-  const zoneOptions =
-    timeZones.some((o) => o.value === zone) ? timeZones : [{ value: zone, label: timeZoneLabel(zone) }, ...timeZones];
+  const zoneOptions = timeZones.some((o) => o.value === zone)
+    ? timeZones
+    : [{ value: zone, label: timeZoneLabel(zone) }, ...timeZones];
 
-  const { state, pending, form } = useFormAction(
-    async (prev: PreferencesState, formData: FormData) => {
-      const result = await callAction(
-        () => (mode === "welcome" ? completeWelcome(prev, formData) : savePreferences(prev, formData)),
-        { notify: false },
-      );
-      if (result === NOT_SENT) return { error: NOT_SENT_MESSAGE };
-      if (result && "ok" in result) toast.success("Changes saved");
-      return result;
-    },
-    undefined,
-  );
+  const { state, pending, form } = useFormAction(async (prev: PreferencesState, formData: FormData) => {
+    const result = await callAction(
+      () => (mode === "welcome" ? completeWelcome(prev, formData) : savePreferences(prev, formData)),
+      { notify: false },
+    );
+    if (result === NOT_SENT) return { error: NOT_SENT_MESSAGE };
+    if (result && "ok" in result) toast.success("Changes saved");
+    return result;
+  }, undefined);
 
   return (
     <form {...form} className="grid gap-6">
@@ -108,13 +98,7 @@ export function PreferencesForm({
 
       <div>
         <Button type="submit" size="lg" disabled={pending}>
-          {mode === "welcome"
-            ? pending
-              ? "Saving…"
-              : "Save and continue"
-            : pending
-              ? "Saving…"
-              : "Save changes"}
+          {mode === "welcome" ? (pending ? "Saving…" : "Save and continue") : pending ? "Saving…" : "Save changes"}
         </Button>
       </div>
     </form>

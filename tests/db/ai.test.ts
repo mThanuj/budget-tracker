@@ -19,8 +19,14 @@ async function setup(t: T) {
   const cats = Object.fromEntries((await listCategories(t.db, u.id)).map((c) => [c.name, c.id]));
   const spend = (description: string, categoryId: string | null) =>
     createTransaction(t.db, u.id, {
-      type: "expense", amount: 100_00, occurredOn: "2026-10-20", description, notes: null,
-      walletId: cash.id, toWalletId: null, categoryId,
+      type: "expense",
+      amount: 100_00,
+      occurredOn: "2026-10-20",
+      description,
+      notes: null,
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId,
     });
   return { user: u, cash, cats, spend };
 }
@@ -45,8 +51,14 @@ describe("learning categories from entries", () => {
     const s = await setup(t);
     const e = await s.spend("Swiggy", s.cats.Groceries);
     await updateTransaction(t.db, s.user.id, e.id, {
-      type: "expense", amount: 100_00, occurredOn: "2026-10-20", description: "Swiggy", notes: null,
-      walletId: s.cash.id, toWalletId: null, categoryId: s.cats["Dining Out"],
+      type: "expense",
+      amount: 100_00,
+      occurredOn: "2026-10-20",
+      description: "Swiggy",
+      notes: null,
+      walletId: s.cash.id,
+      toWalletId: null,
+      categoryId: s.cats["Dining Out"],
     });
     expect(await learnedCategory(t.db, s.user.id, "swiggy order", "expense")).toBe(s.cats["Dining Out"]);
     await archiveCategory(t.db, s.user.id, s.cats["Dining Out"]);

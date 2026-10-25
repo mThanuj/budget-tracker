@@ -23,7 +23,14 @@ export type RuleFormData = {
   today: string;
   defaultWalletId: string | null;
   wallets: { id: string; name: string; archived: boolean }[];
-  categories: { id: string; name: string; kind: "income" | "expense"; icon: string; color: string; archived: boolean }[];
+  categories: {
+    id: string;
+    name: string;
+    kind: "income" | "expense";
+    icon: string;
+    color: string;
+    archived: boolean;
+  }[];
 };
 
 export type EditableRule = {
@@ -44,12 +51,20 @@ export type EditableRule = {
 
 export type RulePreset = Partial<Pick<EditableRule, "type" | "isSubscription">>;
 
-function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: EditableRule; preset?: RulePreset; onDone: () => void }) {
+function RuleForm({
+  data,
+  rule,
+  preset,
+  onDone,
+}: {
+  data: RuleFormData;
+  rule?: EditableRule;
+  preset?: RulePreset;
+  onDone: () => void;
+}) {
   const [type, setType] = useState(rule?.type ?? preset?.type ?? "expense");
   const [categoryId, setCategoryId] = useState<string | null>(rule?.categoryId ?? null);
-  const [repeat, setRepeat] = useState(
-    rule ? `${rule.frequency}-${rule.interval}` : "monthly-1",
-  );
+  const [repeat, setRepeat] = useState(rule ? `${rule.frequency}-${rule.interval}` : "monthly-1");
   const [anchorDate, setAnchorDate] = useState(rule?.anchorDate ?? data.today);
   const [endDate, setEndDate] = useState(rule?.endDate ?? "");
   const [showEnd, setShowEnd] = useState(Boolean(rule?.endDate));
@@ -64,7 +79,12 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
   const option = REPEAT_OPTIONS.find((o) => o.value === repeat) ?? REPEAT_OPTIONS[2];
   const first = /^\d{4}-\d{2}-\d{2}$/.test(anchorDate)
     ? occurrenceOnOrAfter(
-        { frequency: option.frequency, interval: option.interval, anchorDate, endDate: showEnd && endDate ? endDate : null },
+        {
+          frequency: option.frequency,
+          interval: option.interval,
+          anchorDate,
+          endDate: showEnd && endDate ? endDate : null,
+        },
         anchorDate > data.today ? anchorDate : data.today,
       )
     : null;
@@ -137,8 +157,17 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
       )}
 
       <div className={cn("grid gap-4", isTransfer && "sm:grid-cols-2")}>
-        <FormField id="rule-wallet" label={isTransfer ? "From" : type === "income" ? "Received in" : "Paid from"} error={errors.walletId}>
-          <NativeSelect {...fieldAria("rule-wallet", errors.walletId)} name="walletId" defaultValue={rule?.walletId ?? firstWallet} className="w-full">
+        <FormField
+          id="rule-wallet"
+          label={isTransfer ? "From" : type === "income" ? "Received in" : "Paid from"}
+          error={errors.walletId}
+        >
+          <NativeSelect
+            {...fieldAria("rule-wallet", errors.walletId)}
+            name="walletId"
+            defaultValue={rule?.walletId ?? firstWallet}
+            className="w-full"
+          >
             {wallets.map((w) => (
               <NativeSelectOption key={w.id} value={w.id}>
                 {w.name}
@@ -166,7 +195,13 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="rule-repeat" label="Repeats" error={errors.repeat}>
-          <NativeSelect {...fieldAria("rule-repeat", errors.repeat)} name="repeat" value={repeat} onChange={(e) => setRepeat(e.target.value)} className="w-full">
+          <NativeSelect
+            {...fieldAria("rule-repeat", errors.repeat)}
+            name="repeat"
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value)}
+            className="w-full"
+          >
             {REPEAT_OPTIONS.map((o) => (
               <NativeSelectOption key={o.value} value={o.value}>
                 {o.label}
@@ -219,8 +254,16 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
         <div role="radiogroup" aria-label="When the date comes" className="grid gap-2 sm:grid-cols-2">
           {(
             [
-              { value: "auto", label: "Add it automatically", hint: "Best for fixed amounts like rent, salary or subscriptions." },
-              { value: "confirm", label: "Ask me first", hint: "For bills that change, like electricity. You confirm the amount." },
+              {
+                value: "auto",
+                label: "Add it automatically",
+                hint: "Best for fixed amounts like rent, salary or subscriptions.",
+              },
+              {
+                value: "confirm",
+                label: "Ask me first",
+                hint: "For bills that change, like electricity. You confirm the amount.",
+              },
             ] as const
           ).map((o) => (
             <button
@@ -251,7 +294,9 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
           />
           <span className="grid gap-0.5">
             <span className="text-sm font-medium">This is a subscription</span>
-            <span className="text-sm text-muted-foreground">Streaming, apps, gym… It shows up in your subscription total.</span>
+            <span className="text-sm text-muted-foreground">
+              Streaming, apps, gym… It shows up in your subscription total.
+            </span>
           </span>
         </label>
       )}
@@ -287,7 +332,9 @@ export function RuleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-5 sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl">{rule ? "Edit recurring item" : "New recurring item"}</DialogTitle>
+          <DialogTitle className="font-heading text-xl">
+            {rule ? "Edit recurring item" : "New recurring item"}
+          </DialogTitle>
           <DialogDescription>Rent, salary, EMIs, bills and subscriptions that repeat on a schedule.</DialogDescription>
         </DialogHeader>
         {open && <RuleForm data={data} rule={rule} preset={preset} onDone={() => onOpenChange(false)} />}

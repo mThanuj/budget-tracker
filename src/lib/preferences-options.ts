@@ -37,9 +37,7 @@ export function timeZoneLabel(timeZone: string, at: Date = new Date()): string {
 }
 
 export function timeZoneOptions(include: string[] = [], at: Date = new Date()): Option[] {
-  const zones = new Set(
-    [...Intl.supportedValuesOf("timeZone"), "UTC", ...include].map(normalizeTimeZone),
-  );
+  const zones = new Set([...Intl.supportedValuesOf("timeZone"), "UTC", ...include].map(normalizeTimeZone));
   return [...zones].sort().map((value) => ({ value, label: timeZoneLabel(value, at) }));
 }
 

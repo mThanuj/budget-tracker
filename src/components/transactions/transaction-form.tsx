@@ -89,7 +89,10 @@ function TypeItBox({ onFilled }: { onFilled: (prefill: EntryPrefill) => void }) 
           {pending ? "Reading…" : "Fill in"}
         </Button>
       </div>
-      <p aria-live="polite" className={cn("text-xs", message?.tone === "error" ? "text-destructive" : "text-muted-foreground")}>
+      <p
+        aria-live="polite"
+        className={cn("text-xs", message?.tone === "error" ? "text-destructive" : "text-muted-foreground")}
+      >
         {message?.text ?? (
           <>
             Uses AI: what you type here is sent to our AI provider to fill in the form.{" "}
@@ -335,10 +338,20 @@ function EntryFields({
             onChange={(e) => setDate(e.target.value)}
             className="h-9 w-auto"
           />
-          <Button type="button" size="sm" variant={date === data.today ? "secondary" : "ghost"} onClick={() => setDate(data.today)}>
+          <Button
+            type="button"
+            size="sm"
+            variant={date === data.today ? "secondary" : "ghost"}
+            onClick={() => setDate(data.today)}
+          >
             Today
           </Button>
-          <Button type="button" size="sm" variant={date === yesterday ? "secondary" : "ghost"} onClick={() => setDate(yesterday)}>
+          <Button
+            type="button"
+            size="sm"
+            variant={date === yesterday ? "secondary" : "ghost"}
+            onClick={() => setDate(yesterday)}
+          >
             Yesterday
           </Button>
         </div>
@@ -346,7 +359,13 @@ function EntryFields({
 
       {showNotes ? (
         <FormField id="notes" label="Notes" error={errors.notes}>
-          <Textarea {...fieldAria("notes", errors.notes)} name="notes" maxLength={1000} rows={2} defaultValue={entry?.notes ?? ""} />
+          <Textarea
+            {...fieldAria("notes", errors.notes)}
+            name="notes"
+            maxLength={1000}
+            rows={2}
+            defaultValue={entry?.notes ?? ""}
+          />
         </FormField>
       ) : (
         <button

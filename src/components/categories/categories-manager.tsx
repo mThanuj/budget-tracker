@@ -77,11 +77,17 @@ function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kin
       </div>
 
       <IconPicker value={icon} onChange={setIcon} />
-      {errors.icon && <p role="alert" className="-mt-3 text-sm text-destructive">{errors.icon}</p>}
+      {errors.icon && (
+        <p role="alert" className="-mt-3 text-sm text-destructive">
+          {errors.icon}
+        </p>
+      )}
       <ColorPicker value={color} onChange={setColor} />
 
       {state && !state.ok && state.error && (
-        <p role="alert" className="text-sm text-destructive">{state.error}</p>
+        <p role="alert" className="text-sm text-destructive">
+          {state.error}
+        </p>
       )}
 
       <div className="flex justify-end">
@@ -156,13 +162,19 @@ function CategoryRow({ category }: { category: CategoryItem }) {
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onClick={() => setEditing(true)}>Edit</DropdownMenuItem>
           {category.usage > 0 && (
-            <DropdownMenuItem render={<Link href={`/transactions?category=${category.id}`} />}>View entries</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href={`/transactions?category=${category.id}`} />}>
+              View entries
+            </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
           {category.archived ? (
-            <DropdownMenuItem onClick={() => run("restore", category.id, "Category restored")}>Restore</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => run("restore", category.id, "Category restored")}>
+              Restore
+            </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem onClick={() => run("archive", category.id, "Category archived")}>Archive</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => run("archive", category.id, "Category archived")}>
+              Archive
+            </DropdownMenuItem>
           )}
           {category.usage === 0 && (
             <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
@@ -216,7 +228,9 @@ export function CategoriesManager({ categories }: { categories: CategoryItem[] }
           <CategoryRow key={c.id} category={c} />
         ))}
         {active.length === 0 && (
-          <li className="px-5 py-10 text-center text-muted-foreground">No {kind === "income" ? "income" : "spending"} categories yet.</li>
+          <li className="px-5 py-10 text-center text-muted-foreground">
+            No {kind === "income" ? "income" : "spending"} categories yet.
+          </li>
         )}
       </ul>
 

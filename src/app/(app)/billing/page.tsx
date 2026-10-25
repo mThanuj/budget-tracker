@@ -60,13 +60,15 @@ async function BillingContent() {
                 Renews on {day(sub.renewsAt)} · {priceLabel(sub.interval as BillingInterval)}
               </p>
             )}
-            {sub.endsAt && <p>Pro until {day(sub.endsAt)}. It won&rsquo;t renew, and you&rsquo;ll move to Free after that.</p>}
+            {sub.endsAt && (
+              <p>Pro until {day(sub.endsAt)}. It won&rsquo;t renew, and you&rsquo;ll move to Free after that.</p>
+            )}
             {sub.paymentProblem && (
               <p className="flex items-start gap-2 text-warning">
                 <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
                 <span>
-                  Your last payment didn&rsquo;t go through. Razorpay will try again over the next few days; check that your
-                  UPI Autopay mandate or card is still active.
+                  Your last payment didn&rsquo;t go through. Razorpay will try again over the next few days; check that
+                  your UPI Autopay mandate or card is still active.
                 </span>
               </p>
             )}
@@ -88,7 +90,9 @@ async function BillingContent() {
           {billing ? (
             <UpgradePanel />
           ) : (
-            <p className="text-sm text-muted-foreground">Payments aren&rsquo;t switched on yet. Everything on Free keeps working.</p>
+            <p className="text-sm text-muted-foreground">
+              Payments aren&rsquo;t switched on yet. Everything on Free keeps working.
+            </p>
           )}
         </section>
       )}

@@ -5,7 +5,6 @@ import { category, transaction } from "../db/schema";
 import { UserError } from "./errors";
 import { assertRoomFor } from "./limits";
 
-
 export async function listCategories(db: Db, userId: string, { includeArchived = false } = {}) {
   return db
     .select({
@@ -28,7 +27,10 @@ export async function getOwnedCategory(db: Db, userId: string, categoryId: strin
 }
 
 function rethrowDuplicate(err: unknown): never {
-  if (err instanceof Error && /category_user_kind_name_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)) {
+  if (
+    err instanceof Error &&
+    /category_user_kind_name_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)
+  ) {
     throw new UserError("You already have a category with that name.", "name");
   }
   throw err;
@@ -50,12 +52,7 @@ export async function createCategory(db: Db, userId: string, input: CategoryInpu
 }
 
 /** Kind (income/expense) is fixed after creation so past entries stay consistent. */
-export async function updateCategory(
-  db: Db,
-  userId: string,
-  categoryId: string,
-  input: Omit<CategoryInput, "kind">,
-) {
+export async function updateCategory(db: Db, userId: string, categoryId: string, input: Omit<CategoryInput, "kind">) {
   await getOwnedCategory(db, userId, categoryId);
   const [row] = await db
     .update(category)

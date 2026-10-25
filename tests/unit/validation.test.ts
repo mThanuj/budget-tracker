@@ -49,21 +49,35 @@ describe("transactionSchema", () => {
 
 describe("walletSchema", () => {
   it("stores what a credit card owes as a negative opening balance", () => {
-    const card = walletSchema("INR").parse({ name: "ICICI Card", kind: "credit_card", color: "#8a64b8", openingBalance: "1,500" });
+    const card = walletSchema("INR").parse({
+      name: "ICICI Card",
+      kind: "credit_card",
+      color: "#8a64b8",
+      openingBalance: "1,500",
+    });
     expect(card.openingBalanceMinor).toBe(-150000);
     const bank = walletSchema("INR").parse({ name: "SBI", kind: "bank", color: "#4a7fc1", openingBalance: "1,500" });
     expect(bank.openingBalanceMinor).toBe(150000);
   });
 
   it("treats an empty opening balance as zero and requires a name", () => {
-    expect(walletSchema("INR").parse({ name: "Cash", kind: "cash", color: "#3f9b74", openingBalance: "" }).openingBalanceMinor).toBe(0);
-    expect(fieldErrors(walletSchema("INR").safeParse({ name: "  ", kind: "cash", color: "#3f9b74" }).error!).name).toMatch(/name/);
+    expect(
+      walletSchema("INR").parse({ name: "Cash", kind: "cash", color: "#3f9b74", openingBalance: "" })
+        .openingBalanceMinor,
+    ).toBe(0);
+    expect(
+      fieldErrors(walletSchema("INR").safeParse({ name: "  ", kind: "cash", color: "#3f9b74" }).error!).name,
+    ).toMatch(/name/);
   });
 });
 
 describe("categorySchema", () => {
   it("only accepts icons from the picker", () => {
-    expect(categorySchema.safeParse({ name: "Pets", kind: "expense", icon: "paw-print", color: "#8a7f72" }).success).toBe(true);
-    expect(categorySchema.safeParse({ name: "Pets", kind: "expense", icon: "skull", color: "#8a7f72" }).success).toBe(false);
+    expect(
+      categorySchema.safeParse({ name: "Pets", kind: "expense", icon: "paw-print", color: "#8a7f72" }).success,
+    ).toBe(true);
+    expect(categorySchema.safeParse({ name: "Pets", kind: "expense", icon: "skull", color: "#8a7f72" }).success).toBe(
+      false,
+    );
   });
 });

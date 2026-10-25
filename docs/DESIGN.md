@@ -17,15 +17,15 @@ before inventing new ones.
 
 ## Tokens (`src/app/globals.css`)
 
-| Token | Use |
-|---|---|
-| `--background` paper, `--foreground` ink | Page and body text |
-| `--card` | Surfaces (cards, lists, dialogs) |
-| `--primary` teal | The one accent: main buttons, links, focus ring, progress |
-| `--muted-foreground` | Secondary text, labels, hints |
-| `--destructive` | Errors, over budget, delete |
-| `--warning` | Almost used up, card amounts owed |
-| `--chart-1` / `--chart-2` | Income / spending (validated for colour blindness) |
+| Token                                    | Use                                                       |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `--background` paper, `--foreground` ink | Page and body text                                        |
+| `--card`                                 | Surfaces (cards, lists, dialogs)                          |
+| `--primary` teal                         | The one accent: main buttons, links, focus ring, progress |
+| `--muted-foreground`                     | Secondary text, labels, hints                             |
+| `--destructive`                          | Errors, over budget, delete                               |
+| `--warning`                              | Almost used up, card amounts owed                         |
+| `--chart-1` / `--chart-2`                | Income / spending (validated for colour blindness)        |
 
 **Radius by role:** `rounded-2xl` cards and page sections, `rounded-xl` tiles
 inside a card, `rounded-lg` controls (buttons, inputs), `rounded-full` pills,
@@ -52,16 +52,16 @@ Onest for everything else; `font-medium` for list-group labels.
 
 ## Components
 
-| Need | Use |
-|---|---|
-| Page title, description, actions | `PageHeader` |
-| Nothing here yet | `EmptyState` (title, one sentence, optional action) |
-| Not found / failed to load | `StatusView`, `NotFoundView`, `ErrorView` (`error.tsx` / `not-found.tsx`) |
-| A form field | `FormField` + `fieldAria(id, error, hasHint)` |
-| "Are you sure?" | `ConfirmDialog` |
-| A few mutually exclusive options | `Segmented` |
-| Progress against a limit or target | `Meter` + `BudgetStatus` |
-| Buttons | `Button`: `default` for the one main action in view, `outline` for secondary, `ghost` for quiet ones, `destructive` for deleting |
+| Need                               | Use                                                                                                                              |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Page title, description, actions   | `PageHeader`                                                                                                                     |
+| Nothing here yet                   | `EmptyState` (title, one sentence, optional action)                                                                              |
+| Not found / failed to load         | `StatusView`, `NotFoundView`, `ErrorView` (`error.tsx` / `not-found.tsx`)                                                        |
+| A form field                       | `FormField` + `fieldAria(id, error, hasHint)`                                                                                    |
+| "Are you sure?"                    | `ConfirmDialog`                                                                                                                  |
+| A few mutually exclusive options   | `Segmented`                                                                                                                      |
+| Progress against a limit or target | `Meter` + `BudgetStatus`                                                                                                         |
+| Buttons                            | `Button`: `default` for the one main action in view, `outline` for secondary, `ghost` for quiet ones, `destructive` for deleting |
 
 **Text links** (utilities in `globals.css`), all with the same focus ring as
 buttons:
@@ -73,13 +73,13 @@ buttons:
 
 ## States
 
-| State | How |
-|---|---|
-| Loading | The page streams behind a `Suspense` skeleton shaped like the content |
-| Empty | `EmptyState`, saying what will appear and how |
-| Error | `ErrorView` with **Try again** (`retry()`) and a reference code |
-| Saving | The submit button disables and says what's happening ("Saving…") |
-| Done | A short toast in the past tense ("Entry saved", "Goal added") |
+| State         | How                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Loading       | The page streams behind a `Suspense` skeleton shaped like the content                      |
+| Empty         | `EmptyState`, saying what will appear and how                                              |
+| Error         | `ErrorView` with **Try again** (`retry()`) and a reference code                            |
+| Saving        | The submit button disables and says what's happening ("Saving…")                           |
+| Done          | A short toast in the past tense ("Entry saved", "Goal added")                              |
 | Invalid input | The message under the field, in words people use ("Enter an amount like 250 or 1,250.50.") |
 
 ## Accessibility checklist

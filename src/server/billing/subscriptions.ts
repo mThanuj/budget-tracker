@@ -12,7 +12,9 @@ const fromUnix = (s: number | null | undefined) => (s ? new Date(s * 1000) : nul
 /** Razorpay sends notes as an object, or as [] when there are none. Only string values are used. */
 function notesOf(s: RazorpaySubscription): Record<string, string> {
   if (!s.notes || Array.isArray(s.notes)) return {};
-  return Object.fromEntries(Object.entries(s.notes).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+  return Object.fromEntries(
+    Object.entries(s.notes).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
 }
 
 function intervalOf(s: RazorpaySubscription, cfg: RazorpayConfig): BillingInterval | null {
@@ -70,7 +72,8 @@ export async function handleRazorpayWebhook(
   input: { rawBody: string; signature: string | null; eventId: string | null },
   fetchLatest: (id: string) => Promise<RazorpaySubscription>,
 ): Promise<{ status: number; body: string }> {
-  if (!verifyWebhookSignature(input.rawBody, input.signature, cfg.webhookSecret)) return { status: 400, body: "Bad signature" };
+  if (!verifyWebhookSignature(input.rawBody, input.signature, cfg.webhookSecret))
+    return { status: 400, body: "Bad signature" };
   let json: unknown;
   try {
     json = JSON.parse(input.rawBody);
@@ -93,7 +96,8 @@ export async function handleRazorpayWebhook(
       console.error("[billing] couldn't fetch subscription for webhook:", err instanceof Error ? err.message : err);
       return { status: 502, body: "Try again" };
     }
-    if (!(await saveSubscriptionState(db, latest, cfg))) console.warn(`[billing] webhook for unknown subscription ${subId}`);
+    if (!(await saveSubscriptionState(db, latest, cfg)))
+      console.warn(`[billing] webhook for unknown subscription ${subId}`);
   }
   await db.insert(paymentEvent).values({ eventId, eventType: event.event }).onConflictDoNothing();
   return { status: 200, body: "OK" };
@@ -112,7 +116,12 @@ export async function subscriptionsToSync(db: Db, userId: string, now = new Date
   const rows = await db
     .select()
     .from(subscription)
-    .where(and(eq(subscription.userId, userId), inArray(subscription.status, ["created", "authenticated", "active", "pending"])));
+    .where(
+      and(
+        eq(subscription.userId, userId),
+        inArray(subscription.status, ["created", "authenticated", "active", "pending"]),
+      ),
+    );
   return rows.filter((s) => s.status === "created" || s.status === "authenticated" || isStale(s, now));
 }
 

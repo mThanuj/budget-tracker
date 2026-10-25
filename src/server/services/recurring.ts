@@ -243,7 +243,10 @@ export async function confirmOccurrence(
   const r = await getDueConfirmRule(db, userId, id, today);
   await db.transaction(async (tx) => {
     if (!(await advanceFrom(tx, r))) throw new UserError("This was already recorded.");
-    await tx.insert(transaction).values(entryFor(r, r.nextDueOn!, input)).onConflictDoNothing();
+    await tx
+      .insert(transaction)
+      .values(entryFor(r, r.nextDueOn!, input))
+      .onConflictDoNothing();
   });
 }
 
@@ -318,11 +321,17 @@ export async function trackSubscription(db: Db, userId: string, merchantKey: str
     .select({ archivedAt: wallet.archivedAt })
     .from(wallet)
     .where(and(eq(wallet.id, candidate.walletId), eq(wallet.userId, userId)));
-  if (!w[0] || w[0].archivedAt) throw new UserError("The wallet these charges came from is archived. Restore it first.");
+  if (!w[0] || w[0].archivedAt)
+    throw new UserError("The wallet these charges came from is archived. Restore it first.");
   await assertRoomFor(db, userId, "recurringItems");
 
   return db.transaction(async (tx) => {
-    const schedule: Schedule = { frequency: candidate.frequency, interval: 1, anchorDate: candidate.nextExpectedOn, endDate: null };
+    const schedule: Schedule = {
+      frequency: candidate.frequency,
+      interval: 1,
+      anchorDate: candidate.nextExpectedOn,
+      endDate: null,
+    };
     const [rule] = await tx
       .insert(recurringRule)
       .values({
@@ -349,5 +358,8 @@ export async function trackSubscription(db: Db, userId: string, merchantKey: str
 }
 
 export async function dismissSubscriptionSuggestion(db: Db, userId: string, merchantKey: string) {
-  await db.insert(alertDismissal).values({ userId, alertKey: SUGGESTION_KEY(merchantKey) }).onConflictDoNothing();
+  await db
+    .insert(alertDismissal)
+    .values({ userId, alertKey: SUGGESTION_KEY(merchantKey) })
+    .onConflictDoNothing();
 }

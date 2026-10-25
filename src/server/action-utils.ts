@@ -4,9 +4,7 @@ import { fieldErrors } from "@/lib/validation";
 import { UserError } from "./services/errors";
 
 export type ActionResult =
-  | { ok: true }
-  | { ok: false; error?: string; fieldErrors?: Record<string, string> }
-  | undefined;
+  { ok: true } | { ok: false; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
 /** Turns validation and expected service errors into a result the form can show. */
 export async function runAction(fn: () => Promise<void>): Promise<ActionResult> {
@@ -16,9 +14,7 @@ export async function runAction(fn: () => Promise<void>): Promise<ActionResult> 
   } catch (err) {
     if (err instanceof z.ZodError) return { ok: false, fieldErrors: fieldErrors(err) };
     if (err instanceof UserError) {
-      return err.field
-        ? { ok: false, fieldErrors: { [err.field]: err.message } }
-        : { ok: false, error: err.message };
+      return err.field ? { ok: false, fieldErrors: { [err.field]: err.message } } : { ok: false, error: err.message };
     }
     throw err; // redirects from requireUser() and real bugs
   }

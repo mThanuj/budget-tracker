@@ -47,7 +47,10 @@ export function TransactionFilters({
         }}
         className="relative min-w-48 flex-1"
       >
-        <SearchIcon aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <SearchIcon
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+        />
         <Input
           type="search"
           aria-label="Search descriptions and notes"
@@ -58,7 +61,11 @@ export function TransactionFilters({
           className="h-9 pl-8"
         />
       </form>
-      <NativeSelect aria-label="Wallet" value={values.wallet ?? ""} onChange={(e) => apply({ wallet: e.target.value || undefined })}>
+      <NativeSelect
+        aria-label="Wallet"
+        value={values.wallet ?? ""}
+        onChange={(e) => apply({ wallet: e.target.value || undefined })}
+      >
         <NativeSelectOption value="">All wallets</NativeSelectOption>
         {wallets.map((w) => (
           <NativeSelectOption key={w.id} value={w.id}>
@@ -66,7 +73,11 @@ export function TransactionFilters({
           </NativeSelectOption>
         ))}
       </NativeSelect>
-      <NativeSelect aria-label="Category" value={values.category ?? ""} onChange={(e) => apply({ category: e.target.value || undefined })}>
+      <NativeSelect
+        aria-label="Category"
+        value={values.category ?? ""}
+        onChange={(e) => apply({ category: e.target.value || undefined })}
+      >
         <NativeSelectOption value="">All categories</NativeSelectOption>
         <NativeSelectOption value="none">No category</NativeSelectOption>
         <NativeSelectOptGroup label="Spending">
@@ -84,7 +95,11 @@ export function TransactionFilters({
           ))}
         </NativeSelectOptGroup>
       </NativeSelect>
-      <NativeSelect aria-label="Type" value={values.type ?? ""} onChange={(e) => apply({ type: e.target.value || undefined })}>
+      <NativeSelect
+        aria-label="Type"
+        value={values.type ?? ""}
+        onChange={(e) => apply({ type: e.target.value || undefined })}
+      >
         <NativeSelectOption value="">All types</NativeSelectOption>
         <NativeSelectOption value="expense">Spent</NativeSelectOption>
         <NativeSelectOption value="income">Received</NativeSelectOption>

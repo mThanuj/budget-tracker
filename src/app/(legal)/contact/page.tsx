@@ -8,7 +8,10 @@ export const metadata = { title: "Contact" };
 
 export default function ContactPage() {
   return (
-    <LegalPage title="Contact" intro={`Questions, problems with a payment, or something about your data: we'd like to hear from you.`}>
+    <LegalPage
+      title="Contact"
+      intro={`Questions, problems with a payment, or something about your data: we'd like to hear from you.`}
+    >
       <ContactBody />
     </LegalPage>
   );

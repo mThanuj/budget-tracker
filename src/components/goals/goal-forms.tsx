@@ -42,7 +42,17 @@ function useSave<T extends (prev: Parameters<typeof saveGoal>[0], fd: FormData) 
   }, undefined);
 }
 
-function GoalForm({ goal, currency, today, onDone }: { goal?: EditableGoal; currency: string; today: string; onDone: () => void }) {
+function GoalForm({
+  goal,
+  currency,
+  today,
+  onDone,
+}: {
+  goal?: EditableGoal;
+  currency: string;
+  today: string;
+  onDone: () => void;
+}) {
   const [icon, setIcon] = useState(goal?.icon ?? "piggy-bank");
   const [color, setColor] = useState<string>(goal?.color ?? SWATCHES[2]);
   const { state, pending, form } = useSave(saveGoal, goal ? "Goal updated" : "Goal added", onDone);

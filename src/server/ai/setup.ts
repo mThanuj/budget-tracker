@@ -29,7 +29,10 @@ function schemaFor(step: SetupStep, ctx: SetupContext): z.ZodType<Record<string,
           z.object({
             name: z.string().describe('Short name, e.g. "SBI Savings", "ICICI Credit Card", "Cash"'),
             kind: z.enum(["bank", "credit_card", "cash", "other"]),
-            balance: z.number().nullable().describe("Money in it now; for a credit card, the amount owed. null if not said"),
+            balance: z
+              .number()
+              .nullable()
+              .describe("Money in it now; for a credit card, the amount owed. null if not said"),
           }),
         ),
       });
@@ -107,7 +110,11 @@ export function toSetupRows(step: SetupStep, raw: Record<string, unknown>, ctx: 
         .filter((w) => w.name);
     case "incomes":
       return list("incomes")
-        .map((i): IncomeRow => ({ name: nameText(i.name), amount: amountText(i.amount, ctx.currency), day: dayText(i.day) }))
+        .map((i): IncomeRow => ({
+          name: nameText(i.name),
+          amount: amountText(i.amount, ctx.currency),
+          day: dayText(i.day),
+        }))
         .filter((i) => i.name && i.amount);
     case "bills":
       return list("bills")
@@ -117,13 +124,21 @@ export function toSetupRows(step: SetupStep, raw: Record<string, unknown>, ctx: 
           day: dayText(b.day),
           subscription: b.subscription === true,
           categoryId:
-            ctx.expenseCategories.find((c) => typeof b.category === "string" && c.name.toLowerCase() === b.category.toLowerCase())?.id ?? null,
+            ctx.expenseCategories.find(
+              (c) => typeof b.category === "string" && c.name.toLowerCase() === b.category.toLowerCase(),
+            )?.id ?? null,
         }))
         .filter((b) => b.name && b.amount);
     case "goals":
       return list("goals")
         .map((g): GoalRow => {
-          const by = typeof g.by === "string" && /^\d{4}-\d{2}-\d{2}$/.test(g.by) && g.by > ctx.today && g.by < addDays(ctx.today, 365 * 50) ? g.by : "";
+          const by =
+            typeof g.by === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(g.by) &&
+            g.by > ctx.today &&
+            g.by < addDays(ctx.today, 365 * 50)
+              ? g.by
+              : "";
           return { name: nameText(g.name), target: amountText(g.target, ctx.currency), by };
         })
         .filter((g) => g.name && g.target);

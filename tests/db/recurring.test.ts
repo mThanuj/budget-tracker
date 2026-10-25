@@ -96,8 +96,14 @@ describe("recurring rules", () => {
     await recordDueForUser(t.db, s.userId, "2026-10-01");
     const [e] = await entriesOf(t, r.id);
     await updateTransaction(t.db, s.userId, e.id, {
-      type: "expense", amount: 15_500_00, occurredOn: "2026-10-03", description: "Rent", notes: null,
-      walletId: s.bank.id, toWalletId: null, categoryId: s.cats["Rent & Housing"],
+      type: "expense",
+      amount: 15_500_00,
+      occurredOn: "2026-10-03",
+      description: "Rent",
+      notes: null,
+      walletId: s.bank.id,
+      toWalletId: null,
+      categoryId: s.cats["Rent & Housing"],
     });
     // Rewind the cursor as if a stale job ran: the unique key still prevents a duplicate.
     await t.db.update(recurringRule).set({ nextDueOn: "2026-10-01" }).where(eq(recurringRule.id, r.id));
@@ -110,20 +116,30 @@ describe("recurring rules", () => {
     const r = await createRule(
       t.db,
       s.userId,
-      s.rule({ description: "Electricity", amount: 1_200_00, anchorDate: "2026-09-05", mode: "confirm", categoryId: s.cats["Bills & Utilities"] }),
+      s.rule({
+        description: "Electricity",
+        amount: 1_200_00,
+        anchorDate: "2026-09-05",
+        mode: "confirm",
+        categoryId: s.cats["Bills & Utilities"],
+      }),
       "2026-09-05",
     );
     expect(await recordDueForUser(t.db, s.userId, "2026-10-24")).toBe(0); // never automatic
 
     let waiting = await listAwaitingConfirmation(t.db, s.userId, "2026-10-24");
-    expect(waiting.map((w) => [w.rule.description, w.dueOn, w.pendingCount])).toEqual([["Electricity", "2026-09-05", 2]]);
+    expect(waiting.map((w) => [w.rule.description, w.dueOn, w.pendingCount])).toEqual([
+      ["Electricity", "2026-09-05", 2],
+    ]);
 
     await confirmOccurrence(t.db, s.userId, r.id, { amountMinor: 1_480_00, occurredOn: "2026-09-07" }, "2026-10-24");
     await skipOccurrence(t.db, s.userId, r.id, "2026-10-24");
     waiting = await listAwaitingConfirmation(t.db, s.userId, "2026-10-24");
     expect(waiting).toHaveLength(0);
     const rows = await entriesOf(t, r.id);
-    expect(rows.map((e) => [e.occurredOn, e.recurrenceOn, e.amountMinor])).toEqual([["2026-09-07", "2026-09-05", 1_480_00]]);
+    expect(rows.map((e) => [e.occurredOn, e.recurrenceOn, e.amountMinor])).toEqual([
+      ["2026-09-07", "2026-09-05", 1_480_00],
+    ]);
     await expect(skipOccurrence(t.db, s.userId, r.id, "2026-10-24")).rejects.toThrow(/Nothing is waiting/);
   });
 
@@ -142,7 +158,13 @@ describe("recurring rules", () => {
   it("restarts the schedule when it changes and stops at the end date", async () => {
     const s = await setup(t);
     const r = await createRule(t.db, s.userId, s.rule({ anchorDate: "2026-11-01" }), "2026-10-24");
-    const moved = await updateRule(t.db, s.userId, r.id, s.rule({ anchorDate: "2026-11-05", endDate: "2026-12-31" }), "2026-10-24");
+    const moved = await updateRule(
+      t.db,
+      s.userId,
+      r.id,
+      s.rule({ anchorDate: "2026-11-05", endDate: "2026-12-31" }),
+      "2026-10-24",
+    );
     expect(moved.nextDueOn).toBe("2026-11-05");
     await recordDueForUser(t.db, s.userId, "2027-02-01");
     expect((await entriesOf(t, r.id)).map((e) => e.occurredOn)).toEqual(["2026-11-05", "2026-12-05"]);
@@ -155,7 +177,14 @@ describe("recurring rules", () => {
     const r = await createRule(
       t.db,
       s.userId,
-      s.rule({ type: "transfer", description: "To cash", amount: 5_000_00, toWalletId: s.cash.id, categoryId: null, anchorDate: "2026-10-01" }),
+      s.rule({
+        type: "transfer",
+        description: "To cash",
+        amount: 5_000_00,
+        toWalletId: s.cash.id,
+        categoryId: null,
+        anchorDate: "2026-10-01",
+      }),
       "2026-10-01",
     );
     await recordDueForUser(t.db, s.userId, "2026-10-01");
@@ -188,7 +217,10 @@ describe("recurring rules", () => {
     const r = await createRule(t.db, s.userId, s.rule({ anchorDate: "2026-10-01" }), "2026-10-01");
     await recordDueForUser(t.db, s.userId, "2026-10-01");
     await deleteRule(t.db, s.userId, r.id);
-    const rows = await t.db.select().from(transaction).where(and(eq(transaction.userId, s.userId), eq(transaction.description, "Rent")));
+    const rows = await t.db
+      .select()
+      .from(transaction)
+      .where(and(eq(transaction.userId, s.userId), eq(transaction.description, "Rent")));
     expect(rows).toHaveLength(1);
     expect(rows[0].recurringRuleId).toBeNull();
   });
@@ -196,11 +228,24 @@ describe("recurring rules", () => {
   it("lists upcoming dates and builds due-soon reminders", async () => {
     const s = await setup(t);
     await createRule(t.db, s.userId, s.rule({ anchorDate: "2026-10-26" }), "2026-10-24");
-    await createRule(t.db, s.userId, s.rule({ description: "Gym", amount: 1_500_00, anchorDate: "2026-11-05", categoryId: null }), "2026-10-24");
+    await createRule(
+      t.db,
+      s.userId,
+      s.rule({ description: "Gym", amount: 1_500_00, anchorDate: "2026-11-05", categoryId: null }),
+      "2026-10-24",
+    );
     const upcoming = await listUpcoming(t.db, s.userId, "2026-10-24");
-    expect(upcoming.map((u) => [u.rule.description, u.date])).toEqual([["Rent", "2026-10-26"], ["Gym", "2026-11-05"]]);
+    expect(upcoming.map((u) => [u.rule.description, u.date])).toEqual([
+      ["Rent", "2026-10-26"],
+      ["Gym", "2026-11-05"],
+    ]);
 
-    const alerts = buildRecurringAlerts({ upcoming, rules: await listRules(t.db, s.userId), today: "2026-10-24", currency: "INR" });
+    const alerts = buildRecurringAlerts({
+      upcoming,
+      rules: await listRules(t.db, s.userId),
+      today: "2026-10-24",
+      currency: "INR",
+    });
     expect(alerts.map((a) => a.title)).toEqual(["Rent is due on Mon, 26 Oct"]); // Gym is more than 3 days away
   });
 });
@@ -213,10 +258,21 @@ describe("subscriptions", () => {
   afterAll(() => t.close());
 
   async function seedNetflix(s: Awaited<ReturnType<typeof setup>>) {
-    for (const [date, amount] of [["2026-07-12", 649_00], ["2026-08-12", 649_00], ["2026-09-12", 649_00], ["2026-10-12", 799_00]] as const) {
+    for (const [date, amount] of [
+      ["2026-07-12", 649_00],
+      ["2026-08-12", 649_00],
+      ["2026-09-12", 649_00],
+      ["2026-10-12", 799_00],
+    ] as const) {
       await createTransaction(t.db, s.userId, {
-        type: "expense", amount, occurredOn: date, description: "Netflix", notes: null,
-        walletId: s.bank.id, toWalletId: null, categoryId: s.cats.Subscriptions,
+        type: "expense",
+        amount,
+        occurredOn: date,
+        description: "Netflix",
+        notes: null,
+        walletId: s.bank.id,
+        toWalletId: null,
+        categoryId: s.cats.Subscriptions,
       });
     }
   }
@@ -225,16 +281,30 @@ describe("subscriptions", () => {
     const s = await setup(t);
     await seedNetflix(s);
     const [suggestion] = await listSubscriptionSuggestions(t.db, s.userId, "2026-10-24");
-    expect(suggestion).toMatchObject({ merchantKey: "netflix", frequency: "monthly", amountMinor: 799_00, nextExpectedOn: "2026-11-12" });
+    expect(suggestion).toMatchObject({
+      merchantKey: "netflix",
+      frequency: "monthly",
+      amountMinor: 799_00,
+      nextExpectedOn: "2026-11-12",
+    });
 
     const rule = await trackSubscription(t.db, s.userId, "netflix", "2026-10-24");
     expect(rule).toMatchObject({ isSubscription: true, nextDueOn: "2026-11-12", amountMinor: 799_00 });
     expect(await entriesOf(t, rule.id)).toHaveLength(4); // past charges linked, nothing new
     expect(await listSubscriptionSuggestions(t.db, s.userId, "2026-10-24")).toHaveLength(0);
 
-    const alerts = buildRecurringAlerts({ upcoming: [], rules: await listRules(t.db, s.userId), today: "2026-10-24", currency: "INR" });
+    const alerts = buildRecurringAlerts({
+      upcoming: [],
+      rules: await listRules(t.db, s.userId),
+      today: "2026-10-24",
+      currency: "INR",
+    });
     expect(alerts).toEqual([
-      expect.objectContaining({ tone: "warning", title: "Netflix went up to ₹799.00", body: expect.stringContaining("₹649.00") }),
+      expect.objectContaining({
+        tone: "warning",
+        title: "Netflix went up to ₹799.00",
+        body: expect.stringContaining("₹649.00"),
+      }),
     ]);
   });
 
@@ -259,7 +329,10 @@ describe("the hourly job", () => {
     // 20:00 UTC on Oct 31: already Nov 1 in India, still Oct 31 in California.
     const result = await recordDueForEveryone(t.db, new Date("2026-10-31T20:00:00Z"));
     expect(result.recorded).toBe(1);
-    const recorded = await t.db.select({ userId: transaction.userId }).from(transaction).where(eq(transaction.source, "recurring"));
+    const recorded = await t.db
+      .select({ userId: transaction.userId })
+      .from(transaction)
+      .where(eq(transaction.source, "recurring"));
     expect(recorded.map((r) => r.userId)).toEqual([india.userId]);
     expect(await t.db.select().from(user)).toHaveLength(2);
     await t.close();

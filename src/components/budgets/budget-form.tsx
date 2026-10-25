@@ -107,9 +107,15 @@ function BudgetForm({
       {suggestion ? (
         <div className="-mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-muted/70 px-3 py-2 text-sm">
           <span className="text-muted-foreground">
-            You spent about {formatMoney(suggestion, currency)} a month {target.mode === "overall" ? "in total" : "here"} recently.
+            You spent about {formatMoney(suggestion, currency)} a month{" "}
+            {target.mode === "overall" ? "in total" : "here"} recently.
           </span>
-          <Button type="button" size="sm" variant="secondary" onClick={() => setAmount(minorToInput(suggestion, currency))}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setAmount(minorToInput(suggestion, currency))}
+          >
             Use this
           </Button>
         </div>
@@ -171,8 +177,12 @@ export function BudgetDialog({
 }) {
   const title =
     target.mode === "overall"
-      ? target.budget ? "Edit monthly limit" : "Set a monthly limit"
-      : target.budget ? "Edit budget" : "Add a budget";
+      ? target.budget
+        ? "Edit monthly limit"
+        : "Set a monthly limit"
+      : target.budget
+        ? "Edit budget"
+        : "Add a budget";
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-5 sm:max-w-md">

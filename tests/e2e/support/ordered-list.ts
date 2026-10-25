@@ -1,6 +1,14 @@
 import { createWriteStream, type WriteStream } from "node:fs";
 import { relative } from "node:path";
-import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestError, TestResult } from "@playwright/test/reporter";
+import type {
+  FullConfig,
+  FullResult,
+  Reporter,
+  Suite,
+  TestCase,
+  TestError,
+  TestResult,
+} from "@playwright/test/reporter";
 
 // Writes the run to a log file (test-e2e.log) while Playwright's own "list"
 // reporter stays live in the terminal. In the log, tests are numbered by their
@@ -10,13 +18,20 @@ import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestError, Test
 
 type Done = { test: TestCase; result: TestResult };
 
-const MARK: Record<TestResult["status"], string> = { passed: "✓", failed: "✘", timedOut: "✘", interrupted: "✘", skipped: "-" };
+const MARK: Record<TestResult["status"], string> = {
+  passed: "✓",
+  failed: "✘",
+  timedOut: "✘",
+  interrupted: "✘",
+  skipped: "-",
+};
 
 // In a terminal Playwright colours its error messages; the log gets plain text.
 const ANSI = /\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 const plain = (text: string) => text.replace(ANSI, "");
 
-const time = (ms: number) => (ms < 1000 ? `${Math.round(ms)}ms` : ms < 60_000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 60_000).toFixed(1)}m`);
+const time = (ms: number) =>
+  ms < 1000 ? `${Math.round(ms)}ms` : ms < 60_000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 60_000).toFixed(1)}m`;
 
 export default class OrderedList implements Reporter {
   private out: WriteStream;
@@ -102,7 +117,9 @@ export default class OrderedList implements Reporter {
     const { test, result } = entry;
     const where = `${relative(process.cwd(), test.location.file)}:${test.location.line}:${test.location.column}`;
     const took = result.status === "skipped" ? "" : ` (${time(result.duration)})`;
-    this.log(`  ${MARK[result.status]} ${String(id).padStart(3)} [${this.projectOf(test)}] › ${where} › ${test.title}${took}`);
+    this.log(
+      `  ${MARK[result.status]} ${String(id).padStart(3)} [${this.projectOf(test)}] › ${where} › ${test.title}${took}`,
+    );
     if (result.status !== "passed" && result.status !== "skipped") this.failures.push(entry);
   }
 
@@ -111,7 +128,11 @@ export default class OrderedList implements Reporter {
     this.log(`\n  ${n}) [${this.projectOf(test)}] › ${where} › ${test.title}\n`);
     if (result.status === "timedOut") this.log(`    Test timeout of ${test.timeout}ms exceeded.\n`);
     for (const error of result.errors) {
-      const text = [error.message ?? String(error.value ?? ""), error.snippet, error.location && `at ${error.location.file}:${error.location.line}:${error.location.column}`]
+      const text = [
+        error.message ?? String(error.value ?? ""),
+        error.snippet,
+        error.location && `at ${error.location.file}:${error.location.line}:${error.location.column}`,
+      ]
         .filter(Boolean)
         .join("\n\n");
       this.log(text.replace(/^/gm, "    "));

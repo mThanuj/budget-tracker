@@ -8,7 +8,16 @@ export async function UserMenu({ compact = false }: { compact?: boolean }) {
   const session = await getSession();
   if (!session) return null;
   const { name, email, image } = session.user;
-  return <UserMenuDropdown name={name} email={email} image={image ?? null} compact={compact} admin={isAdmin(session.user)} billing={billingEnabled()} />;
+  return (
+    <UserMenuDropdown
+      name={name}
+      email={email}
+      image={image ?? null}
+      compact={compact}
+      admin={isAdmin(session.user)}
+      billing={billingEnabled()}
+    />
+  );
 }
 
 export function UserMenuSkeleton({ compact = false }: { compact?: boolean }) {

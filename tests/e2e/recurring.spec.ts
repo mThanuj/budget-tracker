@@ -34,9 +34,18 @@ test("ask-first items wait on the home page until recorded", async ({ signedIn: 
     db,
     userId,
     {
-      type: "expense", amount: 1_200_00, description: "Electricity", walletId: cash.id, toWalletId: null,
-      categoryId: bills.id, frequency: "monthly", interval: 1, anchorDate: today(), endDate: null,
-      mode: "confirm", isSubscription: false,
+      type: "expense",
+      amount: 1_200_00,
+      description: "Electricity",
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId: bills.id,
+      frequency: "monthly",
+      interval: 1,
+      anchorDate: today(),
+      endDate: null,
+      mode: "confirm",
+      isSubscription: false,
     },
     today(),
   );
@@ -62,9 +71,14 @@ test("a repeating charge is suggested as a subscription", async ({ signedIn: { p
   const anchor = `${addMonths(t.slice(0, 7), -2)}-${String(day).padStart(2, "0")}`;
   for (const n of [0, 1, 2]) {
     await createTransaction(db, userId, {
-      type: "expense", amount: 119_00, description: "Spotify", notes: null,
+      type: "expense",
+      amount: 119_00,
+      description: "Spotify",
+      notes: null,
       occurredOn: occurrence({ frequency: "monthly", interval: 1, anchorDate: anchor, endDate: null }, n),
-      walletId: cash.id, toWalletId: null, categoryId: null,
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId: null,
     });
   }
 

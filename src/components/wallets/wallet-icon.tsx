@@ -9,15 +9,7 @@ export const WALLET_KIND_ICON: Record<WalletKind, LucideIcon> = {
   other: WalletGlyph,
 };
 
-export function WalletIcon({
-  kind,
-  color,
-  className,
-}: {
-  kind: WalletKind;
-  color: string;
-  className?: string;
-}) {
+export function WalletIcon({ kind, color, className }: { kind: WalletKind; color: string; className?: string }) {
   const Icon = WALLET_KIND_ICON[kind];
   return (
     <span

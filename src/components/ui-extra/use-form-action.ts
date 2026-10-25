@@ -15,7 +15,10 @@ import { type FormEvent, startTransition, useActionState } from "react";
  * Spread the returned `form` props onto the <form>. `action` stays on it so a
  * submit before the page has hydrated still does nothing, as React intends.
  */
-export function useFormAction<State>(action: (previous: Awaited<State>, data: FormData) => State | Promise<State>, initialState: Awaited<State>) {
+export function useFormAction<State>(
+  action: (previous: Awaited<State>, data: FormData) => State | Promise<State>,
+  initialState: Awaited<State>,
+) {
   const [state, formAction, pending] = useActionState<State, FormData>(action, initialState);
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

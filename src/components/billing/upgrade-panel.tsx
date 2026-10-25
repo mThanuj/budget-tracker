@@ -33,7 +33,13 @@ export function UpgradePanel() {
     }
     try {
       await openCheckout(
-        { key: start.keyId, subscription_id: start.subscriptionId, name: APP_NAME, description: start.description, prefill: start.prefill },
+        {
+          key: start.keyId,
+          subscription_id: start.subscriptionId,
+          name: APP_NAME,
+          description: start.description,
+          prefill: start.prefill,
+        },
         {
           paid: (response) =>
             startConfirming(async () => {
@@ -71,15 +77,16 @@ export function UpgradePanel() {
         ]}
       />
       <p>
-        <span className="font-heading text-3xl">{price.amount}</span> <span className="text-muted-foreground">{price.per}</span>
+        <span className="font-heading text-3xl">{price.amount}</span>{" "}
+        <span className="text-muted-foreground">{price.per}</span>
         {price.note && <span className="ml-2 text-sm text-primary">{price.note}</span>}
       </p>
       <Button size="lg" className="justify-self-start" disabled={busy || confirming} onClick={upgrade}>
         {confirming ? "Confirming payment…" : busy ? "Opening payment…" : "Get Pro"}
       </Button>
       <p className="text-xs text-muted-foreground">
-        Pay with UPI Autopay or a card through Razorpay. It renews automatically; cancel any time and Pro stays until the end of
-        the period you paid for.
+        Pay with UPI Autopay or a card through Razorpay. It renews automatically; cancel any time and Pro stays until
+        the end of the period you paid for.
       </p>
     </div>
   );

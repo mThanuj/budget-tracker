@@ -65,7 +65,9 @@ export async function writeInsightWithModel(m: ModelChoice, facts: InsightFacts)
   });
   const report: InsightReport = {
     headline: output.headline.trim().slice(0, 240),
-    items: output.items.slice(0, 6).map((i) => ({ kind: i.kind, title: i.title.trim().slice(0, 80), detail: i.detail.trim().slice(0, 320) })),
+    items: output.items
+      .slice(0, 6)
+      .map((i) => ({ kind: i.kind, title: i.title.trim().slice(0, 80), detail: i.detail.trim().slice(0, 320) })),
   };
   const madeUp = ungroundedNumbers(report, facts);
   if (madeUp.length > 0) throw new BadOutputError(`Report used numbers not in the facts: ${madeUp.join(", ")}`);

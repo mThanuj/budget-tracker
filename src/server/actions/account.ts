@@ -37,18 +37,33 @@ export async function deleteAccount(confirmation: string): Promise<{ ok: false; 
   const live = await db
     .select()
     .from(subscription)
-    .where(and(eq(subscription.userId, user.id), inArray(subscription.status, ["created", "authenticated", "active", "pending", "paused"])));
+    .where(
+      and(
+        eq(subscription.userId, user.id),
+        inArray(subscription.status, ["created", "authenticated", "active", "pending", "paused"]),
+      ),
+    );
   if (live.length > 0) {
     const cfg = razorpayKeys();
-    if (!cfg) return { ok: false, error: "Payments are unavailable right now, so your Pro renewal can't be cancelled. Try again later." };
+    if (!cfg)
+      return {
+        ok: false,
+        error: "Payments are unavailable right now, so your Pro renewal can't be cancelled. Try again later.",
+      };
     for (const s of live) {
       try {
         await cancelSubscriptionNow(cfg, s.razorpaySubscriptionId);
       } catch (err) {
         // A checkout that was never paid can't always be cancelled; that's fine.
         if (s.status === "created") continue;
-        console.error("[account] couldn't cancel subscription before deleting:", err instanceof Error ? err.message : err);
-        return { ok: false, error: "We couldn't cancel your Pro renewal, so nothing was deleted. Try again in a minute." };
+        console.error(
+          "[account] couldn't cancel subscription before deleting:",
+          err instanceof Error ? err.message : err,
+        );
+        return {
+          ok: false,
+          error: "We couldn't cancel your Pro renewal, so nothing was deleted. Try again in a minute.",
+        };
       }
     }
   }

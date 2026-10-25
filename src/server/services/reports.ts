@@ -33,8 +33,14 @@ export async function monthlyTotals(db: Db, userId: string, fromMonth: ISOMonth,
   const rows = await db
     .select({
       month: monthExpr,
-      incomeMinor: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'income'), 0)`.mapWith(Number),
-      expenseMinor: sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense'), 0)`.mapWith(Number),
+      incomeMinor:
+        sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'income'), 0)`.mapWith(
+          Number,
+        ),
+      expenseMinor:
+        sql<number>`coalesce(sum(${transaction.amountMinor}) filter (where ${transaction.type} = 'expense'), 0)`.mapWith(
+          Number,
+        ),
     })
     .from(transaction)
     .where(

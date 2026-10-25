@@ -6,7 +6,6 @@ import { recurringRule, transaction, user, wallet } from "../db/schema";
 import { UserError } from "./errors";
 import { assertRoomFor } from "./limits";
 
-
 // Drizzle leaves single-table columns unqualified, which a correlated subquery
 // would resolve against its own table. Spell out the outer reference.
 const W_ID = sql.raw(`"wallet"."id"`);
@@ -49,7 +48,10 @@ export async function getOwnedWallet(db: Db, userId: string, walletId: string) {
 }
 
 function rethrowDuplicate(err: unknown): never {
-  if (err instanceof Error && /wallet_user_name_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)) {
+  if (
+    err instanceof Error &&
+    /wallet_user_name_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)
+  ) {
     throw new UserError("You already have a wallet with that name.", "name");
   }
   throw err;

@@ -43,11 +43,28 @@ async function newUser() {
 }
 const wallet = (name: string) => ({ name, kind: "bank" as const, color: "#4a7fc1", openingBalanceMinor: 0 });
 const entry = (walletId: string) => ({
-  type: "expense" as const, amount: 10_00, occurredOn: today, description: "Chai", notes: null, walletId, toWalletId: null, categoryId: null,
+  type: "expense" as const,
+  amount: 10_00,
+  occurredOn: today,
+  description: "Chai",
+  notes: null,
+  walletId,
+  toWalletId: null,
+  categoryId: null,
 });
 const rule = (walletId: string, description: string) => ({
-  type: "expense" as const, amount: 99_00, description, walletId, toWalletId: null, categoryId: null,
-  frequency: "monthly" as const, interval: 1 as const, anchorDate: "2026-11-01", endDate: null, mode: "confirm" as const, isSubscription: false,
+  type: "expense" as const,
+  amount: 99_00,
+  description,
+  walletId,
+  toWalletId: null,
+  categoryId: null,
+  frequency: "monthly" as const,
+  interval: 1 as const,
+  anchorDate: "2026-11-01",
+  endDate: null,
+  mode: "confirm" as const,
+  isSubscription: false,
 });
 const refused = (p: Promise<unknown>) => expect(p).rejects.toBeInstanceOf(UserError);
 
@@ -57,7 +74,9 @@ describe("per-account limits", () => {
     const bank = await createWallet(t.db, u.id, wallet("Bank"));
     await archiveWallet(t.db, u.id, bank.id);
     await createWallet(t.db, u.id, wallet("Card"));
-    await expect(createWallet(t.db, u.id, wallet("One more"))).rejects.toThrow("You can have up to 3 wallets, and archived ones count too.");
+    await expect(createWallet(t.db, u.id, wallet("One more"))).rejects.toThrow(
+      "You can have up to 3 wallets, and archived ones count too.",
+    );
   });
 
   it("caps categories, goals and recurring items", async () => {
@@ -78,10 +97,15 @@ describe("per-account limits", () => {
   it("limits new entries per 24 hours, not counting older ones or recurring ones the app records", async () => {
     const u = await newUser();
     for (let i = 0; i < 3; i++) await createTransaction(t.db, u.id, entry(u.cash));
-    await expect(createTransaction(t.db, u.id, entry(u.cash))).rejects.toThrow("That's 3 entries in the last 24 hours, the most allowed in a day.");
+    await expect(createTransaction(t.db, u.id, entry(u.cash))).rejects.toThrow(
+      "That's 3 entries in the last 24 hours, the most allowed in a day.",
+    );
 
     // A day later there's room again; recurring entries never count.
-    await t.db.update(schema.transaction).set({ createdAt: sql`now() - interval '25 hours'` }).where(eq(schema.transaction.userId, u.id));
+    await t.db
+      .update(schema.transaction)
+      .set({ createdAt: sql`now() - interval '25 hours'` })
+      .where(eq(schema.transaction.userId, u.id));
     await t.db.insert(schema.transaction).values({ ...entryRow(u), source: "recurring" });
     await t.db.insert(schema.transaction).values({ ...entryRow(u), source: "recurring" });
     for (let i = 0; i < 3; i++) await createTransaction(t.db, u.id, entry(u.cash));
@@ -90,7 +114,13 @@ describe("per-account limits", () => {
 
   it("limits goal savings and dismissed alerts per day", async () => {
     const u = await newUser();
-    const g = await createGoal(t.db, u.id, { name: "Bike", target: 1_000_00, targetDate: null, icon: "tag", color: "#4a7fc1" });
+    const g = await createGoal(t.db, u.id, {
+      name: "Bike",
+      target: 1_000_00,
+      targetDate: null,
+      icon: "tag",
+      color: "#4a7fc1",
+    });
     const add = { direction: "add" as const, amount: 10_00, occurredOn: today, note: null };
     await addContribution(t.db, u.id, g.id, add);
     await addContribution(t.db, u.id, g.id, add);
@@ -106,11 +136,19 @@ describe("per-account limits", () => {
     const u = await newUser();
     const input = {
       wallets: ["A", "B", "C"].map((name) => ({ name, kind: "bank" as const, balance: 0 })),
-      incomes: [], bills: [], goals: [], incomeWallet: "", billsWallet: "", limit: 0, categoryBudgets: [],
+      incomes: [],
+      bills: [],
+      goals: [],
+      incomeWallet: "",
+      billsWallet: "",
+      limit: 0,
+      categoryBudgets: [],
     };
     await refused(applySetup(t.db, u.id, input, today)); // Cash + 3 new would be 4
     expect(await listWallets(t.db, u.id, { includeArchived: true })).toHaveLength(1);
-    expect(await applySetup(t.db, u.id, { ...input, wallets: input.wallets.slice(0, 2) }, today)).toMatchObject({ wallets: 2 });
+    expect(await applySetup(t.db, u.id, { ...input, wallets: input.wallets.slice(0, 2) }, today)).toMatchObject({
+      wallets: 2,
+    });
   });
 
   it("are per account: one account at its limit doesn't affect another", async () => {
@@ -122,5 +160,12 @@ describe("per-account limits", () => {
 });
 
 function entryRow(u: { id: string; cash: string }) {
-  return { userId: u.id, type: "expense" as const, amountMinor: 10_00, occurredOn: today, description: "Rent", walletId: u.cash };
+  return {
+    userId: u.id,
+    type: "expense" as const,
+    amountMinor: 10_00,
+    occurredOn: today,
+    description: "Rent",
+    walletId: u.cash,
+  };
 }

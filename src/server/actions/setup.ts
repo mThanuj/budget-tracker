@@ -34,7 +34,9 @@ export async function parseSetupAnswer(step: SetupStep, text: string): Promise<S
   const ctx = {
     today: userToday(user),
     currency: userCurrency(user),
-    expenseCategories: (await listCategories(db, user.id)).filter((c) => c.kind === "expense").map((c) => ({ id: c.id, name: c.name })),
+    expenseCategories: (await listCategories(db, user.id))
+      .filter((c) => c.kind === "expense")
+      .map((c) => ({ id: c.id, name: c.name })),
   };
   const result = await runWithFallback(
     access.chain,
@@ -46,8 +48,7 @@ export async function parseSetupAnswer(step: SetupStep, text: string): Promise<S
 }
 
 export type SetupApplyResult =
-  | { ok: true; counts: Record<string, number> }
-  | { ok: false; error?: string; fieldErrors?: Record<string, string> };
+  { ok: true; counts: Record<string, number> } | { ok: false; error?: string; fieldErrors?: Record<string, string> };
 
 export async function applySetupAction(payload: unknown): Promise<SetupApplyResult> {
   const user = await requireUser();

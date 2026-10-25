@@ -36,7 +36,10 @@ const { createTestUser } = await import("../db/helpers");
 
 afterAll(() => vi.unstubAllEnvs());
 
-const call = (path: string, { body, cookie, origin = ORIGIN }: { body?: unknown; cookie?: string; origin?: string } = {}) =>
+const call = (
+  path: string,
+  { body, cookie, origin = ORIGIN }: { body?: unknown; cookie?: string; origin?: string } = {},
+) =>
   auth.handler(
     new Request(`${ORIGIN}/api/auth${path}`, {
       method: body === undefined ? "GET" : "POST",
@@ -64,7 +67,10 @@ beforeAll(async () => {
 describe("sessions", () => {
   it("accepts the real cookie and nothing forged", async () => {
     expect((await (await call("/get-session", { cookie })).json())?.user?.id).toBe(userId);
-    const forged = cookie.replace(/\.[^.]+$/, `.${encodeURIComponent(createHmac("sha256", "wrong-secret").update("x").digest("base64"))}`);
+    const forged = cookie.replace(
+      /\.[^.]+$/,
+      `.${encodeURIComponent(createHmac("sha256", "wrong-secret").update("x").digest("base64"))}`,
+    );
     expect(await (await call("/get-session", { cookie: forged })).json()).toBeNull();
     expect(await (await call("/get-session")).json()).toBeNull();
   });
@@ -78,7 +84,10 @@ describe("cross-site requests (CSRF) and redirects", () => {
   });
 
   it("only sends people back to this site after Google sign-in", async () => {
-    expect((await call("/sign-in/social", { body: { provider: "google", callbackURL: "https://evil.example/steal" } })).status).toBe(403);
+    expect(
+      (await call("/sign-in/social", { body: { provider: "google", callbackURL: "https://evil.example/steal" } }))
+        .status,
+    ).toBe(403);
     const ok = await call("/sign-in/social", { body: { provider: "google", callbackURL: "/dashboard" } });
     expect(ok.status).toBe(200);
     expect((await ok.json()).url).toMatch(/^https:\/\/accounts\.google\.com\//);
@@ -87,7 +96,13 @@ describe("cross-site requests (CSRF) and redirects", () => {
 
 describe("what a signed-in user can change about their account", () => {
   it("can't set the app's own fields (mass assignment)", async () => {
-    for (const field of [{ currency: "USD" }, { timezone: "UTC" }, { aiEnabled: false }, { onboardedAt: "2020-01-01" }, { defaultWalletId: crypto.randomUUID() }]) {
+    for (const field of [
+      { currency: "USD" },
+      { timezone: "UTC" },
+      { aiEnabled: false },
+      { onboardedAt: "2020-01-01" },
+      { defaultWalletId: crypto.randomUUID() },
+    ]) {
       expect((await call("/update-user", { body: field, cookie })).status, JSON.stringify(field)).toBe(400);
     }
     const [row] = await db.select().from(schema.user).where(eq(schema.user.id, userId));
@@ -95,7 +110,9 @@ describe("what a signed-in user can change about their account", () => {
   });
 
   it("can't change the email (the admin check relies on it)", async () => {
-    expect((await call("/update-user", { body: { email: "owner@example.com", emailVerified: true }, cookie })).status).toBe(400);
+    expect(
+      (await call("/update-user", { body: { email: "owner@example.com", emailVerified: true }, cookie })).status,
+    ).toBe(400);
     expect((await call("/change-email", { body: { newEmail: "owner@example.com" }, cookie })).status).toBe(400);
     const [row] = await db.select().from(schema.user).where(eq(schema.user.id, userId));
     expect(row.email).toBe(`${userId}@example.com`);
@@ -103,7 +120,9 @@ describe("what a signed-in user can change about their account", () => {
   });
 
   it("has no password sign-up, and account deletion only through the app (which cancels Pro first)", async () => {
-    expect((await call("/sign-up/email", { body: { email: "a@example.com", password: "password1234", name: "A" } })).status).toBe(400);
+    expect(
+      (await call("/sign-up/email", { body: { email: "a@example.com", password: "password1234", name: "A" } })).status,
+    ).toBe(400);
     expect((await call("/delete-user", { body: {}, cookie })).status).toBe(404);
     expect((await call("/update-user", { body: { name: "Signed out" } })).status).toBe(401);
   });

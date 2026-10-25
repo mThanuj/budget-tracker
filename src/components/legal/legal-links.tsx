@@ -13,7 +13,11 @@ export function LegalLinks({ className }: { className?: string }) {
   return (
     <nav aria-label="Policies" className={cn("flex flex-wrap gap-x-5 gap-y-2", className)}>
       {LEGAL_LINKS.filter((l) => l.href !== "/refund" || billingEnabled()).map((l) => (
-        <Link key={l.href} href={l.href} className="rounded underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">
+        <Link
+          key={l.href}
+          href={l.href}
+          className="rounded underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           {l.label}
         </Link>
       ))}

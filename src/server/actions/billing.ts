@@ -12,7 +12,12 @@ import {
   razorpayConfig,
   verifyCheckoutSignature,
 } from "@/server/billing/razorpay";
-import { isConfirming, saveSubscriptionState, subscriptionsToSync, unsettledSubscriptions } from "@/server/billing/subscriptions";
+import {
+  isConfirming,
+  saveSubscriptionState,
+  subscriptionsToSync,
+  unsettledSubscriptions,
+} from "@/server/billing/subscriptions";
 import { db } from "@/server/db";
 import { subscription } from "@/server/db/schema";
 import { requireUser } from "@/server/session";
@@ -40,13 +45,22 @@ export async function startCheckout(interval: "monthly" | "yearly"): Promise<Che
     if ((await getUserPlan(db, user.id)).id === "pro") return { ok: false, error: "You already have Pro." };
     // A payment Razorpay is still confirming: a second checkout could charge twice.
     if ((await unsettledSubscriptions(db, user.id)).some((s) => isConfirming(s))) {
-      return { ok: false, error: "Your last payment is still being confirmed. Pro should switch on in a minute or two." };
+      return {
+        ok: false,
+        error: "Your last payment is still being confirmed. Pro should switch on in a minute or two.",
+      };
     }
 
     const [reusable] = await db
       .select()
       .from(subscription)
-      .where(and(eq(subscription.userId, user.id), eq(subscription.planKey, chosen.data), eq(subscription.status, "created")))
+      .where(
+        and(
+          eq(subscription.userId, user.id),
+          eq(subscription.planKey, chosen.data),
+          eq(subscription.status, "created"),
+        ),
+      )
       .orderBy(desc(subscription.createdAt))
       .limit(1);
     let subscriptionId = reusable?.razorpaySubscriptionId;
@@ -93,15 +107,27 @@ export async function confirmCheckout(response: unknown): Promise<CheckoutConfir
   const [row] = await db
     .select()
     .from(subscription)
-    .where(and(eq(subscription.userId, user.id), eq(subscription.razorpaySubscriptionId, input.data.razorpay_subscription_id)));
+    .where(
+      and(
+        eq(subscription.userId, user.id),
+        eq(subscription.razorpaySubscriptionId, input.data.razorpay_subscription_id),
+      ),
+    );
   const signed =
     row &&
     verifyCheckoutSignature(
-      { paymentId: input.data.razorpay_payment_id, subscriptionId: row.razorpaySubscriptionId, signature: input.data.razorpay_signature },
+      {
+        paymentId: input.data.razorpay_payment_id,
+        subscriptionId: row.razorpaySubscriptionId,
+        signature: input.data.razorpay_signature,
+      },
       cfg.keySecret,
     );
   if (!signed) {
-    return { ok: false, error: "We couldn't confirm that payment. If money was taken, Pro will switch on here within a few minutes." };
+    return {
+      ok: false,
+      error: "We couldn't confirm that payment. If money was taken, Pro will switch on here within a few minutes.",
+    };
   }
 
   try {
@@ -111,7 +137,8 @@ export async function confirmCheckout(response: unknown): Promise<CheckoutConfir
   } catch (err) {
     console.error("[billing] confirm fetch failed:", err instanceof Error ? err.message : err);
     // Only move forward: never overwrite a state Razorpay already confirmed.
-    if (row.status === "created") await db.update(subscription).set({ status: "authenticated" }).where(eq(subscription.id, row.id));
+    if (row.status === "created")
+      await db.update(subscription).set({ status: "authenticated" }).where(eq(subscription.id, row.id));
   }
   refresh();
   return { ok: true, active: (await getUserPlan(db, user.id)).id === "pro" };
@@ -124,7 +151,8 @@ export async function checkPaymentStatus(): Promise<boolean> {
   if (!cfg) return false;
   try {
     for (const row of await unsettledSubscriptions(db, user.id)) {
-      if (row.status === "authenticated") await saveSubscriptionState(db, await fetchSubscription(cfg, row.razorpaySubscriptionId), cfg);
+      if (row.status === "authenticated")
+        await saveSubscriptionState(db, await fetchSubscription(cfg, row.razorpaySubscriptionId), cfg);
     }
   } catch (err) {
     console.error("[billing] status check failed:", err instanceof Error ? err.message : err);
@@ -152,7 +180,12 @@ export async function cancelPro(): Promise<{ ok: true } | { ok: false; error: st
   await db
     .update(subscription)
     .set({ cancelAtCycleEnd: true })
-    .where(and(eq(subscription.userId, user.id), eq(subscription.razorpaySubscriptionId, plan.subscription.razorpaySubscriptionId)));
+    .where(
+      and(
+        eq(subscription.userId, user.id),
+        eq(subscription.razorpaySubscriptionId, plan.subscription.razorpaySubscriptionId),
+      ),
+    );
   refresh();
   return { ok: true };
 }

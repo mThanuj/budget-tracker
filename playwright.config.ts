@@ -16,7 +16,7 @@ export default defineConfig({
   // 75% of CPU cores (6 on an 8-core Mac). All workers share one dev server and
   // the AI rate limits, so going higher mostly adds contention. Override with
   // PW_WORKERS=8 (or "50%"), or pass --workers=N.
-  workers: process.env.CI ? 2 : workersFromEnv(process.env.PW_WORKERS) ?? "75%",
+  workers: process.env.CI ? 2 : (workersFromEnv(process.env.PW_WORKERS) ?? "75%"),
   retries: process.env.CI ? 2 : 0,
   // Tests tagged @live-ai call the real AI provider, so their results depend on
   // a model and its rate limits. They run only with LIVE_AI=1 (pnpm test:e2e:live).

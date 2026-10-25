@@ -13,10 +13,7 @@ export function ProTeaser({ period }: { period: string }) {
           Pro turns these numbers into a short report: what went well, what to watch and a few small things to try. From{" "}
           {PRICES.monthly.amount} {PRICES.monthly.per}.
         </p>
-        <Link
-          href="/billing"
-          className="link justify-self-start text-sm font-medium"
-        >
+        <Link href="/billing" className="link justify-self-start text-sm font-medium">
           See Pro
         </Link>
       </div>

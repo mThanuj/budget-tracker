@@ -26,7 +26,17 @@ export type WaitingItem = {
   categoryColor: string | null;
 };
 
-function RecordForm({ item, currency, today, onDone }: { item: WaitingItem; currency: string; today: string; onDone: () => void }) {
+function RecordForm({
+  item,
+  currency,
+  today,
+  onDone,
+}: {
+  item: WaitingItem;
+  currency: string;
+  today: string;
+  onDone: () => void;
+}) {
   const { state, pending, form } = useFormAction(async (prev: Parameters<typeof confirmDue>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => confirmDue(prev, fd), { notify: false });
@@ -41,7 +51,12 @@ function RecordForm({ item, currency, today, onDone }: { item: WaitingItem; curr
   return (
     <form {...form} className="grid gap-5">
       <input type="hidden" name="ruleId" value={item.ruleId} />
-      <FormField id="due-amount" label="Amount" hint="Change it if this time's amount was different." error={errors.amount}>
+      <FormField
+        id="due-amount"
+        label="Amount"
+        hint="Change it if this time's amount was different."
+        error={errors.amount}
+      >
         <Input
           {...fieldAria("due-amount", errors.amount, true)}
           name="amount"
@@ -53,7 +68,14 @@ function RecordForm({ item, currency, today, onDone }: { item: WaitingItem; curr
         />
       </FormField>
       <FormField id="due-date" label="Paid on" error={errors.occurredOn}>
-        <Input {...fieldAria("due-date", errors.occurredOn)} type="date" name="occurredOn" max={today} defaultValue={item.dueOn <= today ? item.dueOn : today} className="h-9 w-auto" />
+        <Input
+          {...fieldAria("due-date", errors.occurredOn)}
+          type="date"
+          name="occurredOn"
+          max={today}
+          defaultValue={item.dueOn <= today ? item.dueOn : today}
+          className="h-9 w-auto"
+        />
       </FormField>
       {state && !state.ok && state.error && (
         <p role="alert" className="text-sm text-destructive">
@@ -75,7 +97,10 @@ function WaitingRow({ item, currency, today }: { item: WaitingItem; currency: st
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
       {item.type === "transfer" ? (
-        <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+        <span
+          aria-hidden
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"
+        >
           <ArrowLeftRightIcon className="size-4" />
         </span>
       ) : (
@@ -125,7 +150,10 @@ function WaitingRow({ item, currency, today }: { item: WaitingItem; currency: st
 export function WaitingList({ items, currency, today }: { items: WaitingItem[]; currency: string; today: string }) {
   if (items.length === 0) return null;
   return (
-    <section aria-labelledby="waiting-title" className="overflow-hidden rounded-2xl bg-card ring-1 ring-[color-mix(in_oklab,var(--primary)_30%,transparent)]">
+    <section
+      aria-labelledby="waiting-title"
+      className="overflow-hidden rounded-2xl bg-card ring-1 ring-[color-mix(in_oklab,var(--primary)_30%,transparent)]"
+    >
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border px-4 py-3 sm:px-5">
         <h2 id="waiting-title" className="flex items-center gap-2 self-center font-medium">
           <BellRingIcon className="size-4 text-primary" aria-hidden />

@@ -30,7 +30,8 @@ export async function askMoney(messages: { role: "user" | "assistant"; content: 
   const user = await requireUser();
   const access = await aiAccess(db, user.id);
   const parsed = history.safeParse(messages);
-  if (!parsed.success) return { ok: false, reason: "invalid", left: await chatQuestionsLeft(db, user.id, access.limits) };
+  if (!parsed.success)
+    return { ok: false, reason: "invalid", left: await chatQuestionsLeft(db, user.id, access.limits) };
   if (!aiAvailableFor(user)) return { ok: false, reason: "disabled", left: 0 };
   if (!(await takeChatQuota(db, user.id, access.limits))) {
     return { ok: false, reason: "limit", left: 0, upgrade: canUpgrade(access.plan.id) };
