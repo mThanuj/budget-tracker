@@ -18,6 +18,9 @@ export default defineConfig({
   // PW_WORKERS=8 (or "50%"), or pass --workers=N.
   workers: process.env.CI ? 2 : workersFromEnv(process.env.PW_WORKERS) ?? "75%",
   retries: process.env.CI ? 2 : 0,
+  // Tests tagged @live-ai call the real AI provider, so their results depend on
+  // a model and its rate limits. They run only with LIVE_AI=1 (pnpm test:e2e:live).
+  grepInvert: process.env.LIVE_AI === "1" ? undefined : /@live-ai/,
   // Live progress in the terminal ("list"), plus a clean log in test-e2e.log
   // with the tests in number order (1, 2, 3…).
   reporter: [["list"], ["./tests/e2e/support/ordered-list.ts", { outputFile: "test-e2e.log" }]],

@@ -26,7 +26,8 @@ Google OAuth needs `http://localhost:3000` as an authorized origin and
 |---|---|
 | `pnpm dev` | Dev server |
 | `pnpm build` / `pnpm start` | Production build / run it |
-| `pnpm test` | Unit tests and database tests (in-memory Postgres via PGlite) |
+| `pnpm test` | Every Vitest suite: unit, database, integration, component (see [docs/TESTING.md](docs/TESTING.md)) |
+| `pnpm test:e2e` | Browser tests (Playwright) against `pnpm dev` |
 | `pnpm typecheck` · `pnpm lint` | TypeScript and ESLint |
 | `pnpm db:generate` | Create a migration after editing `src/server/db/schema.ts` |
 | `pnpm db:migrate` | Apply migrations to the database in `.env.local` |
@@ -45,7 +46,7 @@ src/
   server/         server-only: db/, auth, session (requireUser), actions/
   proxy.ts        optimistic cookie check; real auth is requireUser()
 drizzle/          generated SQL migrations
-tests/            unit/ and db/ tests
+tests/            unit/, db/, integration/, component/, e2e/ (see docs/TESTING.md)
 ```
 
 ## Conventions

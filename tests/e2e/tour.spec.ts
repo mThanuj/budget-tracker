@@ -10,6 +10,9 @@ import { db, expect, test } from "./support/fixtures";
 
 // Not a behavior test: fills an account with realistic data and saves
 // screenshots of every page (tests/e2e/.tour/) for design review.
+// AI on, so the screenshots show what users see (nothing here calls the model
+// except the Pro report, which only runs with LIVE_AI=1).
+test.use({ ai: true });
 
 test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   // ~20 pages (each compiled on first visit by a fresh dev server) plus a real AI report.
@@ -117,7 +120,7 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   await page.getByRole("dialog").getByRole("radio", { name: "Groceries" }).click();
   await shot("new-entry");
 
-  // Pro pages, while payments are on. The written report calls the real AI, so only once (desktop).
+  // Pro pages, while payments are on. The written report calls the real AI, so only once (desktop) and only with LIVE_AI=1.
   if (process.env.BILLING_ENABLED?.trim() !== "true") return;
   await db.insert(schema.subscription).values({
     userId, razorpaySubscriptionId: `sub_tour_${userId}`, planKey: "yearly", status: "active",
@@ -126,7 +129,7 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
   await page.goto("/billing");
   await expect(page.getByRole("heading", { name: "Your plan: Pro" })).toBeVisible();
   await shot("billing-pro");
-  if (process.env.LLM_GROQ_API_KEY && info.project.name === "desktop-chrome") {
+  if (process.env.LIVE_AI === "1" && process.env.LLM_GROQ_API_KEY && info.project.name === "desktop-chrome") {
     await page.goto("/insights");
     await expect(page.getByText("Written by AI from the numbers below.")).toBeVisible({ timeout: 60_000 });
     await shot("insights-pro");

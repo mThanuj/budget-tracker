@@ -74,20 +74,6 @@ test("Pro shows when it renews", async ({ signedIn: { page, userId } }) => {
   await expect(page.getByRole("button", { name: "Get Pro" })).toHaveCount(0);
 });
 
-test("free users who run out of questions are pointed at Pro", async ({ signedIn: { page, userId } }) => {
-  test.skip(!aiOn, "No AI provider key in .env.local");
-  const scope = `user:${userId}`;
-  await db.insert(schema.aiUsage).values({ scope, day: new Date().toISOString().slice(0, 10), feature: "chat", count: 10 });
-  try {
-    await page.goto("/ask");
-    await expect(page.getByText("You've used today's questions. They reset tomorrow.")).toBeVisible();
-    await expect(page.getByText("0 questions left today")).toBeVisible();
-    if (billingOn) await expect(page.getByRole("link", { name: "See Pro" })).toHaveAttribute("href", "/billing");
-  } finally {
-    await db.delete(schema.aiUsage).where(eq(schema.aiUsage.scope, scope));
-  }
-});
-
 test("free users get last month's numbers, without the write-up", async ({ signedIn: { page, userId } }) => {
   const month = await seedLastMonth(userId);
   await page.goto("/insights");
@@ -98,20 +84,39 @@ test("free users get last month's numbers, without the write-up", async ({ signe
   await expect(section.getByRole("link", { name: "See Pro" })).toHaveCount(billingOn ? 1 : 0);
 });
 
-test("Pro users get last month written up, once", async ({ signedIn: { page, userId } }) => {
-  test.skip(!aiOn, "No AI provider key in .env.local");
-  test.skip(paymentsOff, "Payments are switched off (BILLING_ENABLED)");
-  test.skip(test.info().project.name !== "desktop-chrome", "Server-side AI: checked once");
-  await makePro(userId);
-  const month = await seedLastMonth(userId);
-  await page.goto("/insights");
-  const section = page.getByRole("region", { name: month });
-  await expect(section.getByText("Written by AI from the numbers below.")).toBeVisible({ timeout: 60_000 });
-  await expect(section.getByText("Try this").first()).toBeVisible();
+// These need AI switched on for the user (and a provider key in .env.local).
+test.describe("with AI on", () => {
+  test.use({ ai: true });
 
-  // Saved: coming back doesn't write it again.
-  await page.reload();
-  await expect(section.getByText("Written by AI from the numbers below.")).toBeVisible();
-  await expect(section.getByText("Writing your report…")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Check in on this month" })).toHaveCount(0); // under 5 entries this month
+  test("free users who run out of questions are pointed at Pro", async ({ signedIn: { page, userId } }) => {
+    test.skip(!aiOn, "No AI provider key in .env.local");
+    const scope = `user:${userId}`;
+    await db.insert(schema.aiUsage).values({ scope, day: new Date().toISOString().slice(0, 10), feature: "chat", count: 10 });
+    try {
+      await page.goto("/ask");
+      await expect(page.getByText("You've used today's questions. They reset tomorrow.")).toBeVisible();
+      await expect(page.getByText("0 questions left today")).toBeVisible();
+      if (billingOn) await expect(page.getByRole("link", { name: "See Pro" })).toHaveAttribute("href", "/billing");
+    } finally {
+      await db.delete(schema.aiUsage).where(eq(schema.aiUsage.scope, scope));
+    }
+  });
+
+  test("Pro users get last month written up, once", { tag: "@live-ai" }, async ({ signedIn: { page, userId } }) => {
+    test.skip(!aiOn, "No AI provider key in .env.local");
+    test.skip(paymentsOff, "Payments are switched off (BILLING_ENABLED)");
+    test.skip(test.info().project.name !== "desktop-chrome", "Server-side AI: checked once");
+    await makePro(userId);
+    const month = await seedLastMonth(userId);
+    await page.goto("/insights");
+    const section = page.getByRole("region", { name: month });
+    await expect(section.getByText("Written by AI from the numbers below.")).toBeVisible({ timeout: 60_000 });
+    await expect(section.getByText("Try this").first()).toBeVisible();
+
+    // Saved: coming back doesn't write it again.
+    await page.reload();
+    await expect(section.getByText("Written by AI from the numbers below.")).toBeVisible();
+    await expect(section.getByText("Writing your report…")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Check in on this month" })).toHaveCount(0); // under 5 entries this month
+  });
 });

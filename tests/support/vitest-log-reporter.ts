@@ -1,10 +1,13 @@
 import { writeFileSync } from "node:fs";
 import type { Reporter, SerializedError, TestModule, TestRunEndReason } from "vitest/node";
 
-// Writes a clean copy of the unit/DB test results to test-unit.log, alongside
-// Vitest's normal live output in the terminal (reporters: ["default", this]).
+// Writes a clean copy of the results to a log file, alongside Vitest's normal
+// live output in the terminal (reporters: ["default", this]). A full run
+// (pnpm test) writes test-unit.log; a run of one folder writes its own, e.g.
+// pnpm test:integration → test-integration.log, so it never overwrites the full run's.
 
-const LOG = "test-unit.log";
+const folders = new Set(process.argv.slice(2).flatMap((a) => /^(?:\.\/)?tests\/(unit|db|integration|component)\b/.exec(a)?.[1] ?? []));
+const LOG = `test-${folders.size === 1 ? [...folders][0] : "unit"}.log`;
 const time = (ms: number) => (ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(2)}s`);
 const counts = (c: { passed: number; failed: number; skipped: number }, total: number) =>
   [c.failed && `${c.failed} failed`, c.skipped && `${c.skipped} skipped`, `${c.passed} passed`].filter(Boolean).join(" | ") + ` (${total})`;

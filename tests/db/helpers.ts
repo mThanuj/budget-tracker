@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import type { Db } from "@/server/db";
 import * as schema from "@/server/db/schema";
 
 /** A fresh in-memory Postgres with all migrations applied. */
@@ -12,7 +13,7 @@ export async function createTestDb() {
 }
 
 export async function createTestUser(
-  db: Awaited<ReturnType<typeof createTestDb>>["db"],
+  db: Db,
   overrides: Partial<typeof schema.user.$inferInsert> = {},
 ) {
   const id = overrides.id ?? crypto.randomUUID();

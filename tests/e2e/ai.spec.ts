@@ -4,13 +4,16 @@ import { createTransaction } from "../../src/server/services/transactions";
 import { listWallets } from "../../src/server/services/wallets";
 import { db, expect, test } from "./support/fixtures";
 
-// These use the real AI provider from .env.local, so they're skipped without a key.
+// These need an AI provider in .env.local, so they're skipped without a key.
+// The ones that really call it are tagged @live-ai: they only run with LIVE_AI=1
+// (pnpm test:e2e:live), since their answers come from a model, not from us.
 test.skip(!process.env.LLM_GROQ_API_KEY, "No AI provider key in .env.local");
+test.use({ ai: true });
 // One at a time, in one worker: with more workers they'd otherwise hit the free
 // tier's per-minute limit together. Each still passes or fails on its own.
 test.describe.configure({ mode: "default" });
 
-test("typing a note fills in the entry form", async ({ signedIn: { page } }) => {
+test("typing a note fills in the entry form", { tag: "@live-ai" }, async ({ signedIn: { page } }) => {
   await page.goto("/transactions");
   const dialog = page.getByRole("dialog", { name: "New entry" });
   await expect(async () => {
@@ -50,7 +53,7 @@ test("switching AI off hides the typing box", async ({ signedIn: { page } }) => 
 // only; running both at once just doubles traffic against free rate limits.
 const desktopOnly = () => test.skip(test.info().project.name !== "desktop-chrome", "Server-side AI: checked once");
 
-test("the money chat answers from the user's own entries", async ({ signedIn: { page, userId } }) => {
+test("the money chat answers from the user's own entries", { tag: "@live-ai" }, async ({ signedIn: { page, userId } }) => {
   desktopOnly();
   const [cash] = await listWallets(db, userId);
   const groceries = (await listCategories(db, userId)).find((c) => c.name === "Groceries")!;
@@ -67,7 +70,7 @@ test("the money chat answers from the user's own entries", async ({ signedIn: { 
   await expect(page.getByText(/questions? left today/)).toContainText("9 questions left today");
 });
 
-test("the setup answer box turns words into rows", async ({ newUser: { page } }) => {
+test("the setup answer box turns words into rows", { tag: "@live-ai" }, async ({ newUser: { page } }) => {
   desktopOnly();
   await page.goto("/setup");
   const read = page.getByRole("button", { name: "Read my answer" });

@@ -25,22 +25,31 @@ const testAuth = betterAuth({
 });
 
 type Fixtures = {
+  /**
+   * Whether the test user starts with AI features on. Off by default, so tests
+   * never reach the AI provider by accident (the entry form asks it for a
+   * category as soon as a description is typed). Tests about AI opt in with
+   * `test.use({ ai: true })`; the ones that really call the provider are also
+   * tagged @live-ai and only run with LIVE_AI=1.
+   */
+  ai: boolean;
   /** Signs a fresh, already-onboarded user into the page. Deleted afterwards. */
   signedIn: { page: Page; userId: string };
   /** Same, but the user hasn't finished the welcome step yet. */
   newUser: { page: Page; userId: string };
 };
 
-async function signIn(page: Page, { onboarded }: { onboarded: boolean }) {
+async function signIn(page: Page, { onboarded, ai }: { onboarded: boolean; ai: boolean }) {
   const ctx = await testAuth.$context;
   const id = crypto.randomUUID();
   const user = await ctx.test.saveUser(
     ctx.test.createUser({ id, email: `e2e-${id}@example.test`, name: "Asha Rao", emailVerified: true }),
   );
   await seedNewUser(db, user.id);
-  if (onboarded) {
-    await db.update(schema.user).set({ onboardedAt: new Date() }).where(eq(schema.user.id, user.id));
-  }
+  await db
+    .update(schema.user)
+    .set({ aiEnabled: ai, onboardedAt: onboarded ? new Date() : null })
+    .where(eq(schema.user.id, user.id));
   const cookies = await ctx.test.getCookies({ userId: user.id, domain: "localhost" });
   await page.context().addCookies(cookies);
   return user.id;
@@ -52,13 +61,27 @@ async function cleanup(userId: string) {
 
 // The fixture callback is named `provide` (not `use`) so the React hooks lint rule leaves it alone.
 export const test = base.extend<Fixtures>({
-  signedIn: async ({ page }, provide) => {
-    const userId = await signIn(page, { onboarded: true });
+  // Next's dev-only badge sits bottom-right, which on a phone is on top of the
+  // entry sheet's Save button once any console error is counted as an "issue".
+  // Production has no badge or overlay, so tests (and tour screenshots) hide them.
+  page: async ({ page }, provide) => {
+    await page.addInitScript(() => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const style = document.createElement("style");
+        style.textContent = "nextjs-portal { display: none !important; }";
+        document.head.append(style);
+      });
+    });
+    await provide(page);
+  },
+  ai: [false, { option: true }],
+  signedIn: async ({ page, ai }, provide) => {
+    const userId = await signIn(page, { onboarded: true, ai });
     await provide({ page, userId });
     await cleanup(userId);
   },
-  newUser: async ({ page }, provide) => {
-    const userId = await signIn(page, { onboarded: false });
+  newUser: async ({ page, ai }, provide) => {
+    const userId = await signIn(page, { onboarded: false, ai });
     await provide({ page, userId });
     await cleanup(userId);
   },

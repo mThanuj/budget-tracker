@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
 
 /** Opens the entry dialog, retrying until the page has hydrated. */
@@ -77,11 +77,34 @@ test("add, edit and delete an entry", async ({ signedIn: { page } }) => {
   await expect(row).toHaveCount(0);
 });
 
-test("shows a friendly error for a missing amount", async ({ signedIn: { page } }) => {
+test("shows a friendly error for a missing amount, keeping what was typed", async ({ signedIn: { page } }) => {
   await page.goto("/transactions");
   const dialog = await openNewEntry(page);
+  await dialog.getByLabel("What was it for?").fill("Bus pass");
   await dialog.getByRole("button", { name: "Save entry" }).click();
   await expect(dialog.getByText("Enter an amount like 250 or 1,250.50.")).toBeVisible();
+  await expect(dialog.getByLabel("What was it for?")).toHaveValue("Bus pass");
+});
+
+test("a save that doesn't reach the server can be retried without retyping", async ({ signedIn: { page } }) => {
+  await page.goto("/transactions");
+  const dialog = await openNewEntry(page);
+  await dialog.getByLabel("Amount").fill("75");
+  await dialog.getByLabel("What was it for?").fill("Auto fare");
+
+  // Server actions are POSTs carrying a Next-Action header: drop them, as a lost connection would.
+  const offline = (route: Route) =>
+    route.request().method() === "POST" && route.request().headers()["next-action"] ? route.abort("internetdisconnected") : route.fallback();
+  await page.route("**/*", offline);
+  await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("That didn't go through. Check your connection and try again.");
+  await expect(dialog.getByLabel("Amount")).toHaveValue("75");
+  await expect(dialog.getByLabel("What was it for?")).toHaveValue("Auto fare");
+
+  await page.unroute("**/*", offline);
+  await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByText("Entry saved")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Auto fare/ })).toContainText("−₹75.00");
 });
 
 test("add a bank wallet and move money between wallets", async ({ signedIn: { page } }) => {
