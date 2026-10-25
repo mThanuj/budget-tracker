@@ -1,0 +1,12 @@
+# Generated or not ours to format
+.next/
+node_modules/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+tests/e2e/.tour/
+drizzle/
+pnpm-lock.yaml
+next-env.d.ts
+*.log

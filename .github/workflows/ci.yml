@@ -1,0 +1,55 @@
+# Checks every pull request and every push to main: lint, formatting, types,
+# all Vitest suites (unit, db, integration, component, security) and a
+# production build. Needs no secrets: tests use an in-memory Postgres and strip
+# app settings, and `next build` runs without environment variables.
+# End-to-end tests aren't run here (they need a database and auth secret);
+# run `pnpm test:e2e` locally, see docs/TESTING.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR cancels the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v7
+      # pnpm version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install (lockfile must match package.json)
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Formatting
+        run: pnpm format:check
+      - name: Type check
+        run: pnpm typecheck
+      - name: Tests
+        run: pnpm test
+      - name: Production build
+        run: pnpm build
+      - name: Keep the test log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-logs-${{ github.run_number }}
+          path: test-*.log
+          if-no-files-found: ignore
+          retention-days: 7

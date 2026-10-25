@@ -11,6 +11,11 @@ vi.mock("@/server/db", async () => {
   return { db: (await createTestDb()).db };
 });
 vi.mock("@/server/session", () => ({ getSession: vi.fn(async () => null), requireUser: vi.fn() }));
+// Outside a real request Next's connection() throws; here every call is a request.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  connection: vi.fn(async () => undefined),
+}));
 vi.mock("@/env", () => ({
   env: () => ({
     BETTER_AUTH_URL: "http://localhost:3000",
@@ -31,7 +36,18 @@ const REVIEWED: Record<string, { rule: string; methods: Record<string, (h: Handl
     rule: "Better Auth's own endpoints; see auth.test.ts",
     methods: {
       GET: async (h) => expect(await (await h(req("/api/auth/get-session"))).json()).toBeNull(),
-      POST: async (h) => expect((await h(req("/api/auth/update-user", { method: "POST", headers: { "content-type": "application/json", origin: "http://localhost:3000" }, body: "{}" }))).status).toBe(401),
+      POST: async (h) =>
+        expect(
+          (
+            await h(
+              req("/api/auth/update-user", {
+                method: "POST",
+                headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+                body: "{}",
+              }),
+            )
+          ).status,
+        ).toBe(401),
     },
   },
   "api/cron/recurring/route.ts": {
@@ -39,7 +55,9 @@ const REVIEWED: Record<string, { rule: string; methods: Record<string, (h: Handl
     methods: {
       GET: async (h) => {
         expect((await h(req("/api/cron/recurring"))).status).toBe(401);
-        expect((await h(req("/api/cron/recurring", { headers: { authorization: `Bearer ${"x".repeat(32)}` } }))).status).toBe(401);
+        expect(
+          (await h(req("/api/cron/recurring", { headers: { authorization: `Bearer ${"x".repeat(32)}` } }))).status,
+        ).toBe(401);
       },
     },
   },
@@ -63,9 +81,13 @@ const REVIEWED: Record<string, { rule: string; methods: Record<string, (h: Handl
       POST: async (h) => {
         expect((await h(req("/api/webhooks/razorpay", { method: "POST", body: "{}" }))).status).toBe(503); // billing not set up
         for (const [k, v] of Object.entries({
-          RAZORPAY_KEY_ID: "rzp_test", RAZORPAY_KEY_SECRET: "key_secret", RAZORPAY_WEBHOOK_SECRET: "whsec",
-          RAZORPAY_PLAN_MONTHLY: "plan_m", RAZORPAY_PLAN_YEARLY: "plan_y",
-        })) vi.stubEnv(k, v);
+          RAZORPAY_KEY_ID: "rzp_test",
+          RAZORPAY_KEY_SECRET: "key_secret",
+          RAZORPAY_WEBHOOK_SECRET: "whsec",
+          RAZORPAY_PLAN_MONTHLY: "plan_m",
+          RAZORPAY_PLAN_YEARLY: "plan_y",
+        }))
+          vi.stubEnv(k, v);
         expect((await h(req("/api/webhooks/razorpay", { method: "POST", body: "{}" }))).status).toBe(400); // unsigned
       },
     },
@@ -83,7 +105,9 @@ const routeFiles: string[] = [];
     else if (f === "route.ts" || f === "route.tsx") routeFiles.push(p);
   }
 })(APP);
-const routes = Object.fromEntries(routeFiles.map((p) => [p, () => import(/* @vite-ignore */ p) as Promise<Record<string, unknown>>]));
+const routes = Object.fromEntries(
+  routeFiles.map((p) => [p, () => import(/* @vite-ignore */ p) as Promise<Record<string, unknown>>]),
+);
 const name = (path: string) => relative(APP, path);
 const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
 

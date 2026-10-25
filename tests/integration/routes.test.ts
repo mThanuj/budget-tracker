@@ -18,6 +18,11 @@ vi.mock("@/server/session", () => ({
   requireUser: vi.fn(),
 }));
 vi.mock("@/env", () => ({ env: () => ({ CRON_SECRET: cron.secret }) }));
+// Outside a real request Next's connection() throws; here every call is a request.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  connection: vi.fn(async () => undefined),
+}));
 vi.mock("@/server/billing/razorpay", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/billing/razorpay")>()),
   fetchSubscription: vi.fn(),
@@ -42,7 +47,14 @@ async function newUser(name: string) {
 async function addEntry(userId: string, description: string, amount: number) {
   const [cash] = await listWallets(db, userId);
   await createTransaction(db, userId, {
-    type: "expense", amount, occurredOn: "2026-10-20", description, notes: null, walletId: cash.id, toWalletId: null, categoryId: null,
+    type: "expense",
+    amount,
+    occurredOn: "2026-10-20",
+    description,
+    notes: null,
+    walletId: cash.id,
+    toWalletId: null,
+    categoryId: null,
   });
 }
 
@@ -91,17 +103,21 @@ describe("GET /api/export", async () => {
     const bytes = new Uint8Array(await (await GET()).arrayBuffer());
     expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]); // the BOM Excel needs (Response.text() would drop it)
     const csv = new TextDecoder().decode(bytes);
-    expect(csv.trim().split("\r\n")).toEqual(["Date,Type,Amount,Currency,Description,Category,Wallet,To wallet,Notes,Added by"]);
+    expect(csv.trim().split("\r\n")).toEqual([
+      "Date,Type,Amount,Currency,Description,Category,Wallet,To wallet,Notes,Added by",
+    ]);
   });
 
   it("downloads only the signed-in user's entries, with formulas defused", async () => {
-    await addEntry(alice.id, "=HYPERLINK(\"http://evil\")", 120_00);
+    await addEntry(alice.id, '=HYPERLINK("http://evil")', 120_00);
     await addEntry(bob.id, "Bob's lunch", 90_00);
     session.user = alice;
     const res = await GET();
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("text/csv; charset=utf-8");
-    expect(res.headers.get("content-disposition")).toMatch(/^attachment; filename="clearpaisa-entries-\d{4}-\d{2}-\d{2}\.csv"$/);
+    expect(res.headers.get("content-disposition")).toMatch(
+      /^attachment; filename="clearpaisa-entries-\d{4}-\d{2}-\d{2}\.csv"$/,
+    );
     const csv = await res.text();
     expect(csv).toContain(`"'=HYPERLINK(""http://evil"")"`);
     expect(csv).not.toContain("Bob's lunch");
@@ -143,11 +159,18 @@ describe("POST /api/webhooks/razorpay", async () => {
   });
   const configure = () => {
     for (const [k, v] of Object.entries({
-      RAZORPAY_KEY_ID: "rzp_test", RAZORPAY_KEY_SECRET: "key_secret", RAZORPAY_WEBHOOK_SECRET: SECRET,
-      RAZORPAY_PLAN_MONTHLY: "plan_m", RAZORPAY_PLAN_YEARLY: "plan_y",
-    })) vi.stubEnv(k, v);
+      RAZORPAY_KEY_ID: "rzp_test",
+      RAZORPAY_KEY_SECRET: "key_secret",
+      RAZORPAY_WEBHOOK_SECRET: SECRET,
+      RAZORPAY_PLAN_MONTHLY: "plan_m",
+      RAZORPAY_PLAN_YEARLY: "plan_y",
+    }))
+      vi.stubEnv(k, v);
   };
-  const activated = JSON.stringify({ event: "subscription.activated", payload: { subscription: { entity: { id: "sub_route" } } } });
+  const activated = JSON.stringify({
+    event: "subscription.activated",
+    payload: { subscription: { entity: { id: "sub_route" } } },
+  });
 
   it("is 503 when billing isn't set up", async () => {
     expect((await send(activated)).status).toBe(503);
@@ -170,10 +193,17 @@ describe("POST /api/webhooks/razorpay", async () => {
 
   it("switches Pro on for a signed activation, once", async () => {
     configure();
-    await db.insert(schema.subscription).values({ userId: alice.id, razorpaySubscriptionId: "sub_route", planKey: "monthly", status: "created" });
+    await db
+      .insert(schema.subscription)
+      .values({ userId: alice.id, razorpaySubscriptionId: "sub_route", planKey: "monthly", status: "created" });
     vi.mocked(fetchSubscription).mockResolvedValue({
-      id: "sub_route", plan_id: "plan_m", status: "active", current_start: Date.UTC(2026, 9, 24) / 1000,
-      current_end: Date.UTC(2099, 0, 1) / 1000, ended_at: null, notes: { userId: alice.id, interval: "monthly" },
+      id: "sub_route",
+      plan_id: "plan_m",
+      status: "active",
+      current_start: Date.UTC(2026, 9, 24) / 1000,
+      current_end: Date.UTC(2099, 0, 1) / 1000,
+      ended_at: null,
+      notes: { userId: alice.id, interval: "monthly" },
     });
     const res = await send(activated, signed(activated, "evt_route"));
     expect(res.status).toBe(200);
