@@ -16,10 +16,22 @@ const walletCard = (page: Page, name: string) =>
   page.getByRole("article").filter({ has: page.getByRole("heading", { name: new RegExp(`^${name}`) }) });
 
 test("signed-out visitors are sent to the landing page", async ({ page }) => {
+  // Anything that isn't a public page, including a mistyped URL: the proxy
+  // can't tell a missing page from a private one, so it never reveals which.
+  await page.goto("/no-such-page");
+  await expect(page).toHaveURL(/localhost:3000\/$/);
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/localhost:3000\/$/);
   await expect(page.getByRole("heading", { name: "Know where your money goes." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+});
+
+test("unknown pages explain what happened and lead back home", async ({ signedIn: { page } }) => {
+  const res = await page.goto("/no-such-page");
+  expect(res?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
+  await page.getByRole("link", { name: "Go to Home" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/); // signed in, home is the dashboard
 });
 
 test("new users choose currency and time zone before reaching home", async ({ newUser: { page } }) => {

@@ -22,6 +22,7 @@ import { listWallets } from "@/server/services/wallets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";
+import { EmptyState } from "@/components/app/empty-state";
 
 export const metadata = { title: "Entries" };
 
@@ -123,17 +124,15 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
       />
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-          <h3 className="font-heading text-xl">
-            {filtered ? "No entries match these filters" : `Nothing recorded in ${formatMonth(month).split(" ")[0]}`}
-          </h3>
-          <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-            {filtered
-              ? "Try a different wallet, category or search word."
-              : "Add what you spend and receive, and it will show up here day by day."}
-          </p>
-          {!filtered && <AddEntryButton className="mt-6" />}
-        </div>
+        <EmptyState
+          headingLevel={3}
+          title={filtered ? "No entries match these filters" : `Nothing recorded in ${formatMonth(month).split(" ")[0]}`}
+          action={!filtered && <AddEntryButton />}
+        >
+          {filtered
+            ? "Try a different wallet, category or search word."
+            : "Add what you spend and receive, and it will show up here day by day."}
+        </EmptyState>
       ) : (
         <div className="grid gap-5">
           {groupByDay(rows).map((g) => (

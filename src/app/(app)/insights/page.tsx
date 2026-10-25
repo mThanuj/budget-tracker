@@ -45,7 +45,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 const SettingsLink = () => (
-  <Link href="/settings" className="text-primary underline-offset-4 hover:underline">
+  <Link href="/settings" className="link-inline">
     Settings
   </Link>
 );

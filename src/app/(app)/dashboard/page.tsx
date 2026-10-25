@@ -72,7 +72,7 @@ function Card({
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-heading text-lg">{title}</h2>
         {href && (
-          <Link href={href} className="inline-flex items-center gap-0.5 text-sm text-primary underline-offset-4 hover:underline">
+          <Link href={href} className="link inline-flex items-center gap-0.5 text-sm">
             {linkLabel}
             <ChevronRightIcon className="size-4" aria-hidden />
           </Link>

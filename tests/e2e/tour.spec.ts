@@ -81,6 +81,10 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     return [css.getPropertyValue("--chart-1").trim(), css.getPropertyValue("--chart-2").trim()];
   });
   expect(chart).toEqual(["#0a8f80", "#eb6834"]);
+  // Newer utilities too: a link must be the brand teal, or the dev server is
+  // serving an old stylesheet (fix: stop it, `rm -rf .next/dev`, start again).
+  const linkColor = await page.getByRole("link", { name: "All budgets" }).evaluate((el) => getComputedStyle(el).color);
+  expect(linkColor, "stale dev CSS: rm -rf .next/dev and restart pnpm dev").toBe("rgb(15, 110, 102)");
 
   for (const [path, name] of [
     ["/dashboard", "dashboard"],
@@ -98,6 +102,7 @@ test("visual tour", async ({ signedIn: { page, userId } }, info) => {
     ["/setup", "setup"],
     ["/privacy", "privacy"],
     ["/contact", "contact"],
+    ["/no-such-page", "not-found"],
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

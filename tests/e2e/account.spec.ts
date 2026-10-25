@@ -34,7 +34,7 @@ test("the policy pages are public and linked from the home page", async ({ page 
   }
   await page.goto("/refund");
   if (paymentsOn) await expect(page.getByText("Payments for Pro aren’t refunded")).toBeVisible();
-  else await expect(page.getByText("This page could not be found.")).toBeVisible();
+  else await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
 });
 
 test("entries download as CSV", async ({ signedIn: { page, userId } }) => {
@@ -71,6 +71,6 @@ test("deleting the account removes everything and signs out", async ({ signedIn:
 
 test("the admin page is a plain 404 for everyone else", async ({ signedIn: { page } }) => {
   await page.goto("/admin");
-  await expect(page.getByText("This page could not be found.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Admin" })).toHaveCount(0);
 });

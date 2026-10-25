@@ -27,6 +27,9 @@ export default defineConfig({
   projects: [
     { name: "desktop-chrome", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile-safari", use: { ...devices["iPhone 15"] } },
+    // Tablet portrait, where the sidebar first appears: screenshots only (the
+    // behaviour tests already run on desktop and mobile).
+    { name: "tablet", use: { ...devices["iPad Mini"] }, testMatch: /tour\.spec\.ts/ },
   ],
   webServer: {
     command: "pnpm dev",

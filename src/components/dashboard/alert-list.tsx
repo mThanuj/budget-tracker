@@ -38,7 +38,7 @@ export function AlertList({ alerts }: { alerts: Alert[] }) {
                 <p className="font-medium">{a.title}</p>
                 <p className="text-sm text-muted-foreground">
                   {a.body}{" "}
-                  <Link href={a.href} className="text-primary underline-offset-4 hover:underline">
+                  <Link href={a.href} className="link-inline">
                     View
                   </Link>
                 </p>

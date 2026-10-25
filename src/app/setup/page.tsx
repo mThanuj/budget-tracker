@@ -17,7 +17,7 @@ export default function SetupPage() {
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-5 py-6 sm:px-8">
       <div className="flex items-center justify-between">
         <Brand href="/dashboard" />
-        <Link href="/dashboard" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+        <Link href="/dashboard" className="link-quiet text-sm text-muted-foreground">
           Skip for now
         </Link>
       </div>

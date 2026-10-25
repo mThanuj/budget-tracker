@@ -19,6 +19,7 @@ import type { BudgetLevel } from "@/lib/budgets";
 import { formatMoney } from "@/lib/money";
 import { removeBudget } from "@/server/actions/budgets";
 import { BudgetDialog, type BudgetTarget } from "./budget-form";
+import { EmptyState } from "@/components/app/empty-state";
 
 export type BudgetRowData = {
   id: string;
@@ -239,12 +240,9 @@ export function CategoryBudgets({
         </Button>
       </div>
       {budgets.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-10 text-center">
-          <p className="mx-auto max-w-sm text-muted-foreground">
-            Pick the categories where money tends to slip away, like Dining Out or Shopping, and give each a monthly
-            limit.
-          </p>
-        </div>
+        <EmptyState headingLevel={3} title="No category budgets yet">
+          Pick the categories where money tends to slip away, like Dining Out or Shopping, and give each a monthly limit.
+        </EmptyState>
       ) : (
         <ul className="divide-y divide-dashed divide-border overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
           {budgets.map((b) => (

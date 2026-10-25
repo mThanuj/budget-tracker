@@ -35,11 +35,14 @@ export function FormField({
   );
 }
 
-/** aria props for the control inside a FormField. */
-export function fieldAria(id: string, error?: string) {
+/**
+ * aria props for the control inside a FormField. Pass `hasHint` when the field
+ * shows a hint, so screen readers read it too (an error replaces the hint).
+ */
+export function fieldAria(id: string, error?: string, hasHint = false) {
   return {
     id,
     "aria-invalid": error ? true : undefined,
-    "aria-describedby": error ? `${id}-error` : undefined,
+    "aria-describedby": error ? `${id}-error` : hasHint ? `${id}-hint` : undefined,
   } as const;
 }

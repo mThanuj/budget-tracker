@@ -140,6 +140,21 @@
     font-variant-numeric: tabular-nums;
   }
 }
+/* Text links: three roles, one focus ring (the same as buttons).
+   - link: standalone ("All budgets", "Plan & billing"), underlined on hover.
+   - link-inline: inside a sentence, always underlined, so it isn't told apart
+     by colour alone (WCAG 1.4.1).
+   - link-quiet: secondary actions in muted text ("Skip for now"). */
+@utility link {
+  @apply rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:underline focus-visible:ring-3 focus-visible:ring-ring/50;
+}
+@utility link-inline {
+  @apply rounded-sm text-primary underline decoration-primary/40 underline-offset-2 outline-none hover:decoration-primary focus-visible:ring-3 focus-visible:ring-ring/50;
+}
+@utility link-quiet {
+  @apply rounded-sm underline decoration-current/40 underline-offset-2 outline-none hover:text-foreground hover:decoration-current focus-visible:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50;
+}
+
 /* Policy pages: readable long-form text. */
 @layer components {
   .legal h2 {
@@ -161,5 +176,18 @@
   }
   .legal a {
     @apply text-primary underline-offset-4 hover:underline;
+  }
+}
+
+/* People who ask their device to reduce motion get no animations or
+   transitions anywhere (progress bars, skeleton pulses, dialogs). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

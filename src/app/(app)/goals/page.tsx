@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { type GoalCardData, GoalCard, NewGoalButton } from "@/components/goals/goal-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,12 +14,25 @@ export const metadata = { title: "Goals" };
 export default function GoalsPage() {
   return (
     <>
-      <PageHeader title="Goals" description="Save up for the things that matter to you." />
+      <PageHeader
+        title="Goals"
+        description="Save up for the things that matter to you."
+        actions={
+          <Suspense fallback={<Skeleton className="h-8 w-28 rounded-lg" />}>
+            <GoalActions />
+          </Suspense>
+        }
+      />
       <Suspense fallback={<GoalsSkeleton />}>
         <GoalsContent />
       </Suspense>
     </>
   );
+}
+
+async function GoalActions() {
+  const user = await requireUser();
+  return <NewGoalButton currency={userCurrency(user)} today={userToday(user)} />;
 }
 
 async function GoalsContent() {
@@ -42,27 +56,21 @@ async function GoalsContent() {
 
   return (
     <div className="grid gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-card p-5 ring-1 ring-foreground/10">
-        <div>
-          <p className="text-sm text-muted-foreground">Set aside for goals</p>
-          <p className="mt-1 text-4xl font-semibold tracking-tight">{formatMoney(setAside, currency)}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {active.length === 0
-              ? "Nothing yet."
-              : `Across ${active.length} ${active.length === 1 ? "goal" : "goals"}. This money stays in your wallets.`}
-          </p>
-        </div>
-        <NewGoalButton currency={currency} today={today} />
+      <div className="rounded-2xl bg-card p-5 ring-1 ring-foreground/10">
+        <p className="text-sm text-muted-foreground">Set aside for goals</p>
+        <p className="mt-1 text-4xl font-semibold tracking-tight">{formatMoney(setAside, currency)}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {active.length === 0
+            ? "Nothing yet."
+            : `Across ${active.length} ${active.length === 1 ? "goal" : "goals"}. This money stays in your wallets.`}
+        </p>
       </div>
 
       {active.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-          <h2 className="font-heading text-xl">What are you saving for?</h2>
-          <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-            A new phone, a trip, an emergency fund. Add a goal and a date, and you&apos;ll see how much to put aside
-            each month.
-          </p>
-        </div>
+        <EmptyState title="What are you saving for?">
+          A new phone, a trip, an emergency fund. Add a goal and a date, and you&apos;ll see how much to put aside each
+          month.
+        </EmptyState>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {active.map((g) => (

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddWalletButton, MoveMoneyButton, WalletCard } from "@/components/wallets/wallet-card";
@@ -15,11 +16,31 @@ export const metadata = { title: "Wallets" };
 export default function WalletsPage() {
   return (
     <>
-      <PageHeader title="Wallets" description="Where your money lives: bank accounts, cards and cash." />
+      <PageHeader
+        title="Wallets"
+        description="Where your money lives: bank accounts, cards and cash."
+        actions={
+          <Suspense fallback={<Skeleton className="h-8 w-56 rounded-lg" />}>
+            <WalletActions />
+          </Suspense>
+        }
+      />
       <Suspense fallback={<WalletsSkeleton />}>
         <WalletsContent />
       </Suspense>
     </>
+  );
+}
+
+async function WalletActions() {
+  const user = await requireUser();
+  // Moving money needs two wallets to move between.
+  const active = await listWallets(db, user.id);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {active.length >= 2 && <MoveMoneyButton />}
+      <AddWalletButton currency={userCurrency(user)} />
+    </div>
   );
 }
 
@@ -55,7 +76,7 @@ async function WalletsContent() {
 
   return (
     <div className="grid gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-card p-5 ring-1 ring-foreground/10">
+      <div className="rounded-2xl bg-card p-5 ring-1 ring-foreground/10">
         <div>
           <p className="text-sm text-muted-foreground">Total across wallets</p>
           <p className="mt-1 text-4xl font-semibold tracking-tight">{formatMoney(total, currency)}</p>
@@ -71,19 +92,12 @@ async function WalletsContent() {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {active.length >= 2 && <MoveMoneyButton />}
-          <AddWalletButton currency={currency} />
-        </div>
       </div>
 
       {active.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-          <h2 className="font-heading text-xl">No wallets yet</h2>
-          <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-            Add the places you keep money, like your bank account, credit card or cash, so every entry has a home.
-          </p>
-        </div>
+        <EmptyState title="No wallets yet">
+          Add the places you keep money, like your bank account, credit card or cash, so every entry has a home.
+        </EmptyState>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {active.map((w) => (

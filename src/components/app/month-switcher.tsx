@@ -29,7 +29,7 @@ export function MonthSwitcher({
         </Link>
       </div>
       {month !== currentMonth && (
-        <Link href={href(currentMonth)} className="text-sm text-primary underline-offset-4 hover:underline">
+        <Link href={href(currentMonth)} className="link text-sm">
           This month
         </Link>
       )}

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { askMoney, type ChatReply } from "@/server/actions/chat";
 import { SimpleMarkdown } from "./simple-markdown";
+import { EmptyState } from "@/components/app/empty-state";
 
 type Message = { role: "user" | "assistant"; content: string; lookedUp?: string[]; failed?: boolean; upgrade?: boolean };
 
@@ -32,7 +33,7 @@ function UpgradeNote({ proDaily }: { proDaily: number }) {
   return (
     <p className="text-sm">
       Pro gives you {proDaily} questions a day.{" "}
-      <Link href="/billing" className="font-medium text-primary underline-offset-4 hover:underline">
+      <Link href="/billing" className="link-inline font-medium">
         See Pro
       </Link>
     </p>
@@ -91,16 +92,13 @@ export function ChatPanel({
 
   if (!available) {
     return (
-      <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-        <h2 className="font-heading text-xl">AI features are off</h2>
-        <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-          Turn them on in{" "}
-          <Link href="/settings" className="text-primary underline-offset-4 hover:underline">
-            Settings
-          </Link>{" "}
-          to ask questions about your money.
-        </p>
-      </div>
+      <EmptyState title="AI features are off">
+        Turn them on in{" "}
+        <Link href="/settings" className="link-inline">
+          Settings
+        </Link>{" "}
+        to ask questions about your money.
+      </EmptyState>
     );
   }
 
@@ -167,7 +165,7 @@ export function ChatPanel({
           e.preventDefault();
           send(input);
         }}
-        className="sticky bottom-24 grid gap-2 rounded-2xl bg-card p-3 ring-1 ring-foreground/10 md:bottom-4"
+        className="sticky bottom-24 grid gap-2 rounded-2xl bg-card p-3 ring-1 ring-foreground/10 lg:bottom-4"
       >
         <label htmlFor="ask-input" className="sr-only">
           Your question

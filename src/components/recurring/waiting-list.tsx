@@ -39,7 +39,7 @@ function RecordForm({ item, currency, today, onDone }: { item: WaitingItem; curr
       <input type="hidden" name="ruleId" value={item.ruleId} />
       <FormField id="due-amount" label="Amount" hint="Change it if this time's amount was different." error={errors.amount}>
         <Input
-          {...fieldAria("due-amount", errors.amount)}
+          {...fieldAria("due-amount", errors.amount, true)}
           name="amount"
           inputMode="decimal"
           autoComplete="off"
@@ -121,11 +121,13 @@ export function WaitingList({ items, currency, today }: { items: WaitingItem[]; 
   if (items.length === 0) return null;
   return (
     <section aria-labelledby="waiting-title" className="overflow-hidden rounded-2xl bg-card ring-1 ring-[color-mix(in_oklab,var(--primary)_30%,transparent)]">
-      <h2 id="waiting-title" className="flex items-center gap-2 border-b border-border px-4 py-3 font-medium sm:px-5">
-        <BellRingIcon className="size-4 text-primary" aria-hidden />
-        Waiting for you
-        <span className="text-sm font-normal text-muted-foreground">· confirm the amount to record it</span>
-      </h2>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border px-4 py-3 sm:px-5">
+        <h2 id="waiting-title" className="flex items-center gap-2 self-center font-medium">
+          <BellRingIcon className="size-4 text-primary" aria-hidden />
+          Waiting for you
+        </h2>
+        <p className="text-sm text-muted-foreground">Confirm the amount to record it.</p>
+      </div>
       <ul className="divide-y divide-dashed divide-border">
         {items.map((i) => (
           <WaitingRow key={i.ruleId} item={i} currency={currency} today={today} />

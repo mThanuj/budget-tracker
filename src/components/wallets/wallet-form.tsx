@@ -98,7 +98,7 @@ function WalletForm({ wallet, currency, onDone }: { wallet?: EditableWallet; cur
         error={errors.openingBalance}
       >
         <Input
-          {...fieldAria("openingBalance", errors.openingBalance)}
+          {...fieldAria("openingBalance", errors.openingBalance, true)}
           name="openingBalance"
           inputMode="decimal"
           autoComplete="off"

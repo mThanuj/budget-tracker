@@ -22,6 +22,7 @@ import { formatMoney } from "@/lib/money";
 import { describeRepeat, monthlyEquivalent } from "@/lib/recurring";
 import { ruleAction, subscriptionSuggestionAction } from "@/server/actions/recurring";
 import { type EditableRule, RuleDialog, type RuleFormData, type RulePreset } from "./rule-form";
+import { EmptyState } from "@/components/app/empty-state";
 
 export type RuleItem = EditableRule & {
   active: boolean;
@@ -233,16 +234,11 @@ export function RecurringManager({
       )}
 
       {shown.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-          <h2 className="font-heading text-xl">
-            {view === "subscriptions" ? "No subscriptions tracked yet" : "Nothing repeats yet"}
-          </h2>
-          <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-            {view === "subscriptions"
-              ? "Add Netflix, Spotify, your gym or any app you pay for, and see what they cost you together."
-              : "Add rent, salary, EMIs and bills once, and they'll be recorded on their dates."}
-          </p>
-        </div>
+        <EmptyState title={view === "subscriptions" ? "No subscriptions tracked yet" : "Nothing repeats yet"}>
+          {view === "subscriptions"
+            ? "Add Netflix, Spotify, your gym or any app you pay for, and see what they cost you together."
+            : "Add rent, salary, EMIs and bills once, and they'll be recorded on their dates."}
+        </EmptyState>
       ) : (
         <ul className="divide-y divide-dashed divide-border overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
           {shown.map((r) => (
@@ -253,8 +249,8 @@ export function RecurringManager({
 
       <p className="text-sm text-muted-foreground">
         Recorded entries appear in{" "}
-        <Link href="/transactions" className="text-primary underline-offset-4 hover:underline">
-          Transactions
+        <Link href="/transactions" className="link-inline">
+          Entries
         </Link>{" "}
         like anything else, so you can edit or delete them there.
       </p>

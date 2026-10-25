@@ -49,7 +49,7 @@ async function seedLastMonth(userId: string) {
 test("with payments off, nothing about plans shows", async ({ signedIn: { page } }) => {
   test.skip(!paymentsOff, "Payments are switched on in .env.local");
   await page.goto("/billing");
-  await expect(page.getByText("This page could not be found.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Your data" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Plan & billing" })).toHaveCount(0);

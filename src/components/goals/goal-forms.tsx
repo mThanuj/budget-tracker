@@ -179,7 +179,7 @@ function ContributionForm({
         error={errors.amount}
       >
         <Input
-          {...fieldAria("contribution-amount", errors.amount)}
+          {...fieldAria("contribution-amount", errors.amount, direction === "withdraw")}
           name="amount"
           inputMode="decimal"
           autoComplete="off"

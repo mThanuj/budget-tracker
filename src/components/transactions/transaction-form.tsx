@@ -90,7 +90,7 @@ function TypeItBox({ onFilled }: { onFilled: (prefill: EntryPrefill) => void }) 
         {message?.text ?? (
           <>
             Uses AI: what you type here is sent to our AI provider to fill in the form.{" "}
-            <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">
+            <Link href="/settings" className="link-quiet">
               Settings
             </Link>
           </>

@@ -23,7 +23,7 @@ export default function BudgetsPage({ searchParams }: PageProps<"/budgets">) {
         title="Budgets"
         description="Plan how much to spend each month, and see how you're doing."
         actions={
-          <Link href="/setup" className="text-sm text-primary underline-offset-4 hover:underline">
+          <Link href="/setup" className="link text-sm">
             Plan with a few questions
           </Link>
         }
