@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
   type PreferencesState,
 } from "@/server/actions/settings";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 
 const noopSubscribe = () => () => {};
 
@@ -39,7 +40,7 @@ export function PreferencesForm({
   const zoneOptions =
     timeZones.some((o) => o.value === zone) ? timeZones : [{ value: zone, label: timeZoneLabel(zone) }, ...timeZones];
 
-  const [state, formAction, pending] = useActionState(
+  const { state, pending, form } = useFormAction(
     async (prev: PreferencesState, formData: FormData) => {
       const result = await callAction(
         () => (mode === "welcome" ? completeWelcome(prev, formData) : savePreferences(prev, formData)),
@@ -53,7 +54,7 @@ export function PreferencesForm({
   );
 
   return (
-    <form action={formAction} className="grid gap-6">
+    <form {...form} className="grid gap-6">
       <div className="grid gap-2">
         <Label htmlFor="currency">Currency</Label>
         <NativeSelect id="currency" name="currency" defaultValue={currency} className="w-full">

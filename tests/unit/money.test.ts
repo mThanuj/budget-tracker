@@ -22,6 +22,7 @@ describe("isValidCurrency", () => {
     expect(isValidCurrency("INR")).toBe(true);
     expect(isValidCurrency("inr")).toBe(false);
     expect(isValidCurrency("XYZW")).toBe(false);
+    expect(isValidCurrency("XYZ")).toBe(false); // well-formed but not a real currency
     expect(isValidCurrency("")).toBe(false);
   });
 });

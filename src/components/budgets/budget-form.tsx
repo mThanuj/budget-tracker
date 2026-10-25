@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import { FormField, fieldAria } from "@/components/ui-extra/form-field";
 import { formatMoney, minorToInput } from "@/lib/money";
 import { saveBudget } from "@/server/actions/budgets";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 
 export type BudgetTarget =
   | { mode: "overall"; budget?: { id: string; amountMinor: number } }
@@ -41,7 +42,7 @@ function BudgetForm({
   const [rollover, setRollover] = useState(target.mode === "category" && Boolean(target.budget?.rollover));
   const suggestion = suggestions[target.mode === "overall" ? "overall" : categoryId];
 
-  const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveBudget>[0], fd: FormData) => {
+  const { state, pending, form } = useFormAction(async (prev: Parameters<typeof saveBudget>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => saveBudget(prev, fd), { notify: false });
     if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
@@ -58,7 +59,7 @@ function BudgetForm({
   }
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       {existing && <input type="hidden" name="id" value={existing.id} />}
       <input type="hidden" name="categoryId" value={categoryId} />
       {rollover && <input type="hidden" name="rollover" value="on" />}

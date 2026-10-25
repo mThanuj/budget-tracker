@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { SWATCHES } from "@/lib/category-icons";
 import { formatMoney, minorToInput } from "@/lib/money";
 import { saveContribution, saveGoal } from "@/server/actions/goals";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 
 export type EditableGoal = {
   id: string;
@@ -29,7 +30,7 @@ function useSave<T extends (prev: Parameters<typeof saveGoal>[0], fd: FormData) 
   success: string,
   onDone: () => void,
 ) {
-  return useActionState(async (prev: Parameters<T>[0], fd: FormData) => {
+  return useFormAction(async (prev: Parameters<T>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => action(prev, fd), { notify: false });
     if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
@@ -44,11 +45,11 @@ function useSave<T extends (prev: Parameters<typeof saveGoal>[0], fd: FormData) 
 function GoalForm({ goal, currency, today, onDone }: { goal?: EditableGoal; currency: string; today: string; onDone: () => void }) {
   const [icon, setIcon] = useState(goal?.icon ?? "piggy-bank");
   const [color, setColor] = useState<string>(goal?.color ?? SWATCHES[2]);
-  const [state, formAction, pending] = useSave(saveGoal, goal ? "Goal updated" : "Goal added", onDone);
+  const { state, pending, form } = useSave(saveGoal, goal ? "Goal updated" : "Goal added", onDone);
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       {goal && <input type="hidden" name="id" value={goal.id} />}
       <input type="hidden" name="icon" value={icon} />
       <input type="hidden" name="color" value={color} />
@@ -154,7 +155,7 @@ function ContributionForm({
   onDone: () => void;
 }) {
   const [direction, setDirection] = useState(initial);
-  const [state, formAction, pending] = useSave(
+  const { state, pending, form } = useSave(
     saveContribution,
     direction === "add" ? `Added to ${goal.name}` : `Taken out of ${goal.name}`,
     onDone,
@@ -162,7 +163,7 @@ function ContributionForm({
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       <input type="hidden" name="goalId" value={goal.id} />
       <input type="hidden" name="direction" value={direction} />
       <Segmented

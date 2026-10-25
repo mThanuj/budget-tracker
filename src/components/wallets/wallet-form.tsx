@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { FormField, fieldAria } from "@/components/ui-extra/form-field";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 import { ColorPicker } from "@/components/ui-extra/pickers";
 import { minorToInput } from "@/lib/money";
 import { DEFAULT_WALLET_COLOR, WALLET_KINDS, type WalletKind } from "@/lib/wallets";
@@ -30,7 +31,7 @@ function WalletForm({ wallet, currency, onDone }: { wallet?: EditableWallet; cur
   // A card's opening balance is stored negative (owed) but entered as a positive amount.
   const opening = wallet ? Math.abs(wallet.openingBalanceMinor) : 0;
 
-  const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveWallet>[0], fd: FormData) => {
+  const { state, pending, form } = useFormAction(async (prev: Parameters<typeof saveWallet>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => saveWallet(prev, fd), { notify: false });
     if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
@@ -43,7 +44,7 @@ function WalletForm({ wallet, currency, onDone }: { wallet?: EditableWallet; cur
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       {wallet && <input type="hidden" name="id" value={wallet.id} />}
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="color" value={effectiveColor} />

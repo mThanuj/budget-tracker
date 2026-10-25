@@ -2,7 +2,7 @@
 
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import { SWATCHES } from "@/lib/category-icons";
 import { categoryAction, saveCategory } from "@/server/actions/categories";
 import { CategoryIcon } from "./category-icon";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 
 type Kind = "expense" | "income";
 
@@ -40,7 +41,7 @@ export type CategoryItem = {
 function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kind: Kind; onDone: () => void }) {
   const [icon, setIcon] = useState(category?.icon ?? "tag");
   const [color, setColor] = useState<string>(category?.color ?? SWATCHES[0]);
-  const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveCategory>[0], fd: FormData) => {
+  const { state, pending, form } = useFormAction(async (prev: Parameters<typeof saveCategory>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => saveCategory(prev, fd), { notify: false });
     if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
@@ -53,7 +54,7 @@ function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kin
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       {category && <input type="hidden" name="id" value={category.id} />}
       <input type="hidden" name="kind" value={category?.kind ?? kind} />
       <input type="hidden" name="icon" value={icon} />

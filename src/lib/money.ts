@@ -10,14 +10,12 @@ export function currencyExponent(currency: string): number {
   );
 }
 
+let knownCurrencies: Set<string> | undefined;
+
+/** One of the currencies the picker offers. Intl formats any 3 capital letters, even made-up codes. */
 export function isValidCurrency(code: string): boolean {
-  if (!/^[A-Z]{3}$/.test(code)) return false;
-  try {
-    new Intl.NumberFormat("en", { style: "currency", currency: code });
-    return true;
-  } catch {
-    return false;
-  }
+  knownCurrencies ??= new Set(Intl.supportedValuesOf("currency"));
+  return knownCurrencies.has(code);
 }
 
 // Indian digit grouping (1,00,000) for INR; standard grouping otherwise.

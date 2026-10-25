@@ -2,7 +2,7 @@
 
 import { SparklesIcon } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { CategoryChips } from "@/components/categories/category-chips";
@@ -20,6 +20,7 @@ import type { EntryFormData } from "@/server/actions/entry-form";
 import type { EntryPrefill } from "@/server/ai/parse-entry";
 import { removeTransaction, saveTransaction } from "@/server/actions/transactions";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 
 export type EntryType = "expense" | "income" | "transfer";
 
@@ -161,7 +162,7 @@ function EntryFields({
   const firstWallet = preset?.walletId ?? data.defaultWalletId ?? wallets[0]?.id ?? "";
   const otherWallet = wallets.find((w) => w.id !== firstWallet)?.id ?? "";
 
-  const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveTransaction>[0], fd: FormData) => {
+  const { state, pending, form } = useFormAction(async (prev: Parameters<typeof saveTransaction>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => saveTransaction(prev, fd), { notify: false });
     if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
@@ -212,7 +213,7 @@ function EntryFields({
   const yesterday = addDays(data.today, -1);
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       {entry && <input type="hidden" name="id" value={entry.id} />}
       <input type="hidden" name="type" value={type} />
       <input type="hidden" name="categoryId" value={categoryId ?? ""} />

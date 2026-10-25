@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { CategoryChips } from "@/components/categories/category-chips";
@@ -16,6 +16,7 @@ import { minorToInput } from "@/lib/money";
 import { type Frequency, occurrenceOnOrAfter, REPEAT_OPTIONS } from "@/lib/recurring";
 import { saveRule } from "@/server/actions/recurring";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 
 export type RuleFormData = {
   currency: string;
@@ -68,7 +69,7 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
       )
     : null;
 
-  const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveRule>[0], fd: FormData) => {
+  const { state, pending, form } = useFormAction(async (prev: Parameters<typeof saveRule>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => saveRule(prev, fd), { notify: false });
     if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
@@ -82,7 +83,7 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
   const isTransfer = type === "transfer";
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       {rule && <input type="hidden" name="id" value={rule.id} />}
       <input type="hidden" name="type" value={type} />
       <input type="hidden" name="categoryId" value={categoryId ?? ""} />

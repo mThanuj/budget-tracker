@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeftRightIcon, BellRingIcon } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { relativeDay } from "@/lib/date-format";
 import { formatMoney, minorToInput } from "@/lib/money";
 import { confirmDue, ruleAction } from "@/server/actions/recurring";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
+import { useFormAction } from "@/components/ui-extra/use-form-action";
 
 export type WaitingItem = {
   ruleId: string;
@@ -26,7 +27,7 @@ export type WaitingItem = {
 };
 
 function RecordForm({ item, currency, today, onDone }: { item: WaitingItem; currency: string; today: string; onDone: () => void }) {
-  const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof confirmDue>[0], fd: FormData) => {
+  const { state, pending, form } = useFormAction(async (prev: Parameters<typeof confirmDue>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => confirmDue(prev, fd), { notify: false });
     if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
@@ -38,7 +39,7 @@ function RecordForm({ item, currency, today, onDone }: { item: WaitingItem; curr
   }, undefined);
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
   return (
-    <form action={formAction} className="grid gap-5">
+    <form {...form} className="grid gap-5">
       <input type="hidden" name="ruleId" value={item.ruleId} />
       <FormField id="due-amount" label="Amount" hint="Change it if this time's amount was different." error={errors.amount}>
         <Input
