@@ -6,6 +6,9 @@ import { db, expect, test } from "./support/fixtures";
 
 // These use the real AI provider from .env.local, so they're skipped without a key.
 test.skip(!process.env.LLM_GROQ_API_KEY, "No AI provider key in .env.local");
+// One at a time, in one worker: with more workers they'd otherwise hit the free
+// tier's per-minute limit together. Each still passes or fails on its own.
+test.describe.configure({ mode: "default" });
 
 test("typing a note fills in the entry form", async ({ signedIn: { page } }) => {
   await page.goto("/transactions");
