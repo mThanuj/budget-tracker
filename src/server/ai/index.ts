@@ -1,5 +1,4 @@
 import "server-only";
-import { todayInTz } from "@/lib/dates";
 import type { CurrentUser } from "../auth";
 import type { Db } from "../db";
 import { listCategories } from "../services/categories";
@@ -11,6 +10,7 @@ import { providerChain } from "./config";
 import { runWithFallback } from "./fallback";
 import { type EntryContext, type EntryPrefill, extractEntryWithModel, toPrefill } from "./parse-entry";
 import { recordProviderOutcome, takeAiQuota } from "./quota";
+import { userCurrency, userTimeZone, userToday } from "@/lib/user-prefs";
 
 export type AiFailure = "disabled" | "limit" | "busy" | "unreadable" | "no_amount";
 
@@ -26,11 +26,11 @@ export function aiAvailableFor(user: Pick<CurrentUser, "aiEnabled">) {
 async function entryContext(db: Db, user: CurrentUser): Promise<EntryContext> {
   const [wallets, categories] = await Promise.all([listWallets(db, user.id), listCategories(db, user.id)]);
   return {
-    today: todayInTz(user.timezone ?? "Asia/Kolkata"),
-    timeZone: user.timezone ?? "Asia/Kolkata",
-    currency: user.currency ?? "INR",
+    today: userToday(user),
+    timeZone: userTimeZone(user),
+    currency: userCurrency(user),
     wallets: wallets.map((w) => ({ id: w.id, name: w.name })),
-    defaultWalletId: (user.defaultWalletId as string | null | undefined) ?? null,
+    defaultWalletId: user.defaultWalletId ?? null,
     categories: categories.map((c) => ({ id: c.id, name: c.name, kind: c.kind })),
   };
 }

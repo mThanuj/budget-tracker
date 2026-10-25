@@ -17,6 +17,7 @@ import { razorpayConfig } from "@/server/billing/razorpay";
 import { isConfirming, unsettledSubscriptions } from "@/server/billing/subscriptions";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/session";
+import { userTimeZone } from "@/lib/user-prefs";
 
 export const metadata = { title: "Plan & billing" };
 
@@ -38,7 +39,7 @@ async function BillingContent() {
   const user = await requireUser();
   const [plan, unsettled] = await Promise.all([getUserPlan(db, user.id), unsettledSubscriptions(db, user.id)]);
   const billing = razorpayConfig() !== null;
-  const day = (d: Date) => format(d, "d MMM yyyy", { in: tz(user.timezone ?? "Asia/Kolkata") });
+  const day = (d: Date) => format(d, "d MMM yyyy", { in: tz(userTimeZone(user)) });
   const sub = plan.subscription;
   const activating = plan.id === "free" && unsettled.some((s) => isConfirming(s));
 

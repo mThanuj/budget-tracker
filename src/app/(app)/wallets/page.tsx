@@ -8,6 +8,7 @@ import { totalSetAside } from "@/server/services/goals";
 import { listWallets } from "@/server/services/wallets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
+import { userCurrency } from "@/lib/user-prefs";
 
 export const metadata = { title: "Wallets" };
 
@@ -25,8 +26,8 @@ export default function WalletsPage() {
 async function WalletsContent() {
   const user = await requireUser();
   await syncRecurring(user);
-  const currency = user.currency ?? "INR";
-  const defaultWalletId = (user.defaultWalletId as string | null | undefined) ?? null;
+  const currency = userCurrency(user);
+  const defaultWalletId = user.defaultWalletId ?? null;
   const [wallets, setAside] = await Promise.all([
     listWallets(db, user.id, { includeArchived: true }),
     totalSetAside(db, user.id),

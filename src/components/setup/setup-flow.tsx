@@ -132,11 +132,11 @@ export function SetupFlow(props: SetupContextProps) {
       // Work out the suggested plan from the answers so far.
       const watched = props.expenseCategories.filter((c) => watch.includes(c.id));
       const plan = buildPlan({ monthlyIncomeMinor: income, monthlyBillsMinor: bills, watchCategories: watched.map((c) => c.name), currency });
-      setLimit(plan.limitMinor ? minorToInput(plan.limitMinor, currency).replace(/\.00$/, "") : "");
+      setLimit(plan.limitMinor ? minorToInput(plan.limitMinor, currency, { trimWhole: true }) : "");
       setBudgets(
         plan.categories.map((c) => ({
           categoryId: watched.find((w) => w.name === c.name)!.id,
-          amount: minorToInput(c.amountMinor, currency).replace(/\.00$/, ""),
+          amount: minorToInput(c.amountMinor, currency, { trimWhole: true }),
         })),
       );
       setIncomeWallet((w) => w || preferredWallet);

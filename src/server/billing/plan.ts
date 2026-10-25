@@ -49,4 +49,3 @@ export async function getUserPlan(db: Db, userId: string, now: Date = new Date()
   return { ...plan, limits: PLANS[plan.id] };
 }
 
-export type UserPlan = Awaited<ReturnType<typeof getUserPlan>>;

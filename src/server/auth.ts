@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { APP_NAME } from "@/config/app";
+import { DEFAULT_CURRENCY, DEFAULT_TIME_ZONE } from "@/config/defaults";
 import { env } from "@/env";
 import { db } from "./db";
 import * as schema from "./db/schema";
@@ -23,8 +24,8 @@ export const auth = betterAuth({
   user: {
     // Changed only through our own server actions, never by the client.
     additionalFields: {
-      currency: { type: "string", required: false, defaultValue: "INR", input: false },
-      timezone: { type: "string", required: false, defaultValue: "Asia/Kolkata", input: false },
+      currency: { type: "string", required: false, defaultValue: DEFAULT_CURRENCY, input: false },
+      timezone: { type: "string", required: false, defaultValue: DEFAULT_TIME_ZONE, input: false },
       onboardedAt: { type: "date", required: false, input: false },
       aiEnabled: { type: "boolean", required: false, defaultValue: true, input: false },
       defaultWalletId: { type: "string", required: false, input: false },

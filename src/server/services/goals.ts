@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import type { ContributionInput, GoalInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { goal, goalContribution } from "../db/schema";
@@ -78,16 +78,6 @@ export async function addContribution(db: Db, userId: string, goalId: string, in
     .values({ userId, goalId, amountMinor: amount, occurredOn: input.occurredOn, note: input.note })
     .returning();
   return row;
-}
-
-export async function listContributions(db: Db, userId: string, goalId: string, limit = 20) {
-  await getOwnedGoal(db, userId, goalId);
-  return db
-    .select()
-    .from(goalContribution)
-    .where(and(eq(goalContribution.goalId, goalId), eq(goalContribution.userId, userId)))
-    .orderBy(desc(goalContribution.occurredOn), desc(goalContribution.createdAt))
-    .limit(limit);
 }
 
 /** Total set aside across active goals, shown next to wallet balances. */

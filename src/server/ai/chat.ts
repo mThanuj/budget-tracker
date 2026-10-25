@@ -40,7 +40,7 @@ export const TOOL_LABELS: Record<string, string> = {
  */
 export function moneyTools(db: Db, u: ChatUser) {
   // Whole amounts without ".00": fewer tokens and fewer chances to garble them.
-  const money = (minor: number) => formatMoney(minor, u.currency).replace(/\.00$/, "");
+  const money = (minor: number) => formatMoney(minor, u.currency, { trimWhole: true });
   const day = (d: ISODate) => relativeDay(d, u.today);
   const clampRange = (from: ISODate, to: ISODate) => {
     // Inclusive dates from the model; at most two years, never in the far future.

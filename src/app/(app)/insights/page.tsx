@@ -18,6 +18,7 @@ import { db } from "@/server/db";
 import { buildInsightFacts, factsHash } from "@/server/services/insight-facts";
 import { getInsight, refreshesUsed } from "@/server/services/insights";
 import { requireUser } from "@/server/session";
+import { userCurrency, userTimeZone } from "@/lib/user-prefs";
 
 export const metadata = { title: "Insights" };
 
@@ -51,8 +52,8 @@ const SettingsLink = () => (
 
 async function InsightsContent() {
   const user = await requireUser();
-  const currency = user.currency ?? "INR";
-  const timeZone = user.timezone ?? "Asia/Kolkata";
+  const currency = userCurrency(user);
+  const timeZone = userTimeZone(user);
   const today = todayInTz(timeZone);
   const thisMonth = monthOf(today);
   const lastMonth = addMonths(thisMonth, -1);

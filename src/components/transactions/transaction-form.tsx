@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ui-extra/confirm-dialog";
 import { FormField, fieldAria } from "@/components/ui-extra/form-field";
 import { Segmented } from "@/components/ui-extra/segmented";
 import { addDays } from "@/lib/dates";
-import { minorToInput } from "@/lib/money";
+import { currencySymbol, minorToInput } from "@/lib/money";
 import { type ParseResult, parseEntryText, suggestCategoryFor } from "@/server/actions/ai";
 import type { EntryFormData } from "@/server/actions/entry-form";
 import type { EntryPrefill } from "@/server/ai/parse-entry";
@@ -35,14 +35,6 @@ export type EditableEntry = {
 };
 
 export type EntryPreset = { type?: EntryType; walletId?: string };
-
-function currencySymbol(currency: string) {
-  return (
-    new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency })
-      .formatToParts(0)
-      .find((p) => p.type === "currency")?.value ?? currency
-  );
-}
 
 const PARSE_MESSAGES: Record<Exclude<ParseResult, { ok: true }>["reason"], string> = {
   too_short: "Type a little more, like “spent 240 on chai”.",

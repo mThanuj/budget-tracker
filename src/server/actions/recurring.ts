@@ -2,7 +2,6 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
-import { todayInTz } from "@/lib/dates";
 import { moneyField, recurringSchema } from "@/lib/validation";
 import { type ActionResult, formObject, idSchema, runAction } from "@/server/action-utils";
 import { db } from "@/server/db";
@@ -18,16 +17,16 @@ import {
   updateRule,
 } from "@/server/services/recurring";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
-const todayFor = (tz: string | null | undefined) => todayInTz(tz ?? "Asia/Kolkata");
 const merchantKey = z.string().regex(/^[a-z ]{2,60}$/);
 
 export async function saveRule(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
   return runAction(async () => {
     const { id, ...fields } = formObject(formData);
-    const today = todayFor(user.timezone);
-    const input = recurringSchema(user.currency ?? "INR", today).parse(fields);
+    const today = userToday(user);
+    const input = recurringSchema(userCurrency(user), today).parse(fields);
     if (id) await updateRule(db, user.id, idSchema.parse(id), input, today);
     else await createRule(db, user.id, input, today);
     refresh();
@@ -40,7 +39,7 @@ export async function ruleAction(op: RuleOp, id: string): Promise<ActionResult> 
   const user = await requireUser();
   return runAction(async () => {
     const ruleId = idSchema.parse(id);
-    const today = todayFor(user.timezone);
+    const today = userToday(user);
     if (op === "pause") await pauseRule(db, user.id, ruleId);
     else if (op === "resume") await resumeRule(db, user.id, ruleId, today);
     else if (op === "delete") await deleteRule(db, user.id, ruleId);
@@ -53,11 +52,11 @@ export async function ruleAction(op: RuleOp, id: string): Promise<ActionResult> 
 export async function confirmDue(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
   return runAction(async () => {
-    const today = todayFor(user.timezone);
+    const today = userToday(user);
     const fields = z
       .object({
         ruleId: idSchema,
-        amount: moneyField(user.currency ?? "INR"),
+        amount: moneyField(userCurrency(user)),
         occurredOn: z
           .string()
           .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.")
@@ -73,7 +72,7 @@ export async function subscriptionSuggestionAction(op: "track" | "dismiss", key:
   const user = await requireUser();
   return runAction(async () => {
     const k = merchantKey.parse(key);
-    if (op === "track") await trackSubscription(db, user.id, k, todayFor(user.timezone));
+    if (op === "track") await trackSubscription(db, user.id, k, userToday(user));
     else if (op === "dismiss") await dismissSubscriptionSuggestion(db, user.id, k);
     else throw new Error(`Unknown suggestion operation: ${op}`);
     refresh();

@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { type GoalCardData, GoalCard, NewGoalButton } from "@/components/goals/goal-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { todayInTz } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
 import { listGoals } from "@/server/services/goals";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export const metadata = { title: "Goals" };
 
@@ -23,8 +23,8 @@ export default function GoalsPage() {
 
 async function GoalsContent() {
   const user = await requireUser();
-  const currency = user.currency ?? "INR";
-  const today = todayInTz(user.timezone ?? "Asia/Kolkata");
+  const currency = userCurrency(user);
+  const today = userToday(user);
   const goals = await listGoals(db, user.id, { includeArchived: true });
   const toCard = (g: (typeof goals)[number]): GoalCardData => ({
     id: g.id,

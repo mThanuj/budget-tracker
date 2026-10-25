@@ -13,12 +13,13 @@ import {
   updateWallet,
 } from "@/server/services/wallets";
 import { requireUser } from "@/server/session";
+import { userCurrency } from "@/lib/user-prefs";
 
 export async function saveWallet(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
   return runAction(async () => {
     const { id, ...fields } = formObject(formData);
-    const input = walletSchema(user.currency ?? "INR").parse(fields);
+    const input = walletSchema(userCurrency(user)).parse(fields);
     if (id) await updateWallet(db, user.id, idSchema.parse(id), input);
     else await createWallet(db, user.id, input);
     refresh();

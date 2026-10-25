@@ -1,16 +1,16 @@
 import { and, count, countDistinct, gte, like, sql } from "drizzle-orm";
 import { PRICES } from "@/config/plans";
+import { usageDay } from "../ai/quota";
 import type { Db } from "../db";
 import { aiUsage, subscription, transaction, user } from "../db/schema";
 import { planFromSubscriptions } from "../billing/plan";
 
 const daysAgo = (n: number, now: Date) => new Date(now.getTime() - n * 86_400_000);
-const utcDay = (d: Date) => d.toISOString().slice(0, 10);
 
 export async function adminStats(db: Db, now: Date = new Date()) {
   const since7 = daysAgo(7, now);
   const since30 = daysAgo(30, now);
-  const fromDay = utcDay(daysAgo(13, now));
+  const fromDay = usageDay(daysAgo(13, now));
 
   const [users, active, subs, usage] = await Promise.all([
     db
@@ -52,10 +52,10 @@ export async function adminStats(db: Db, now: Date = new Date()) {
   const mrrMinor = Math.round(pro.monthly * PRICES.monthly.amountMinor + (pro.yearly * PRICES.yearly.amountMinor) / 12);
 
   // AI per day: all requests (global counter), chat questions, provider outcomes.
-  const days = Array.from({ length: 14 }, (_, i) => utcDay(daysAgo(13 - i, now)));
+  const days = Array.from({ length: 14 }, (_, i) => usageDay(daysAgo(13 - i, now)));
   const perDay = new Map(days.map((d) => [d, { day: d, requests: 0, chat: 0, fallbacks: 0 }]));
   const providers = new Map<string, Record<string, number>>();
-  const recent = utcDay(daysAgo(6, now));
+  const recent = usageDay(daysAgo(6, now));
   for (const u of usage) {
     const row = perDay.get(u.day);
     if (u.scope === "global" && u.feature === "ai" && row) row.requests += u.count;

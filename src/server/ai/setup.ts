@@ -87,7 +87,7 @@ export async function extractSetupWithModel(m: ModelChoice, step: SetupStep, ctx
 const amountText = (n: unknown, currency: string) => {
   if (typeof n !== "number" || !Number.isFinite(n) || n <= 0 || n >= 1_000_000_000) return "";
   const minor = parseMoney(n.toFixed(2), currency) ?? parseMoney(String(Math.round(n)), currency);
-  return minor ? minorToInput(minor, currency).replace(/\.00$/, "") : "";
+  return minor ? minorToInput(minor, currency, { trimWhole: true }) : "";
 };
 const dayText = (d: unknown) => (typeof d === "number" && d >= 1 && d <= 31 ? String(Math.trunc(d)) : "");
 const nameText = (s: unknown) => (typeof s === "string" ? s.trim().slice(0, 40) : "");

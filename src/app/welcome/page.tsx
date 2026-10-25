@@ -5,6 +5,7 @@ import { PreferencesForm } from "@/components/settings/preferences-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { currencyOptions, timeZoneOptions } from "@/lib/preferences-options";
 import { requireUser } from "@/server/session";
+import { userCurrency, userTimeZone } from "@/lib/user-prefs";
 
 export const metadata = { title: "Welcome" };
 
@@ -34,10 +35,10 @@ async function WelcomeContent() {
       </p>
       <PreferencesForm
         mode="welcome"
-        currency={user.currency ?? "INR"}
-        timezone={user.timezone ?? "Asia/Kolkata"}
+        currency={userCurrency(user)}
+        timezone={userTimeZone(user)}
         currencies={currencyOptions()}
-        timeZones={timeZoneOptions([user.timezone ?? "Asia/Kolkata"])}
+        timeZones={timeZoneOptions([userTimeZone(user)])}
       />
     </>
   );

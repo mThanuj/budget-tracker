@@ -3,7 +3,7 @@ import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 import { aliasedTable, and, asc, count, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { formatMonth } from "@/lib/date-format";
-import { addDays, addMonths, type ISODate, type ISOMonth, monthOf, monthRange } from "@/lib/dates";
+import { addDays, addMonths, type ISODate, type ISOMonth, monthOf, monthRange, sameDaysLastMonth } from "@/lib/dates";
 import { goalProgress } from "@/lib/goals";
 import type { InsightFacts, InsightKind } from "@/lib/insights";
 import { currencyExponent, formatMoney } from "@/lib/money";
@@ -36,17 +36,16 @@ export async function buildInsightFacts(
   userId: string,
   { kind, month, today, currency }: { kind: InsightKind; month: ISOMonth; today: ISODate; currency: string },
 ): Promise<InsightFacts> {
-  const money = (minor: number) => formatMoney(minor, currency).replace(/\.00$/, "");
+  const money = (minor: number) => formatMoney(minor, currency, { trimWhole: true });
   const prevMonth = addMonths(month, -1);
   const full = monthRange(month);
   const daysInMonth = Number(addDays(full.end, -1).slice(8, 10));
   const day = kind === "so_far" ? Number(today.slice(8, 10)) : daysInMonth;
   const span: Span = kind === "so_far" ? { from: full.start, to: addDays(today, 1) } : { from: full.start, to: full.end };
   const prevFull = monthRange(prevMonth);
+  const sameDays = sameDaysLastMonth(today);
   const before: Span =
-    kind === "so_far"
-      ? { from: prevFull.start, to: [addDays(prevFull.start, day), prevFull.end].sort()[0] }
-      : { from: prevFull.start, to: prevFull.end };
+    kind === "so_far" ? { from: sameDays.start, to: sameDays.end } : { from: prevFull.start, to: prevFull.end };
   const inSpan = (s: Span) => and(gte(transaction.occurredOn, s.from), lt(transaction.occurredOn, s.to));
   const mine = eq(transaction.userId, userId);
 

@@ -5,7 +5,6 @@ import { RecurringManager } from "@/components/recurring/recurring-manager";
 import { toRuleItem } from "@/components/recurring/rule-item";
 import { WaitingList } from "@/components/recurring/waiting-list";
 import { Skeleton } from "@/components/ui/skeleton";
-import { todayInTz } from "@/lib/dates";
 import { db } from "@/server/db";
 import { syncRecurring } from "@/server/recurring-sync";
 import { listCategories } from "@/server/services/categories";
@@ -16,6 +15,7 @@ import {
 } from "@/server/services/recurring";
 import { listWallets } from "@/server/services/wallets";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export const metadata = { title: "Recurring" };
 
@@ -33,8 +33,8 @@ export default function RecurringPage({ searchParams }: PageProps<"/recurring">)
 async function RecurringContent({ searchParams }: Pick<PageProps<"/recurring">, "searchParams">) {
   const user = await requireUser();
   await syncRecurring(user);
-  const currency = user.currency ?? "INR";
-  const today = todayInTz(user.timezone ?? "Asia/Kolkata");
+  const currency = userCurrency(user);
+  const today = userToday(user);
   const { view } = z
     .object({ view: z.enum(["all", "subscriptions"]).optional().catch(undefined) })
     .parse(await searchParams);
@@ -78,7 +78,7 @@ async function RecurringContent({ searchParams }: Pick<PageProps<"/recurring">, 
         data={{
           currency,
           today,
-          defaultWalletId: (user.defaultWalletId as string | null | undefined) ?? null,
+          defaultWalletId: user.defaultWalletId ?? null,
           wallets: wallets.map((w) => ({ id: w.id, name: w.name, archived: w.archivedAt !== null })),
           categories: categories.map((c) => ({
             id: c.id,

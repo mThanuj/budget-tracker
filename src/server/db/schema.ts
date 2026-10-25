@@ -1,4 +1,6 @@
 import { sql } from "drizzle-orm";
+// Relative on purpose: drizzle-kit loads this file without the "@/" alias.
+import { DEFAULT_CURRENCY, DEFAULT_TIME_ZONE } from "../../config/defaults";
 import {
   type AnyPgColumn,
   bigint,
@@ -37,8 +39,8 @@ export const user = pgTable("user", {
   emailVerified: boolean().notNull().default(false),
   image: text(),
   // App profile fields, declared as Better Auth `additionalFields` (input: false).
-  currency: text().notNull().default("INR"),
-  timezone: text().notNull().default("Asia/Kolkata"),
+  currency: text().notNull().default(DEFAULT_CURRENCY),
+  timezone: text().notNull().default(DEFAULT_TIME_ZONE),
   onboardedAt: timestamp({ withTimezone: true }),
   aiEnabled: boolean().notNull().default(true),
   defaultWalletId: uuid().references((): AnyPgColumn => wallet.id, { onDelete: "set null" }),

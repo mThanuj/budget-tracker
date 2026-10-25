@@ -48,3 +48,14 @@ export function addMonths(month: ISOMonth, months: number): ISOMonth {
 export function monthRange(month: ISOMonth): { start: ISODate; end: ISODate } {
   return { start: `${month}-01`, end: `${addMonths(month, 1)}-01` };
 }
+
+/**
+ * The same stretch of the previous month as this month so far, end exclusive:
+ * on the 24th, the 1st–24th of last month (cut short if last month was shorter).
+ * Used to compare "this month so far" like for like.
+ */
+export function sameDaysLastMonth(today: ISODate): { start: ISODate; end: ISODate } {
+  const prev = monthRange(addMonths(monthOf(today), -1));
+  const end = addDays(prev.start, Number(today.slice(8, 10)));
+  return { start: prev.start, end: end < prev.end ? end : prev.end };
+}

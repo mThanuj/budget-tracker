@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
-import { addMonths, monthOf, todayInTz } from "@/lib/dates";
+import { addMonths, monthOf } from "@/lib/dates";
 import { type InsightKind, MIN_ENTRIES_FOR_INSIGHTS } from "@/lib/insights";
 import { aiAvailableFor, record } from "@/server/ai";
 import { aiAccess } from "@/server/ai/access";
@@ -13,6 +13,7 @@ import { db } from "@/server/db";
 import { buildInsightFacts, factsHash } from "@/server/services/insight-facts";
 import { getInsight, giveBackRefresh, saveInsight, takeRefresh } from "@/server/services/insights";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export type WriteInsightResult =
   | { ok: true }
@@ -31,10 +32,10 @@ export async function writeInsight(kind: InsightKind): Promise<WriteInsightResul
   if (!access.plan.limits.insights) return { ok: false, reason: "pro" };
   if (!aiAvailableFor(user)) return { ok: false, reason: "disabled" };
 
-  const today = todayInTz(user.timezone ?? "Asia/Kolkata");
+  const today = userToday(user);
   const thisMonth = monthOf(today);
   const month = parsedKind.data === "month" ? addMonths(thisMonth, -1) : thisMonth;
-  const facts = await buildInsightFacts(db, user.id, { kind: parsedKind.data, month, today, currency: user.currency ?? "INR" });
+  const facts = await buildInsightFacts(db, user.id, { kind: parsedKind.data, month, today, currency: userCurrency(user) });
   if (facts.entries < MIN_ENTRIES_FOR_INSIGHTS) return { ok: false, reason: "not_enough" };
 
   const hash = factsHash(facts);

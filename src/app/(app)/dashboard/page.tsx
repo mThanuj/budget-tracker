@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { daysLeftInMonth } from "@/lib/budgets";
 import { capitalize, relativeDay } from "@/lib/date-format";
-import { addDays, addMonths, monthOf, monthRange, todayInTz } from "@/lib/dates";
+import { addMonths, monthOf, monthRange, sameDaysLastMonth, todayInTz } from "@/lib/dates";
 import { goalProgress } from "@/lib/goals";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
@@ -32,6 +32,7 @@ import { listTransactions, summarizeTransactions } from "@/server/services/trans
 import { listWallets } from "@/server/services/wallets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
+import { userCurrency, userTimeZone } from "@/lib/user-prefs";
 
 export const metadata = { title: "Home" };
 
@@ -96,14 +97,13 @@ async function DashboardContent() {
   const user = await requireUser();
   if (!user.onboardedAt) redirect("/welcome");
   await syncRecurring(user);
-  const currency = user.currency ?? "INR";
-  const timeZone = user.timezone ?? "Asia/Kolkata";
+  const currency = userCurrency(user);
+  const timeZone = userTimeZone(user);
   const today = todayInTz(timeZone);
   const month = monthOf(today);
   const { start, end } = monthRange(month);
-  const prevMonth = addMonths(month, -1);
   // Compare with the same stretch of last month, not all of it.
-  const prevSameDay = [addDays(`${prevMonth}-01`, Number(today.slice(8, 10))), monthRange(prevMonth).end].sort()[0];
+  const lastMonthSameDays = sameDaysLastMonth(today);
 
   const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar, rules, upcoming, waiting] = await Promise.all([
     getBudgetOverview(db, user.id, month),
@@ -113,7 +113,7 @@ async function DashboardContent() {
     monthlyTotals(db, user.id, addMonths(month, -5), month),
     listTransactions(db, user.id, {}, 5),
     summarizeTransactions(db, user.id, { from: start, to: end }),
-    summarizeTransactions(db, user.id, { from: `${prevMonth}-01`, to: prevSameDay }),
+    summarizeTransactions(db, user.id, { from: lastMonthSameDays.start, to: lastMonthSameDays.end }),
     listRules(db, user.id),
     listUpcoming(db, user.id, today, 14),
     listAwaitingConfirmation(db, user.id, today),

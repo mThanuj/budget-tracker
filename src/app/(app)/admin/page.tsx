@@ -90,7 +90,7 @@ async function AdminContent() {
             <Stat label="Pro users" value={s.pro.total} note={`${s.pro.monthly} monthly · ${s.pro.yearly} yearly`} />
             <Stat
               label="Monthly revenue"
-              value={formatMoney(s.pro.mrrMinor, "INR").replace(/\.00$/, "")}
+              value={formatMoney(s.pro.mrrMinor, "INR", { trimWhole: true })}
               note="Estimate; yearly counted as ÷12"
             />
             <Stat label="Cancelling" value={s.pro.ending} note="Pro until period end" />

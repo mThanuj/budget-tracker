@@ -4,7 +4,6 @@ import type { Db } from "../db";
 import { category, transaction } from "../db/schema";
 import { UserError } from "./errors";
 
-export type CategoryWithUsage = Awaited<ReturnType<typeof listCategories>>[number];
 
 export async function listCategories(db: Db, userId: string, { includeArchived = false } = {}) {
   return db

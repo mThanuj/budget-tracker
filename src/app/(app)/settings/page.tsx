@@ -18,6 +18,7 @@ import { aiConfigured } from "@/server/ai";
 import { getUserPlan } from "@/server/billing/plan";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/session";
+import { userCurrency, userTimeZone } from "@/lib/user-prefs";
 
 export const metadata = { title: "Settings" };
 
@@ -106,8 +107,8 @@ async function YourData() {
 
 async function SettingsContent() {
   const user = await requireUser();
-  const currency = user.currency ?? "INR";
-  const timezone = user.timezone ?? "Asia/Kolkata";
+  const currency = userCurrency(user);
+  const timezone = userTimeZone(user);
 
   return (
     <>

@@ -8,7 +8,7 @@ import { type FilterValues, TransactionFilters } from "@/components/transactions
 import { TransactionRowButton } from "@/components/transactions/transaction-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDay, formatMonth, isISOMonth } from "@/lib/date-format";
-import { monthOf, monthRange, todayInTz } from "@/lib/dates";
+import { monthOf, monthRange } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
 import { listCategories } from "@/server/services/categories";
@@ -21,6 +21,7 @@ import {
 import { listWallets } from "@/server/services/wallets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export const metadata = { title: "Entries" };
 
@@ -60,8 +61,8 @@ function groupByDay(rows: TransactionRow[]) {
 async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactions">, "searchParams">) {
   const user = await requireUser();
   await syncRecurring(user);
-  const currency = user.currency ?? "INR";
-  const today = todayInTz(user.timezone ?? "Asia/Kolkata");
+  const currency = userCurrency(user);
+  const today = userToday(user);
   const raw = await searchParams;
   const params = paramsSchema.parse(
     Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])),

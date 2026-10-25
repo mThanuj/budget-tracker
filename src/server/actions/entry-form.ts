@@ -1,11 +1,11 @@
 "use server";
 
-import { todayInTz } from "@/lib/dates";
 import { aiAvailableFor } from "@/server/ai";
 import { listCategories } from "@/server/services/categories";
 import { listWallets } from "@/server/services/wallets";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export type EntryFormData = Awaited<ReturnType<typeof getEntryFormData>>;
 
@@ -20,9 +20,9 @@ export async function getEntryFormData() {
     listCategories(db, user.id, { includeArchived: true }),
   ]);
   return {
-    currency: user.currency ?? "INR",
-    today: todayInTz(user.timezone ?? "Asia/Kolkata"),
-    defaultWalletId: (user.defaultWalletId as string | null | undefined) ?? null,
+    currency: userCurrency(user),
+    today: userToday(user),
+    defaultWalletId: user.defaultWalletId ?? null,
     ai: aiAvailableFor(user),
     wallets: wallets.map((w) => ({ id: w.id, name: w.name, kind: w.kind, archived: w.archivedAt !== null })),
     categories: categories.map((c) => ({

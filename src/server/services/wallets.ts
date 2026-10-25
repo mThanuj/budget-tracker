@@ -5,7 +5,6 @@ import type { Db } from "../db";
 import { recurringRule, transaction, user, wallet } from "../db/schema";
 import { UserError } from "./errors";
 
-export type WalletWithBalance = Awaited<ReturnType<typeof listWallets>>[number];
 
 // Drizzle leaves single-table columns unqualified, which a correlated subquery
 // would resolve against its own table. Spell out the outer reference.

@@ -3,12 +3,12 @@ import { Suspense } from "react";
 import { Brand } from "@/components/app/brand";
 import { SetupFlow } from "@/components/setup/setup-flow";
 import { Skeleton } from "@/components/ui/skeleton";
-import { todayInTz } from "@/lib/dates";
 import { aiAvailableFor } from "@/server/ai";
 import { db } from "@/server/db";
 import { listCategories } from "@/server/services/categories";
 import { listWallets } from "@/server/services/wallets";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export const metadata = { title: "Plan your money" };
 
@@ -35,8 +35,8 @@ async function SetupContent() {
   const [wallets, categories] = await Promise.all([listWallets(db, user.id), listCategories(db, user.id)]);
   return (
     <SetupFlow
-      currency={user.currency ?? "INR"}
-      today={todayInTz(user.timezone ?? "Asia/Kolkata")}
+      currency={userCurrency(user)}
+      today={userToday(user)}
       ai={aiAvailableFor(user)}
       existingWallets={wallets.map((w) => ({ name: w.name, kind: w.kind }))}
       expenseCategories={categories

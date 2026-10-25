@@ -7,11 +7,12 @@ import { type BudgetRowData, CategoryBudgets, OverallBudgetCard } from "@/compon
 import { Skeleton } from "@/components/ui/skeleton";
 import { daysLeftInMonth, suggestLimit } from "@/lib/budgets";
 import { isISOMonth } from "@/lib/date-format";
-import { monthOf, todayInTz } from "@/lib/dates";
+import { monthOf } from "@/lib/dates";
 import { db } from "@/server/db";
 import { averageMonthlySpending, getBudgetOverview, unbudgetedCategories } from "@/server/services/budgets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export const metadata = { title: "Budgets" };
 
@@ -37,8 +38,8 @@ export default function BudgetsPage({ searchParams }: PageProps<"/budgets">) {
 async function BudgetsContent({ searchParams }: Pick<PageProps<"/budgets">, "searchParams">) {
   const user = await requireUser();
   await syncRecurring(user);
-  const currency = user.currency ?? "INR";
-  const today = todayInTz(user.timezone ?? "Asia/Kolkata");
+  const currency = userCurrency(user);
+  const today = userToday(user);
   const currentMonth = monthOf(today);
   const raw = z.object({ month: z.string().optional().catch(undefined) }).parse(await searchParams);
   const month = isISOMonth(raw.month) ? raw.month : currentMonth;

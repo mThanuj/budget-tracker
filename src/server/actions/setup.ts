@@ -2,7 +2,6 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
-import { todayInTz } from "@/lib/dates";
 import type { SetupRows, SetupStep } from "@/lib/setup-types";
 import { setupSchema } from "@/lib/validation";
 import { runAction } from "@/server/action-utils";
@@ -15,6 +14,7 @@ import { db } from "@/server/db";
 import { listCategories } from "@/server/services/categories";
 import { applySetup } from "@/server/services/setup";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export type SetupParseResult =
   | { ok: true; rows: SetupRows[SetupStep] }
@@ -32,8 +32,8 @@ export async function parseSetupAnswer(step: SetupStep, text: string): Promise<S
   if (!(await takeAiQuota(db, user.id, access.limits))) return { ok: false, reason: "limit" };
 
   const ctx = {
-    today: todayInTz(user.timezone ?? "Asia/Kolkata"),
-    currency: user.currency ?? "INR",
+    today: userToday(user),
+    currency: userCurrency(user),
     expenseCategories: (await listCategories(db, user.id)).filter((c) => c.kind === "expense").map((c) => ({ id: c.id, name: c.name })),
   };
   const result = await runWithFallback(
@@ -53,8 +53,8 @@ export async function applySetupAction(payload: unknown): Promise<SetupApplyResu
   const user = await requireUser();
   let counts: Record<string, number> = {};
   const result = await runAction(async () => {
-    const today = todayInTz(user.timezone ?? "Asia/Kolkata");
-    const input = setupSchema(user.currency ?? "INR", today).parse(payload);
+    const today = userToday(user);
+    const input = setupSchema(userCurrency(user), today).parse(payload);
     counts = await applySetup(db, user.id, input, today);
     refresh();
   });

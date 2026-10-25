@@ -29,11 +29,3 @@ export const PRICES: Record<BillingInterval, { amountMinor: number; amount: stri
 };
 
 export const priceLabel = (interval: BillingInterval) => `${PRICES[interval].amount} ${PRICES[interval].per}`;
-
-/** What Pro adds, in the words shown on the Billing page. */
-export const PRO_FEATURES = [
-  "100 money-chat questions a day (Free: 10)",
-  "A monthly AI report on your spending, with tips",
-  "\"This month so far\" check-ins whenever you like (5 a month)",
-  "More AI entry filling: 200 a day (Free: 50)",
-];

@@ -5,6 +5,7 @@ import {
   isValidTimeZone,
   monthOf,
   monthRange,
+  sameDaysLastMonth,
   todayInTz,
 } from "@/lib/dates";
 
@@ -52,5 +53,21 @@ describe("relativeDay", () => {
     expect(relativeDay("2026-10-23", "2026-10-24")).toBe("yesterday");
     expect(relativeDay("2026-10-26", "2026-10-24")).toBe("Mon, 26 Oct");
     expect(relativeDay("2027-01-05", "2026-10-24")).toBe("Tue, 5 Jan 2027");
+  });
+});
+
+describe("sameDaysLastMonth", () => {
+  it("covers the same days of last month, end exclusive", () => {
+    expect(sameDaysLastMonth("2026-10-24")).toEqual({ start: "2026-09-01", end: "2026-09-25" });
+    expect(sameDaysLastMonth("2026-10-01")).toEqual({ start: "2026-09-01", end: "2026-09-02" });
+  });
+
+  it("stops at the end of a shorter month", () => {
+    expect(sameDaysLastMonth("2026-03-31")).toEqual({ start: "2026-02-01", end: "2026-03-01" });
+    expect(sameDaysLastMonth("2028-03-30")).toEqual({ start: "2028-02-01", end: "2028-03-01" }); // leap year
+  });
+
+  it("crosses the year boundary", () => {
+    expect(sameDaysLastMonth("2027-01-15")).toEqual({ start: "2026-12-01", end: "2026-12-16" });
   });
 });

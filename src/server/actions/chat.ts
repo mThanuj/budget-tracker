@@ -2,7 +2,6 @@
 
 import type { ModelMessage } from "ai";
 import { z } from "zod";
-import { todayInTz } from "@/lib/dates";
 import { aiAvailableFor } from "@/server/ai";
 import { answerWithModel, chatInstructions, moneyTools } from "@/server/ai/chat";
 import { aiAccess } from "@/server/ai/access";
@@ -11,6 +10,7 @@ import { chatQuestionsLeft, recordProviderOutcome, takeChatQuota } from "@/serve
 import { razorpayConfig } from "@/server/billing/razorpay";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/session";
+import { userCurrency, userToday } from "@/lib/user-prefs";
 
 const history = z
   .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(2000) }))
@@ -36,7 +36,7 @@ export async function askMoney(messages: { role: "user" | "assistant"; content: 
     return { ok: false, reason: "limit", left: 0, upgrade: canUpgrade(access.plan.id) };
   }
 
-  const u = { id: user.id, currency: user.currency ?? "INR", today: todayInTz(user.timezone ?? "Asia/Kolkata") };
+  const u = { id: user.id, currency: userCurrency(user), today: userToday(user) };
   const tools = moneyTools(db, u);
   const instructions = chatInstructions(u);
   const recent = parsed.data.slice(-10) as ModelMessage[];
@@ -54,13 +54,3 @@ export async function askMoney(messages: { role: "user" | "assistant"; content: 
 
 /** Free users who run out are pointed at Pro, but only once payments are set up. */
 const canUpgrade = (plan: "free" | "pro") => plan === "free" && razorpayConfig() !== null;
-
-export async function chatStatus() {
-  const user = await requireUser();
-  const access = await aiAccess(db, user.id);
-  return {
-    available: aiAvailableFor(user),
-    left: await chatQuestionsLeft(db, user.id, access.limits),
-    upgrade: canUpgrade(access.plan.id),
-  };
-}

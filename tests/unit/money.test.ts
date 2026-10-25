@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   currencyExponent,
+  currencySymbol,
   formatMoney,
   isValidCurrency,
   minorToInput,
@@ -77,5 +78,40 @@ describe("minorToInput", () => {
     for (const v of [0, 1, 99, 100, 123456789]) {
       expect(parseMoney(minorToInput(v, "INR"), "INR")).toBe(v);
     }
+  });
+});
+
+describe("whole amounts without zero decimals", () => {
+  it("trims only when the amount is whole", () => {
+    expect(formatMoney(2_380_00, "INR", { trimWhole: true })).toBe("₹2,380");
+    expect(formatMoney(2_380_50, "INR", { trimWhole: true })).toBe("₹2,380.50");
+    expect(formatMoney(2_380_00, "INR")).toBe("₹2,380.00"); // default unchanged
+    expect(formatMoney(-500_00, "INR", { trimWhole: true })).toBe("-₹500");
+  });
+
+  it("works for currencies with 0 or 3 decimals, not just 2", () => {
+    expect(formatMoney(1500, "JPY", { trimWhole: true })).toBe("¥1,500");
+    // Intl puts a non-breaking space between a currency code and the number.
+    expect(formatMoney(1_000_000, "KWD", { trimWhole: true })).toBe("KWD\u00a01,000");
+    expect(formatMoney(1_000_500, "KWD", { trimWhole: true })).toBe("KWD\u00a01,000.500");
+  });
+
+  it("keeps compact notation as it was", () => {
+    expect(formatMoney(1_25_000_00, "INR", { compact: true, trimWhole: true })).toBe(formatMoney(1_25_000_00, "INR", { compact: true }));
+  });
+
+  it("trims input values the same way", () => {
+    expect(minorToInput(15_000_00, "INR", { trimWhole: true })).toBe("15000");
+    expect(minorToInput(15_000_50, "INR", { trimWhole: true })).toBe("15000.50");
+    expect(minorToInput(15_000_00, "INR")).toBe("15000.00");
+    expect(minorToInput(1_000_000, "KWD", { trimWhole: true })).toBe("1000");
+  });
+});
+
+describe("currencySymbol", () => {
+  it("matches the symbol used in formatted amounts", () => {
+    expect(currencySymbol("INR")).toBe("₹");
+    expect(currencySymbol("USD")).toBe("$");
+    expect(formatMoney(100, "AED")).toContain(currencySymbol("AED"));
   });
 });

@@ -25,19 +25,39 @@ function localeFor(currency: string) {
   return currency === "INR" ? "en-IN" : "en-US";
 }
 
+/** Whole amounts in minor units have no fractional part (₹2,380.00 is whole; ₹2,380.50 isn't). */
+const isWhole = (minor: number, exp: number) => minor % 10 ** exp === 0;
+
 export function formatMoney(
   minor: number,
   currency: string,
-  opts: { signDisplay?: "auto" | "always" | "exceptZero" | "never"; compact?: boolean } = {},
+  opts: {
+    signDisplay?: "auto" | "always" | "exceptZero" | "never";
+    compact?: boolean;
+    /** Leave out zero decimals on whole amounts: "₹2,380" rather than "₹2,380.00". */
+    trimWhole?: boolean;
+  } = {},
 ): string {
   const exp = currencyExponent(currency);
+  const fraction = opts.compact ? undefined : opts.trimWhole && isWhole(minor, exp) ? 0 : exp;
   return new Intl.NumberFormat(localeFor(currency), {
     style: "currency",
     currency,
     signDisplay: opts.signDisplay ?? "auto",
     notation: opts.compact ? "compact" : "standard",
-    maximumFractionDigits: opts.compact ? 1 : exp,
+    ...(fraction === undefined
+      ? { maximumFractionDigits: 1 }
+      : { minimumFractionDigits: fraction, maximumFractionDigits: fraction }),
   }).format(minor / 10 ** exp);
+}
+
+/** The currency's symbol as it appears in formatted amounts ("₹", "$", "AED"). */
+export function currencySymbol(currency: string): string {
+  return (
+    new Intl.NumberFormat(localeFor(currency), { style: "currency", currency })
+      .formatToParts(0)
+      .find((p) => p.type === "currency")?.value ?? currency
+  );
 }
 
 /**
@@ -57,10 +77,13 @@ export function parseMoney(input: string, currency: string): number | null {
   return Number(whole) * 10 ** exp + Number(frac.padEnd(exp, "0") || "0");
 }
 
-/** Minor units → plain decimal string for form inputs ("1234.5" → "1234.50"). */
-export function minorToInput(minor: number, currency: string): string {
+/**
+ * Minor units → plain decimal string for form inputs ("1234.5" → "1234.50").
+ * With trimWhole, whole amounts drop their zero decimals ("1234").
+ */
+export function minorToInput(minor: number, currency: string, opts: { trimWhole?: boolean } = {}): string {
   const exp = currencyExponent(currency);
-  if (exp === 0) return String(minor);
+  if (exp === 0 || (opts.trimWhole && isWhole(minor, exp))) return String(minor / 10 ** exp);
   const s = String(Math.abs(minor)).padStart(exp + 1, "0");
   return `${minor < 0 ? "-" : ""}${s.slice(0, -exp)}.${s.slice(-exp)}`;
 }
