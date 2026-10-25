@@ -13,8 +13,9 @@ if (!logFile || cmd.length === 0) {
 const log = createWriteStream(logFile); // truncates any previous run
 log.write(`$ ${cmd.join(" ")}  (${new Date().toISOString()})\n`);
 
-// FORCE_COLOR=0 keeps ANSI escapes out of the log so it's easy to read back.
-const child = spawn(cmd.join(" "), { shell: true, env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" } });
+// NO_COLOR keeps ANSI escapes out of the log so it is easy to read back. (Not
+// FORCE_COLOR too: setting both makes Node warn that they conflict.)
+const child = spawn(cmd.join(" "), { shell: true, env: { ...process.env, NO_COLOR: "1" } });
 const pipe = (from, to) => from.on("data", (d) => { to.write(d); log.write(d); });
 pipe(child.stdout, process.stdout);
 pipe(child.stderr, process.stderr);
