@@ -1,7 +1,8 @@
 # Checks every pull request and every push to main: lint, formatting, types,
-# all Vitest suites (unit, db, integration, component, security) and a
-# production build. Needs no secrets: tests use an in-memory Postgres and strip
-# app settings, and `next build` runs without environment variables.
+# migrations against the schema, the docs, all Vitest suites (unit, db,
+# integration, component, security) and a production build. Needs no secrets:
+# tests use an in-memory Postgres and strip app settings, and `next build` runs
+# without environment variables.
 # End-to-end tests aren't run here (they need a database and auth secret);
 # run `pnpm test:e2e` locally, see docs/TESTING.md.
 name: CI
@@ -41,6 +42,10 @@ jobs:
         run: pnpm format:check
       - name: Type check
         run: pnpm typecheck
+      - name: Migrations match the schema
+        run: pnpm db:check
+      - name: Docs links, paths and commands resolve
+        run: pnpm docs:check
       - name: Tests
         run: pnpm test
       - name: Production build

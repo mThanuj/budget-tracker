@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "next typegen && tsc --noEmit",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm db:check && pnpm docs:check && pnpm test",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:db": "vitest run tests/db",
@@ -22,13 +22,15 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:check": "node scripts/check-migrations.mjs",
     "db:studio": "drizzle-kit studio",
     "test:e2e": "playwright test",
     "test:e2e:live": "LIVE_AI=1 playwright test --grep @live-ai",
     "ai:eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-eval.ts",
     "ai:chat-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-chat-eval.ts",
     "ai:insights-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-insights-eval.ts",
-    "check:bundle": "node scripts/check-client-bundle.mjs"
+    "check:bundle": "node scripts/check-client-bundle.mjs",
+    "docs:check": "node scripts/check-docs.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.77",

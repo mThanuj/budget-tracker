@@ -1,0 +1,281 @@
+# Design decisions
+
+Decisions that shape the code, newest status first in the index. Each entry
+says what was decided and why, so a later change can weigh the same things.
+Dates come from the commit that introduced the decision (`git show <hash>`).
+"Rationale: not recorded" means the code shows the choice but nothing written
+down explains it; don't invent a reason, ask the owner if it matters.
+
+Template for a new entry (copy it to the end, take the next number):
+
+```markdown
+### D-NNN Title
+
+- **Status:** proposed | accepted | superseded by D-NNN | deprecated · **Date:** YYYY-MM-DD
+- **Context:** the problem or requirement.
+- **Decision:** what was chosen.
+- **Rationale:** why. **Alternatives:** what else was considered, and why not.
+- **Trade-offs / consequences:** costs, and rules future code must follow.
+- **Affected:** files or areas. **References:** commits, tests, docs.
+```
+
+When a decision changes, don't edit history away: set the old entry's status
+to "superseded by D-NNN", add the new entry, and say what changed.
+
+| ID    | Decision                                                                 | Status              |
+| ----- | ------------------------------------------------------------------------ | ------------------- |
+| D-001 | Product scope: beginners, wallets, AI assistant, Free + Pro              | accepted            |
+| D-002 | Next.js 16 App Router with Cache Components                              | accepted            |
+| D-003 | Better Auth with Google sign-in only                                     | accepted            |
+| D-004 | Neon Postgres with Drizzle; committed migrations applied on deploy       | accepted            |
+| D-005 | Server actions are the API; services own data access                     | accepted            |
+| D-006 | Money in integer minor units; dates as strings in the user's time zone   | accepted            |
+| D-007 | AI is optional, only proposes, and uses a privacy-safe fallback chain    | accepted            |
+| D-008 | Razorpay subscriptions, reconciled from Razorpay's API                   | accepted            |
+| D-009 | Hosting on Hetzner + Coolify from the start                              | superseded by D-010 |
+| D-010 | Launch free on Vercel Hobby with payments switched off                   | accepted            |
+| D-011 | Nightly encrypted backups by GitHub Actions, kept 7 days                 | accepted            |
+| D-012 | CSP allows inline scripts to keep static rendering                       | accepted            |
+| D-013 | No client form or data-fetching library                                  | accepted            |
+| D-014 | Forms submit through `useFormAction`, not `<form action>`                | accepted            |
+| D-015 | Client calls go through `callAction` (no error page on a failed request) | accepted            |
+| D-016 | Sign-out is a server action, not Better Auth's browser client            | accepted            |
+| D-017 | A link can't make the app act for the user                               | accepted            |
+| D-018 | Per-account limits as database counts; request rate limiting deferred    | accepted            |
+| D-019 | Tests never use outside services; app-wide security sweeps               | accepted            |
+| D-020 | Prettier, CI on GitHub Actions, exact dependency pins                    | accepted            |
+| D-021 | Agent instructions and project memory in the repo; no MCP or hooks       | accepted            |
+
+### D-001 Product scope
+
+- **Status:** accepted · **Date:** 2026-10-23
+- **Decision:** a public budget tracker for people new to managing money:
+  Google sign-in, one tracking currency per user, user-created wallets with
+  transfers, categories, monthly budgets, savings goals, recurring bills and
+  subscription tracking, in-app alerts only, an AI assistant (entry from a
+  sentence, category suggestions, guided setup, money chat, monthly insights).
+  English only; desktop and mobile treated equally. Free and Pro plans, Pro
+  adding higher AI limits and the insights write-up; everything else free.
+- **Rationale:** agreed with the owner in the original plan (kept outside the
+  repo, not versioned). **Affected:** the whole app. **References:** `30ca6e0`.
+
+### D-002 Next.js 16 App Router with Cache Components
+
+- **Status:** accepted · **Date:** 2026-10-23
+- **Decision:** App Router, `cacheComponents` and `partialPrefetching` on
+  (`next.config.ts`), `src/proxy.ts` for the optimistic cookie check.
+- **Rationale:** a static shell for every page from the CDN, with per-user
+  content streamed, without caching anything user-specific.
+- **Consequences:** user-specific code sits under `<Suspense>`; anything that
+  forces dynamic documents (a CSP nonce) undoes this (see D-012). APIs differ
+  from older Next versions: check `node_modules/next/dist/docs/`.
+- **References:** `30ca6e0`, [implementation-notes.md](implementation-notes.md#nextjs-16).
+
+### D-003 Better Auth with Google sign-in only
+
+- **Status:** accepted · **Date:** 2026-10-23
+- **Decision:** Better Auth (Drizzle adapter, `nextCookies` plugin), Google as
+  the only provider; email/password, change-email and delete-user off; the
+  app's user fields (`currency`, `timezone`, `onboardedAt`, `aiEnabled`,
+  `defaultWalletId`) are `input: false`.
+- **Rationale:** no passwords to store or leak. **Alternatives:** next-auth v5,
+  rejected in the plan because it was still in beta.
+- **Consequences:** people without a Google account can't sign up; only our
+  server actions change app fields. **Affected:** `src/server/auth.ts`,
+  `session.ts`. **References:** `tests/security/auth.test.ts`.
+
+### D-004 Neon Postgres with Drizzle; committed migrations
+
+- **Status:** accepted · **Date:** 2026-10-23
+- **Decision:** Postgres on Neon, Drizzle ORM with node-postgres (`pg` Pool),
+  SQL migrations generated into `drizzle/` and committed. Applied by the
+  production build on Vercel (`scripts/vercel-build.mjs`) and on container start
+  in the Docker image (`src/instrumentation.ts`, `RUN_MIGRATIONS=1`).
+- **Alternatives:** Prisma, rejected in the plan (its latest major was an
+  incompatible release candidate at the time).
+- **Consequences:** the previous version keeps serving while a migration runs,
+  so migrations must be backward compatible. `pnpm db:check` fails when the
+  schema and migrations disagree. **References:** `30ca6e0`, `480d15a`.
+
+### D-005 Server actions are the API; services own data access
+
+- **Status:** accepted · **Date:** 2026-10-23
+- **Decision:** no REST layer. Every action calls `requireUser()`; services take
+  `(db, userId, …)` and scope every query; ids from the client are ownership
+  checked. Route handlers only where something outside the app calls in.
+- **Rationale:** one enforced place for access control, typed end to end.
+- **Consequences:** actions are public endpoints that accept anything; each
+  validates its input. **References:** [architecture.md](architecture.md),
+  `tests/security/access-control.test.ts`, `routes.test.ts`.
+
+### D-006 Money in minor units, dates as strings
+
+- **Status:** accepted · **Date:** 2026-10-23
+- **Decision:** integer minor units with the number of decimals from the
+  currency (`Intl`); calendar dates as `YYYY-MM-DD` in the user's time zone.
+- **Rationale:** no floating-point rounding; "today" is the user's today.
+- **Consequences:** convert at the edges with `src/lib/money.ts` and `dates.ts`.
+
+### D-007 AI optional, proposes only, privacy-safe fallback chain
+
+- **Status:** accepted · **Date:** 2026-10-24
+- **Decision:** every AI feature has a manual path; AI fills forms or suggests,
+  the user confirms and normal actions save. Providers are OpenAI-compatible
+  APIs that don't train on the data (no Gemini free tier), tried in order from
+  `LLM_CHAIN_FREE` / `LLM_CHAIN_PRO`, skipping one that fails; per-user and
+  global daily quotas in `ai_usage`.
+- **Rationale:** free tiers are rate-limited and change often; nothing must
+  depend on them. **Consequences:** output quality is checked with the `ai:*`
+  eval scripts and `pnpm test:e2e:live`, not unit tests.
+- **References:** `4237139`, `117b72f`, `src/server/ai/`.
+
+### D-008 Razorpay subscriptions, reconciled from the API
+
+- **Status:** accepted · **Date:** 2026-10-24
+- **Decision:** Razorpay Subscriptions (UPI Autopay and cards). Webhooks are
+  HMAC-verified, recorded once per event id, and the subscription's state is
+  fetched from Razorpay rather than trusted from the payload. Cancelling keeps
+  Pro until the paid period ends.
+- **Rationale:** events can arrive twice or out of order.
+- **References:** `3b03169`, `src/server/billing/`, `tests/db/billing.test.ts`.
+
+### D-009 Hosting on Hetzner + Coolify from the start
+
+- **Status:** superseded by D-010 (2026-10-24) · **Date:** 2026-10-23
+- **Decision:** a Hetzner VPS with Coolify, because Vercel's free plan doesn't
+  allow commercial use and payments were planned from the start.
+- **What changed:** the owner chose to launch free first. The Docker image and
+  the guide (docs/DEPLOY.md Part 2) are kept for when payments go on.
+
+### D-010 Launch free on Vercel Hobby, payments off
+
+- **Status:** accepted · **Date:** 2026-10-24
+- **Decision:** deploy to Vercel Hobby in Singapore (`vercel.json` `regions:
+["sin1"]`, next to the Neon database), with `BILLING_ENABLED=false` so
+  everyone is on Free and nothing about payments shows. Recurring entries are
+  recorded by a daily cron (the most Hobby allows) and on page loads.
+- **Rationale:** the owner's decision, to launch without the server and
+  payment setup. **Consequences:** turning payments on means moving hosting
+  (D-009's plan, docs/DEPLOY.md Part 2) and Razorpay live mode.
+- **References:** `480d15a`, `src/config/features.ts`.
+
+### D-011 Nightly encrypted backups, kept 7 days
+
+- **Status:** accepted · **Date:** 2026-10-24
+- **Decision:** a GitHub Action dumps the production database each night,
+  encrypts it (AES-256, passphrase in repo secrets) and keeps it 7 days.
+- **Rationale:** Neon's free plan keeps only 6 hours of history; the privacy
+  policy promises deleted data leaves backups within 7 days.
+- **References:** `480d15a` (workflow), `c641b3d` (restore guide), `.github/workflows/backup.yml`, docs/RESTORE.md.
+
+### D-012 CSP allows inline scripts
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Decision:** `script-src 'self' 'unsafe-inline'` (plus Razorpay), with
+  `base-uri`, `object-src`, `frame-ancestors` and `form-action` locked down.
+- **Alternatives:** a nonce-based CSP, rejected: Next's bootstrap scripts are
+  inline, and a per-request nonce makes every page dynamic (undoing D-002).
+- **References:** `902bacc`, `src/lib/security-headers.ts`, SECURITY.md.
+
+### D-013 No client form or data-fetching library
+
+- **Status:** accepted · **Date:** 2026-10-24 (as built)
+- **Decision:** forms are plain `<form>`s posting to server actions, validated
+  on the server with the Zod schemas in `src/lib/validation.ts`; pages read data
+  on the server. No react-hook-form, SWR, React Query or state library.
+- **Rationale:** not recorded. The original plan listed react-hook-form; it was
+  never added. Don't add one without a decision here.
+
+### D-014 Forms submit through `useFormAction`
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Context:** React 19 resets a `<form action={…}>` after every submit, even
+  when the action returned a validation error, so people lost what they typed.
+- **Decision:** `useFormAction` submits from `onSubmit` inside a transition;
+  the `action` prop stays for submits before hydration.
+- **Alternatives:** restoring `defaultValue`s before the reset (React re-applies
+  them), controlled inputs everywhere (more code in every form).
+- **References:** `92dc43f`, `src/components/ui-extra/use-form-action.ts`,
+  `tests/component/wallet-form.test.tsx`.
+
+### D-015 Client calls go through `callAction`
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Context:** a failed server action call inside a transition replaces the
+  page with the error screen.
+- **Decision:** `callAction()` catches it and returns `NOT_SENT` (with a toast
+  unless `notify: false`); Next's redirect and not-found signals are re-thrown.
+- **References:** `30a7a15`, `src/lib/call-action.ts`.
+
+### D-016 Sign-out is a server action
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Decision:** `signOut()` in `src/server/actions/account.ts` calls Better
+  Auth on the server and redirects. **Rationale:** Better Auth's browser client
+  was loaded on every signed-in page (~12 kB gzip) for this one button, and a
+  failed sign-out went unnoticed. The Google sign-in button still uses it.
+- **References:** `8214053`.
+
+### D-017 A link can't make the app act for the user
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Context:** `/ask?q=…` sent the question on load, so any link could spend a
+  user's daily AI questions and put someone else's text in front of the model.
+- **Decision:** side effects need a click. The home page's ask box hands its
+  question over in memory (`src/components/ask/handover.ts`); a question that
+  arrives only in the URL is filled in, not sent.
+- **References:** `8214053`, `tests/component/chat-panel.test.tsx`, `tests/e2e/ai.spec.ts`.
+
+### D-018 Per-account limits; request rate limiting deferred
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Decision:** caps on how much one account can create (`src/config/limits.ts`),
+  checked by counting in the same database. Rate limiting of requests waits for
+  a shared store (an in-memory limiter is per instance on serverless).
+- **Rationale:** one scripted account could otherwise fill the shared database.
+- **References:** `12c24b3`, `tests/db/limits.test.ts`, SECURITY.md.
+
+### D-019 Tests never use outside services
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Decision:** Vitest suites run on PGlite with real migrations and strip app
+  settings; integration and security tests run real actions and routes with
+  only the session, Next's request APIs and outside services replaced.
+  `tests/security/` sweeps every action, route and page. Browser tests use
+  throwaway users with AI off unless a test opts in; tests that call the real
+  AI are tagged `@live-ai` and run only with `LIVE_AI=1`.
+- **References:** `6f11046`, `adaf604`, docs/TESTING.md.
+
+### D-020 Prettier, CI, exact pins
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Decision:** Prettier (120 columns) with ESLint's Next rules; GitHub Actions
+  runs install, lint, formatting, types, tests, the migration check and a build
+  on every PR and push to `main`; direct dependencies pinned exactly, updated by
+  Dependabot. **References:** `e69ba32`, `.github/workflows/ci.yml`.
+
+### D-021 Agent instructions and project memory in the repo
+
+- **Status:** accepted · **Date:** 2026-10-25
+- **Context:** coding agents work on this repo across sessions and tools; some
+  knowledge (open issues, provider quirks, test conventions) lived only in one
+  tool's private memory.
+- **Decision:** `AGENTS.md` holds the shared rules (Next's managed block stays
+  at the top); `CLAUDE.md` imports it and adds Claude Code specifics;
+  `docs/project-memory/` is the canonical memory, updated in the same change as
+  the code; recurring workflows are Claude Code skills in `.claude/skills/`
+  (plain Markdown any agent can follow); `.claude/settings.json` denies reading
+  real `.env` files and asks before pushes, merges, migrations and paid AI runs;
+  `pnpm db:check`, `pnpm docs:check` and a PR template join the gates.
+- **Alternatives:** `next-devtools-mcp` (Next's official dev-server MCP: useful,
+  but needs a reachable local dev server and downloads the package on each run;
+  left opt-in per developer); Next's published skills (optional, e.g.
+  `next-bundle-optimizer` for performance work); a database MCP server
+  (rejected: direct database access for agents; `pnpm db:studio` on the
+  development database covers inspection); git hooks (rejected: a new
+  dependency, and CI plus `pnpm check` already run the same checks); a vector
+  store or external memory service (rejected: Markdown in git is enough).
+- **Consequences:** the memory review is part of finishing a task. Claude Code
+  settings bind only Claude Code; the approval points in `AGENTS.md` apply to
+  every agent. **References:** `AGENTS.md`, `CLAUDE.md`, `.claude/`,
+  `docs/project-memory/README.md`.
