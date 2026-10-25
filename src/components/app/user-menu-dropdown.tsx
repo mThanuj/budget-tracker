@@ -2,7 +2,7 @@
 
 import { ChartNoAxesColumnIcon, CreditCardIcon, LogOutIcon, Settings2Icon } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { startTransition } from "react";
 import { cn } from "cn";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -14,7 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { authClient } from "@/lib/auth-client";
+import { callAction } from "@/lib/call-action";
+import { signOut } from "@/server/actions/account";
 
 function initials(name: string) {
   return name
@@ -40,14 +41,6 @@ export function UserMenuDropdown({
   admin?: boolean;
   billing?: boolean;
 }) {
-  const router = useRouter();
-
-  async function signOut() {
-    await authClient.signOut();
-    router.replace("/");
-    router.refresh();
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -89,7 +82,8 @@ export function UserMenuDropdown({
             Admin
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={signOut}>
+        {/* Goes to the landing page; if the request fails, a toast says so. */}
+        <DropdownMenuItem onClick={() => startTransition(async () => void (await callAction(() => signOut())))}>
           <LogOutIcon aria-hidden />
           Sign out
         </DropdownMenuItem>

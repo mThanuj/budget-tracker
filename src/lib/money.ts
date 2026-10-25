@@ -3,11 +3,19 @@
 
 const MAX_MAJOR = 1_000_000_000; // 1 billion: a sane upper bound for one entry
 
+// Creating an Intl.NumberFormat takes ~30 µs; formatting with an existing one
+// takes well under 1 µs. A busy month shows about a thousand amounts, so the
+// formatters are reused. Keys are a currency plus a few options: a small set.
+const formatters = new Map<string, Intl.NumberFormat>();
+function numberFormat(locale: string, options: Intl.NumberFormatOptions) {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let format = formatters.get(key);
+  if (!format) formatters.set(key, (format = new Intl.NumberFormat(locale, options)));
+  return format;
+}
+
 export function currencyExponent(currency: string): number {
-  return (
-    new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions()
-      .maximumFractionDigits ?? 2
-  );
+  return numberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
 }
 
 let knownCurrencies: Set<string> | undefined;
@@ -38,7 +46,7 @@ export function formatMoney(
 ): string {
   const exp = currencyExponent(currency);
   const fraction = opts.compact ? undefined : opts.trimWhole && isWhole(minor, exp) ? 0 : exp;
-  return new Intl.NumberFormat(localeFor(currency), {
+  return numberFormat(localeFor(currency), {
     style: "currency",
     currency,
     signDisplay: opts.signDisplay ?? "auto",
@@ -52,7 +60,7 @@ export function formatMoney(
 /** The currency's symbol as it appears in formatted amounts ("₹", "$", "AED"). */
 export function currencySymbol(currency: string): string {
   return (
-    new Intl.NumberFormat(localeFor(currency), { style: "currency", currency })
+    numberFormat(localeFor(currency), { style: "currency", currency })
       .formatToParts(0)
       .find((p) => p.type === "currency")?.value ?? currency
   );

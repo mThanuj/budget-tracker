@@ -6,12 +6,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SUGGESTED_QUESTIONS } from "./chat-panel";
+import { handOver } from "./handover";
 
 /** Home-page entry point to the money chat: ask here, answer on the Ask page. */
 export function AskBox() {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const ask = (question: string) => question.trim() && router.push(`/ask?q=${encodeURIComponent(question.trim())}`);
+  const ask = (question: string) => {
+    const text = question.trim();
+    if (!text) return;
+    handOver(text);
+    router.push(`/ask?q=${encodeURIComponent(text)}`);
+  };
   return (
     <section aria-labelledby="ask-box-title" className="grid gap-3 rounded-2xl bg-card p-5 ring-1 ring-foreground/10">
       <h2 id="ask-box-title" className="flex items-center gap-2 font-heading text-lg">

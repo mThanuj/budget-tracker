@@ -69,6 +69,19 @@ test("deleting the account removes everything and signs out", async ({ signedIn:
   await expect(page).toHaveURL(/localhost:3000\/$/); // signed out
 });
 
+test("signing out ends the session on the server", async ({ signedIn: { page, userId } }) => {
+  await page.goto("/settings");
+  // Retried until the page has hydrated (a click before that does nothing).
+  await expect(async () => {
+    if (new URL(page.url()).pathname !== "/") await page.getByRole("button", { name: "Sign out" }).click({ timeout: 1_000 });
+    await expect(page).toHaveURL(/localhost:3000\/$/, { timeout: 3_000 });
+  }).toPass();
+  await expect(page.getByRole("heading", { name: "Know where your money goes." })).toBeVisible();
+  expect(await db.select().from(schema.session).where(eq(schema.session.userId, userId))).toHaveLength(0);
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/localhost:3000\/$/); // the old cookie no longer works
+});
+
 test("the admin page is a plain 404 for everyone else", async ({ signedIn: { page } }) => {
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();

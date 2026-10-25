@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/app/brand";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { askMoney, type ChatReply } from "@/server/actions/chat";
+import { isHandedOver, takeHandedOver } from "./handover";
 import { SimpleMarkdown } from "./simple-markdown";
 import { EmptyState } from "@/components/app/empty-state";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
@@ -54,7 +55,9 @@ export function ChatPanel({
   proDaily: number | null;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  // A question that only came in the URL (a link from elsewhere) is filled in
+  // for the person to send; see ./handover.
+  const [input, setInput] = useState(() => (initialQuestion && !isHandedOver(initialQuestion) ? initialQuestion : ""));
   const [left, setLeft] = useState(initialLeft);
   const [pending, startTransition] = useTransition();
   const end = useRef<HTMLDivElement>(null);
@@ -82,10 +85,11 @@ export function ChatPanel({
     });
   }
 
-  // A question handed over from the home page is asked straight away, once.
-  // useEffectEvent reads the latest props/send without re-running the effect.
+  // A question handed over from the home page's ask box is asked straight
+  // away, once. useEffectEvent reads the latest props/send without re-running
+  // the effect.
   const askHandedOver = useEffectEvent(() => {
-    if (initialQuestion && available && !asked.current) {
+    if (initialQuestion && available && !asked.current && takeHandedOver(initialQuestion)) {
       asked.current = true;
       send(initialQuestion);
     }

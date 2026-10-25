@@ -11,6 +11,18 @@ import { deleteAccountData } from "@/server/services/account";
 import { requireUser } from "@/server/session";
 
 /**
+ * Ends this session on the server and clears its cookies (Better Auth's
+ * nextCookies plugin), then goes to the landing page. A server action rather
+ * than Better Auth's browser client, which would otherwise be loaded on every
+ * signed-in page just for this button.
+ */
+export async function signOut(): Promise<never> {
+  await requireUser();
+  await auth.api.signOut({ headers: await headers() });
+  redirect("/");
+}
+
+/**
  * Deletes the account and everything in it. Any Pro renewal is cancelled at
  * Razorpay first; if that fails, nothing is deleted, so no one keeps paying
  * for an account that's gone.
