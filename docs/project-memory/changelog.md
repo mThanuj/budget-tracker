@@ -6,8 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-10-25
 
+- Agent tools: Next.js dev-server MCP (`.mcp.json`, pinned `next-devtools-mcp`)
+  and Next's `next-bundle-optimizer` skill (decision D-022).
 - Agent instructions and this project memory (`AGENTS.md`, `CLAUDE.md`,
-  `.claude/`, `docs/project-memory/`); `pnpm db:check` and `pnpm docs:check` in CI.
+  `.claude/`, `docs/project-memory/`); `pnpm db:check` and `pnpm docs:check` in CI (`85300c0`).
 - Dependabot: `react`/`react-dom` 19.3.1 (`cac5aa9`), `upload-artifact` v7 in the backup workflow (`004d025`).
 - Team workflow: Prettier, CI on GitHub Actions, `pnpm check`, `typecheck` runs
   `next typegen`, exact dependency pins, README and architecture docs (`e69ba32`, reformat `b0b6836`).

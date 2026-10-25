@@ -8,3 +8,12 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - "@ai-sdk/gateway@4.0.125"
   - ai@7.0.152
+
+# next-devtools-mcp 0.4.0 pins @modelcontextprotocol/sdk 1.25.2, which has
+# published advisories; 1.32.x fixes them with the same API. Drop this once
+# next-devtools-mcp depends on a fixed version (decision D-022).
+overrides:
+  "next-devtools-mcp>@modelcontextprotocol/sdk": "1.32.2"
+  # zod 3 has an advisory fixed only in zod 4.6.6+, the version the app uses.
+  "next-devtools-mcp>zod": "4.6.7"
+  "@modelcontextprotocol/sdk>zod": "4.6.7"

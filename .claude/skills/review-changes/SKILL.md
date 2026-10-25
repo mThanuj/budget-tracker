@@ -42,7 +42,8 @@ When relevant: `pnpm check:bundle` after a build (client code or env changes),
    `src/server/actions/**`, `src/app/api/**`, `src/server/billing/**`,
    `src/lib/security-headers.ts`, `src/config/limits.ts`, `src/env.ts`,
    `next.config.ts`, `vercel.json`, `scripts/vercel-build.mjs`,
-   `.github/workflows/**`, `tests/security/**` (a change to the checks themselves).
+   `.github/workflows/**`, `tests/security/**` (a change to the checks themselves),
+   and agent permissions and tools: `.claude/settings.json`, `.mcp.json`, `.claude/skills/**`.
 
 ## Report
 

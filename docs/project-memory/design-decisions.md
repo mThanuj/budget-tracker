@@ -22,29 +22,30 @@ Template for a new entry (copy it to the end, take the next number):
 When a decision changes, don't edit history away: set the old entry's status
 to "superseded by D-NNN", add the new entry, and say what changed.
 
-| ID    | Decision                                                                 | Status              |
-| ----- | ------------------------------------------------------------------------ | ------------------- |
-| D-001 | Product scope: beginners, wallets, AI assistant, Free + Pro              | accepted            |
-| D-002 | Next.js 16 App Router with Cache Components                              | accepted            |
-| D-003 | Better Auth with Google sign-in only                                     | accepted            |
-| D-004 | Neon Postgres with Drizzle; committed migrations applied on deploy       | accepted            |
-| D-005 | Server actions are the API; services own data access                     | accepted            |
-| D-006 | Money in integer minor units; dates as strings in the user's time zone   | accepted            |
-| D-007 | AI is optional, only proposes, and uses a privacy-safe fallback chain    | accepted            |
-| D-008 | Razorpay subscriptions, reconciled from Razorpay's API                   | accepted            |
-| D-009 | Hosting on Hetzner + Coolify from the start                              | superseded by D-010 |
-| D-010 | Launch free on Vercel Hobby with payments switched off                   | accepted            |
-| D-011 | Nightly encrypted backups by GitHub Actions, kept 7 days                 | accepted            |
-| D-012 | CSP allows inline scripts to keep static rendering                       | accepted            |
-| D-013 | No client form or data-fetching library                                  | accepted            |
-| D-014 | Forms submit through `useFormAction`, not `<form action>`                | accepted            |
-| D-015 | Client calls go through `callAction` (no error page on a failed request) | accepted            |
-| D-016 | Sign-out is a server action, not Better Auth's browser client            | accepted            |
-| D-017 | A link can't make the app act for the user                               | accepted            |
-| D-018 | Per-account limits as database counts; request rate limiting deferred    | accepted            |
-| D-019 | Tests never use outside services; app-wide security sweeps               | accepted            |
-| D-020 | Prettier, CI on GitHub Actions, exact dependency pins                    | accepted            |
-| D-021 | Agent instructions and project memory in the repo; no MCP or hooks       | accepted            |
+| ID    | Decision                                                                 | Status                                 |
+| ----- | ------------------------------------------------------------------------ | -------------------------------------- |
+| D-001 | Product scope: beginners, wallets, AI assistant, Free + Pro              | accepted                               |
+| D-002 | Next.js 16 App Router with Cache Components                              | accepted                               |
+| D-003 | Better Auth with Google sign-in only                                     | accepted                               |
+| D-004 | Neon Postgres with Drizzle; committed migrations applied on deploy       | accepted                               |
+| D-005 | Server actions are the API; services own data access                     | accepted                               |
+| D-006 | Money in integer minor units; dates as strings in the user's time zone   | accepted                               |
+| D-007 | AI is optional, only proposes, and uses a privacy-safe fallback chain    | accepted                               |
+| D-008 | Razorpay subscriptions, reconciled from Razorpay's API                   | accepted                               |
+| D-009 | Hosting on Hetzner + Coolify from the start                              | superseded by D-010                    |
+| D-010 | Launch free on Vercel Hobby with payments switched off                   | accepted                               |
+| D-011 | Nightly encrypted backups by GitHub Actions, kept 7 days                 | accepted                               |
+| D-012 | CSP allows inline scripts to keep static rendering                       | accepted                               |
+| D-013 | No client form or data-fetching library                                  | accepted                               |
+| D-014 | Forms submit through `useFormAction`, not `<form action>`                | accepted                               |
+| D-015 | Client calls go through `callAction` (no error page on a failed request) | accepted                               |
+| D-016 | Sign-out is a server action, not Better Auth's browser client            | accepted                               |
+| D-017 | A link can't make the app act for the user                               | accepted                               |
+| D-018 | Per-account limits as database counts; request rate limiting deferred    | accepted                               |
+| D-019 | Tests never use outside services; app-wide security sweeps               | accepted                               |
+| D-020 | Prettier, CI on GitHub Actions, exact dependency pins                    | accepted                               |
+| D-021 | Agent instructions and project memory in the repo; no MCP or hooks       | accepted; MCP part superseded by D-022 |
+| D-022 | Next.js dev-server MCP and bundle-optimizer skill for agents             | accepted                               |
 
 ### D-001 Product scope
 
@@ -256,7 +257,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 
 ### D-021 Agent instructions and project memory in the repo
 
-- **Status:** accepted · **Date:** 2026-10-25
+- **Status:** accepted; the "no MCP server" part superseded by D-022 (same day) · **Date:** 2026-10-25
 - **Context:** coding agents work on this repo across sessions and tools; some
   knowledge (open issues, provider quirks, test conventions) lived only in one
   tool's private memory.
@@ -279,3 +280,33 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   settings bind only Claude Code; the approval points in `AGENTS.md` apply to
   every agent. **References:** `AGENTS.md`, `CLAUDE.md`, `.claude/`,
   `docs/project-memory/README.md`.
+
+### D-022 Next.js dev-server MCP and bundle-optimizer skill
+
+- **Status:** accepted · **Date:** 2026-10-25 · **Supersedes:** D-021's "no MCP server"
+- **Context:** the owner then allowed the optional integrations D-021 had left
+  out. Two were judged useful; the rest are already covered (Playwright for
+  browser checks, `pnpm db:studio` for the development database).
+- **Decision:** `next-devtools-mcp` (Vercel's official server) is a pinned dev
+  dependency, started by `.mcp.json` with `pnpm exec` and telemetry off
+  (`NEXT_TELEMETRY_DISABLED=1`). It lets an agent read the running dev server's
+  errors, routes and logs. Next's `next-bundle-optimizer` skill is copied
+  unchanged from the `v16.4.2` tag into `.claude/skills/` after review
+  (`PROVENANCE.md`), and kept out of Prettier.
+- **Alternatives:** `npx next-devtools-mcp@latest` as Next's docs suggest
+  (rejected: downloads and runs whatever is latest on each start; the pinned
+  dev dependency is locked, audited and updated by Dependabot); `next-dev-loop`
+  (needs the separate `agent-browser` CLI; not added); a database MCP server
+  (still rejected, as in D-021).
+- **Trade-offs / consequences:** the MCP server only reaches local dev servers
+  (development data), keeps a debug log in `~/.next-devtools-mcp/mcp.log`, and
+  each person's agent client asks before enabling it. Changes to `.mcp.json`,
+  `.claude/settings.json` or skills change what agents can do: owner review.
+  Update the vendored skill when `next` is upgraded.
+- **Overrides:** `next-devtools-mcp` 0.4.0 pins an MCP SDK (1.25.2) and zod
+  (3.25.76) with published advisories (5 high). `pnpm-workspace.yaml` overrides
+  them for that package to `@modelcontextprotocol/sdk` 1.32.2 and zod 4.6.7 (the
+  app's version), which brought `pnpm audit` back to its one accepted moderate
+  item. Checked: tool schemas, `nextjs_docs` and argument validation still work.
+  Remove the overrides when a `next-devtools-mcp` release depends on fixed versions.
+- **Affected:** `.mcp.json`, `package.json`, `.claude/skills/next-bundle-optimizer/`.

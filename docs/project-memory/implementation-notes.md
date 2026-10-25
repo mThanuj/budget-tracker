@@ -54,7 +54,8 @@ has more. Add new ones under the right heading.
   `createTestDb()` in `tests/db/helpers.ts`. Its `db` has the same type (`Db`) as
   the app's, so services run unchanged.
 - `drizzle-kit generate` needs no database connection, which is how `pnpm db:check`
-  works offline and in CI.
+  works offline and in CI. It also exits 0 when it fails (e.g. it mishandles an
+  absolute `out` path), so `scripts/check-migrations.mjs` judges by its message.
 
 ## AI providers
 
@@ -97,6 +98,12 @@ has more. Add new ones under the right heading.
 
 Seen in the owner's Claude Code setup; other environments may differ.
 
+- `next analyze --output` (used by the `next-bundle-optimizer` skill) works
+  inside the sandbox with `NEXT_WORKER_THREADS=1`, despite the skill's note
+  about sandboxes that block ports (it doesn't serve anything with `--output`).
+- `next-devtools-mcp` starts fine over stdio with `pnpm exec` (checked by
+  sending `initialize` and `tools/list`), but reaching the owner's dev server on
+  `localhost:3000` may be blocked here.
 - Binding local ports and reaching `localhost` or `*.vercel.app` may be blocked:
   the owner runs `pnpm dev` and `pnpm test:e2e` and the agent reads `test-e2e.log`.
 - Builds: `NEXT_WORKER_THREADS=1 pnpm build` (Turbopack's default workers need

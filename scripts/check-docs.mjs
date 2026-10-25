@@ -62,7 +62,7 @@ const gitIgnored = (path) =>
   });
 const pathRoots = /^(src|tests|scripts|docs|drizzle|\.github|\.claude)\//;
 const rootFiles =
-  /^(AGENTS|CLAUDE|README|SECURITY)\.md$|^(next|drizzle|playwright)\.config\.ts$|^(vitest\.config\.mts|vercel\.json|package\.json|pnpm-lock\.yaml|\.env\.example|\.nvmrc|Dockerfile|eslint\.config\.mjs|\.prettierrc\.json)$/;
+  /^(AGENTS|CLAUDE|README|SECURITY)\.md$|^(next|drizzle|playwright)\.config\.ts$|^(vitest\.config\.mts|vercel\.json|package\.json|pnpm-lock\.yaml|\.env\.example|\.nvmrc|Dockerfile|eslint\.config\.mjs|\.prettierrc\.json|\.mcp\.json)$/;
 
 const problems = [];
 for (const file of files) {

@@ -20,6 +20,11 @@ here only by name).
 - `pnpm audit`: 1 moderate advisory, `esbuild` through `better-auth` →
   `drizzle-kit` (esbuild's dev server, which never runs here). Accepted; revisit
   when drizzle-kit updates. Two deprecated sub-dependencies on the same path.
+- `pnpm-workspace.yaml` overrides the MCP SDK and zod under `next-devtools-mcp`
+  to patched versions (decision D-022); remove them when that package updates
+  its own dependencies, then check `pnpm audit`.
+- ESLint 9 is marked deprecated upstream (`pnpm install` warns). Moving to
+  ESLint 10 depends on `eslint-config-next` supporting it; not started.
 - Open Dependabot PRs: #3 TypeScript 5 → 6 (major, needs testing), #4
   `@types/node` 24 → 26 (doesn't match the Node 24 runtime; should be closed,
   with Dependabot told to skip `@types/node` majors).

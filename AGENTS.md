@@ -27,7 +27,7 @@ setup and scripts: `README.md`.
    ask the owner instead of working around it.
 4. Reusable step-by-step workflows are in `.claude/skills/*/SKILL.md` (plain
    Markdown, usable by any agent): `add-server-action`, `change-schema`,
-   `fix-bug`, `review-changes`.
+   `fix-bug`, `review-changes`, and Next's own `next-bundle-optimizer`.
 
 ## Setup
 
@@ -142,16 +142,21 @@ names are kebab-case; plain, short user-facing text (`docs/DESIGN.md`).
 - Deleting data or files that aren't yours, history rewrites, force pushes.
 - New dependencies, new external services, and changes to business rules,
   security headers, auth configuration or limits.
+- Changes to what agents may do: `.claude/settings.json`, `.mcp.json`, skills.
 
-## Optional tools (not installed; decision D-021)
+## Agent tools (decision D-022)
 
-- **Next.js dev-server MCP:** `next-devtools-mcp` gives an agent the running dev
-  server's errors, routes and logs. Add it to your own agent client (e.g. an
-  `.mcp.json` with `npx -y next-devtools-mcp@<pinned version>`). It only talks to
-  the local dev server, which uses the development database; logs can contain
-  development data. Never point it at production.
-- **Next.js skills:** `npx skills add vercel/next.js --skill next-bundle-optimizer`
-  for bundle-size work. Review a skill before installing; it runs with your
-  agent's permissions.
+- **Next.js dev-server MCP** (`.mcp.json`, server `next-devtools`): Vercel's
+  `next-devtools-mcp`, a pinned dev dependency run with `pnpm exec`, telemetry
+  off. With `pnpm dev` running, `nextjs_index` finds the server and `nextjs_call`
+  reads its errors, routes and logs, so compile and runtime errors show up
+  without a full build. It only reaches local dev servers (development data)
+  and logs to `~/.next-devtools-mcp/mcp.log`. Your agent client asks before
+  enabling a project MCP server.
+- **`next-bundle-optimizer` skill** (`.claude/skills/next-bundle-optimizer/`,
+  copied from Next.js `v16.4.2`, see its `PROVENANCE.md`): bundle-size audits
+  from `next analyze`; it changes code only when asked for "fix" mode. In
+  sandboxes, run the capture as `NEXT_WORKER_THREADS=1 pnpm exec next analyze --output`.
 - **Database inspection:** `pnpm db:studio`, against the development database only.
-- **Browser checks:** Playwright is already set up (`pnpm test:e2e`).
+- **Browser checks:** Playwright (`pnpm test:e2e`). Next's `next-dev-loop` skill
+  isn't installed (it needs the separate `agent-browser` CLI).

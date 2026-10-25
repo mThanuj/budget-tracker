@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "next-devtools": {
+      "command": "pnpm",
+      "args": ["exec", "next-devtools-mcp"],
+      "env": { "NEXT_TELEMETRY_DISABLED": "1" }
+    }
+  }
+}

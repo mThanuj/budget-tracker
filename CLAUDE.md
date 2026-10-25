@@ -8,8 +8,12 @@ Everything above is shared with other agents; this adds only what's specific
 to Claude Code.
 
 - **Skills:** the workflows in `.claude/skills/` (`add-server-action`,
-  `change-schema`, `fix-bug`, `review-changes`) are project skills. Invoke one by
-  name, or follow it when the task matches its description.
+  `change-schema`, `fix-bug`, `review-changes`, `next-bundle-optimizer`) are
+  project skills. Invoke one by name, or follow it when the task matches its
+  description.
+- **MCP:** `.mcp.json` defines the `next-devtools` server (see "Agent tools" in
+  `AGENTS.md`). Claude Code asks once whether to enable it; it's useful only
+  while `pnpm dev` is running.
 - **Permissions:** `.claude/settings.json` blocks reading `.env` files with
   real values and asks before `git push`, merging PRs, `pnpm db:migrate`, the
   Vercel CLI and commands that spend real AI quota. If a command is denied or
