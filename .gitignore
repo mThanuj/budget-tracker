@@ -48,3 +48,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /tests/e2e/.tour/
+
+# Test run logs (see scripts/run-logged.mjs)
+test-*.log

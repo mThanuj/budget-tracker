@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker image (Hetzner + Coolify).
@@ -13,6 +14,10 @@ const nextConfig: NextConfig = {
   ...(process.env.NEXT_WORKER_THREADS === "1" && {
     experimental: { turbopackPluginRuntimeStrategy: "forceWorkerThreads" },
   }),
+  // Security headers on every response (CSP, HSTS, clickjacking, nosniff).
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders({ dev: process.env.NODE_ENV !== "production" }) }];
+  },
   turbopack: {
     rules: {
       "*.css": {
