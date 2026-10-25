@@ -20,6 +20,7 @@ import { describeBalance, WALLET_KIND_LABEL, type WalletKind } from "@/lib/walle
 import { walletAction } from "@/server/actions/wallets";
 import { type EditableWallet, WalletFormDialog } from "./wallet-form";
 import { WalletIcon } from "./wallet-icon";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 export type WalletCardData = EditableWallet & {
   kind: WalletKind;
@@ -53,7 +54,8 @@ export function MoveMoneyButton() {
 }
 
 async function run(op: Parameters<typeof walletAction>[0], id: string, success: string) {
-  const result = await walletAction(op, id);
+  const result = await callAction(() => walletAction(op, id));
+  if (result === NOT_SENT) return false;
   if (result?.ok) {
     toast.success(success);
     return true;

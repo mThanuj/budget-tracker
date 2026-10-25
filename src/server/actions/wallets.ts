@@ -38,7 +38,8 @@ const OPS = {
 export async function walletAction(op: WalletOp, id: string): Promise<ActionResult> {
   const user = await requireUser();
   return runAction(async () => {
-    if (!(op in OPS)) throw new Error(`Unknown wallet operation: ${op}`);
+    // Own keys only: `in` would also accept inherited names like "toString".
+    if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown wallet operation: ${String(op)}`);
     await OPS[op](db, user.id, idSchema.parse(id));
     refresh();
   });

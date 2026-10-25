@@ -1,6 +1,6 @@
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { chooseCategoryWithModel } from "@/server/ai/categorize";
 import { globalAiLimit, type ProviderConfig, providerChain } from "@/server/ai/config";
 import { classifyError } from "@/server/ai/errors";
@@ -77,8 +77,18 @@ describe("providerChain", () => {
     expect(chain[1]).toMatchObject({ fastModel: "nvidia/nemotron-3-super-120b-a12b:free", body: { provider: { data_collection: "deny" } } });
   });
 
-  it("explains malformed JSON settings", () => {
-    expect(() => providerChain({ ...env, LLM_GROQ_OPTIONS: "{oops" })).toThrow(/LLM_GROQ_OPTIONS must be a JSON object/);
+  it("skips a provider with a malformed JSON setting instead of crashing, and says why once", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const bad of ["{oops", "[1,2]", "42"]) {
+      expect(providerChain({ ...env, LLM_GROQ_OPTIONS: bad }).map((p) => p.name)).toEqual(["openrouter"]);
+    }
+    expect(providerChain({ ...env, LLM_OPENROUTER_BODY: "not json" }).map((p) => p.name)).toEqual(["groq"]);
+    providerChain({ ...env, LLM_OPENROUTER_BODY: "not json" }); // same problem again: not logged twice
+    expect(logged.mock.calls.map((c) => String(c[0]))).toEqual([
+      expect.stringContaining('LLM_GROQ_OPTIONS must be a JSON object'),
+      expect.stringContaining('LLM_OPENROUTER_BODY must be a JSON object'),
+    ]);
+    logged.mockRestore();
   });
 
   it("reads the global limit with a safe default", () => {
@@ -121,6 +131,35 @@ describe("runWithFallback", () => {
     expect(calls).toEqual(["first", "second", "second"]);
     await runWithFallback([p("first"), p("second")], task, record, () => 40_000);
     expect(calls.at(-2)).toBe("first");
+  });
+
+  it("keeps a good answer when recording the usage counter fails", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const tried: string[] = [];
+    const brokenRecord = async () => Promise.reject(new Error("db connection lost"));
+    const task = async (m: ModelChoice) => {
+      tried.push(m.provider);
+      return "answer";
+    };
+    expect(await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 1_000)).toEqual({ ok: true, value: "answer", provider: "first" });
+    // The working provider wasn't put on a cooldown or retried elsewhere.
+    expect(tried).toEqual(["first"]);
+    await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 2_000);
+    expect(tried).toEqual(["first", "first"]);
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("couldn't record a ok result for first"), "db connection lost");
+    logged.mockRestore();
+  });
+
+  it("still tries the next provider when recording a failure fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const task = async (m: ModelChoice) => {
+      if (m.provider === "first") throw rateLimited();
+      return "from second";
+    };
+    const brokenRecord = async () => Promise.reject(new Error("db down"));
+    expect(await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 1_000)).toEqual({ ok: true, value: "from second", provider: "second" });
+    vi.restoreAllMocks();
   });
 
   it("reports busy when everything is down, unreadable when answers were bad", async () => {

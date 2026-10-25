@@ -23,6 +23,7 @@ import { Segmented } from "@/components/ui-extra/segmented";
 import { SWATCHES } from "@/lib/category-icons";
 import { categoryAction, saveCategory } from "@/server/actions/categories";
 import { CategoryIcon } from "./category-icon";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 type Kind = "expense" | "income";
 
@@ -40,7 +41,9 @@ function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kin
   const [icon, setIcon] = useState(category?.icon ?? "tag");
   const [color, setColor] = useState<string>(category?.color ?? SWATCHES[0]);
   const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveCategory>[0], fd: FormData) => {
-    const result = await saveCategory(prev, fd);
+    // A failed send keeps the form as typed and says so inline.
+    const result = await callAction(() => saveCategory(prev, fd), { notify: false });
+    if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
     if (result?.ok) {
       toast.success(category ? "Changes saved" : "Category added");
       onDone();
@@ -116,7 +119,8 @@ function CategoryDialog({
 }
 
 async function run(op: Parameters<typeof categoryAction>[0], id: string, success: string) {
-  const result = await categoryAction(op, id);
+  const result = await callAction(() => categoryAction(op, id));
+  if (result === NOT_SENT) return false;
   if (result?.ok) {
     toast.success(success);
     return true;

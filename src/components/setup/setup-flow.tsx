@@ -18,6 +18,7 @@ import { buildPlan } from "@/lib/setup-plan";
 import type { SetupRows, SetupStep } from "@/lib/setup-types";
 import { applySetupAction, parseSetupAnswer, type SetupParseResult } from "@/server/actions/setup";
 import { BillRows, GoalRows, IncomeRows, WalletRows } from "./rows-editor";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 type Category = { id: string; name: string; icon: string; color: string };
 
@@ -60,8 +61,9 @@ function AnswerBox({ step, onRows }: { step: SetupStep; onRows: (rows: SetupRows
       onSubmit={(e) => {
         e.preventDefault();
         startTransition(async () => {
-          const result = await parseSetupAnswer(step, text);
-          if (result.ok) {
+          const result = await callAction(() => parseSetupAnswer(step, text), { notify: false });
+          if (result === NOT_SENT) setMessage(NOT_SENT_MESSAGE);
+          else if (result.ok) {
             onRows(result.rows);
             setText("");
             setMessage(result.rows.length ? "Added below. Check the rows, then continue." : "Didn't find anything to add. Try adding more detail.");
@@ -149,7 +151,7 @@ export function SetupFlow(props: SetupContextProps) {
   function apply() {
     startApply(async () => {
       const clean = <T extends { name: string }>(list: T[]) => list.filter((r) => r.name.trim());
-      const result = await applySetupAction({
+      const result = await callAction(() => applySetupAction({
         wallets: clean(rows.wallets),
         incomes: clean(rows.incomes),
         bills: clean(rows.bills),
@@ -158,8 +160,9 @@ export function SetupFlow(props: SetupContextProps) {
         billsWallet,
         limit,
         categoryBudgets: budgets.filter((b) => b.amount.trim()),
-      });
-      if (result.ok) {
+      }), { notify: false });
+      if (result === NOT_SENT) setError(NOT_SENT_MESSAGE);
+      else if (result.ok) {
         toast.success("Your plan is ready");
         router.push("/dashboard");
       } else {

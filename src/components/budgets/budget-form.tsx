@@ -9,6 +9,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { FormField, fieldAria } from "@/components/ui-extra/form-field";
 import { formatMoney, minorToInput } from "@/lib/money";
 import { saveBudget } from "@/server/actions/budgets";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 export type BudgetTarget =
   | { mode: "overall"; budget?: { id: string; amountMinor: number } }
@@ -41,7 +42,9 @@ function BudgetForm({
   const suggestion = suggestions[target.mode === "overall" ? "overall" : categoryId];
 
   const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveBudget>[0], fd: FormData) => {
-    const result = await saveBudget(prev, fd);
+    // A failed send keeps the form as typed and says so inline.
+    const result = await callAction(() => saveBudget(prev, fd), { notify: false });
+    if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
     if (result?.ok) {
       toast.success(existing ? "Budget updated" : "Budget added");
       onDone();

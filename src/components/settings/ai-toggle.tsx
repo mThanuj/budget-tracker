@@ -4,6 +4,7 @@ import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { setAiEnabled } from "@/server/actions/settings";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 export function AiToggle({ enabled }: { enabled: boolean }) {
   const [on, setOn] = useOptimistic(enabled);
@@ -19,8 +20,8 @@ export function AiToggle({ enabled }: { enabled: boolean }) {
         onClick={() =>
           startTransition(async () => {
             setOn(!on);
-            await setAiEnabled(!on);
-            toast.success(on ? "AI features switched off" : "AI features switched on");
+            const result = await callAction(() => setAiEnabled(!on));
+            if (result !== NOT_SENT) toast.success(on ? "AI features switched off" : "AI features switched on");
           })
         }
         className="inline-flex items-center gap-3 self-start rounded-full text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"

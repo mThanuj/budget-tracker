@@ -15,6 +15,7 @@ import {
   savePreferences,
   type PreferencesState,
 } from "@/server/actions/settings";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 const noopSubscribe = () => () => {};
 
@@ -40,8 +41,11 @@ export function PreferencesForm({
 
   const [state, formAction, pending] = useActionState(
     async (prev: PreferencesState, formData: FormData) => {
-      const result =
-        mode === "welcome" ? await completeWelcome(prev, formData) : await savePreferences(prev, formData);
+      const result = await callAction(
+        () => (mode === "welcome" ? completeWelcome(prev, formData) : savePreferences(prev, formData)),
+        { notify: false },
+      );
+      if (result === NOT_SENT) return { error: NOT_SENT_MESSAGE };
       if (result && "ok" in result) toast.success("Changes saved");
       return result;
     },

@@ -1,4 +1,6 @@
+import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { z } from "zod";
 import { billingEnabled } from "@/config/features";
 import type { BillingInterval } from "@/config/plans";
 
@@ -41,17 +43,22 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
   return sameHex(hmac(webhookSecret, rawBody), signature);
 }
 
-export type RazorpaySubscription = {
-  id: string;
-  plan_id: string;
-  status: string;
-  current_start: number | null;
-  current_end: number | null;
-  ended_at: number | null;
-  notes?: Record<string, string> | unknown[];
-};
+// Razorpay's answer decides who gets Pro (status, current_end), so it's checked
+// rather than trusted. Timestamps are Unix seconds; missing ones become null.
+const unixOrNull = z.number().int().nonnegative().nullable().optional().transform((v) => v ?? null);
+export const razorpaySubscriptionSchema = z.object({
+  id: z.string().min(1),
+  plan_id: z.string(),
+  status: z.string().min(1),
+  current_start: unixOrNull,
+  current_end: unixOrNull,
+  ended_at: unixOrNull,
+  // An object of notes, or [] when there are none.
+  notes: z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())]).optional(),
+});
+export type RazorpaySubscription = z.infer<typeof razorpaySubscriptionSchema>;
 
-async function call<T>(cfg: RazorpayConfig, method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+async function call(cfg: RazorpayConfig, method: "GET" | "POST", path: string, body?: unknown): Promise<unknown> {
   const res = await fetch(`https://api.razorpay.com/v1${path}`, {
     method,
     headers: {
@@ -65,11 +72,13 @@ async function call<T>(cfg: RazorpayConfig, method: "GET" | "POST", path: string
     const detail = await res.text().catch(() => "");
     throw new Error(`Razorpay ${method} ${path} failed (${res.status}): ${detail.slice(0, 300)}`);
   }
-  return (await res.json()) as T;
+  return res.json();
 }
 
+const subscriptionCall = async (...args: Parameters<typeof call>) => razorpaySubscriptionSchema.parse(await call(...args));
+
 export function createSubscription(cfg: RazorpayConfig, interval: BillingInterval, userId: string) {
-  return call<RazorpaySubscription>(cfg, "POST", "/subscriptions", {
+  return subscriptionCall(cfg, "POST", "/subscriptions", {
     plan_id: cfg.plans[interval],
     // Billing cycles until it ends by itself: about 10 years either way.
     total_count: interval === "monthly" ? 120 : 10,
@@ -79,15 +88,15 @@ export function createSubscription(cfg: RazorpayConfig, interval: BillingInterva
 }
 
 export function fetchSubscription(cfg: RazorpayConfig, id: string) {
-  return call<RazorpaySubscription>(cfg, "GET", `/subscriptions/${encodeURIComponent(id)}`);
+  return subscriptionCall(cfg, "GET", `/subscriptions/${encodeURIComponent(id)}`);
 }
 
 /** Cancels at the end of the paid period, so Pro lasts until then. */
 export function cancelSubscriptionAtCycleEnd(cfg: RazorpayConfig, id: string) {
-  return call<RazorpaySubscription>(cfg, "POST", `/subscriptions/${encodeURIComponent(id)}/cancel`, { cancel_at_cycle_end: 1 });
+  return subscriptionCall(cfg, "POST", `/subscriptions/${encodeURIComponent(id)}/cancel`, { cancel_at_cycle_end: 1 });
 }
 
 /** Cancels straight away (used when an account is deleted). */
 export function cancelSubscriptionNow(cfg: RazorpayConfig, id: string) {
-  return call<RazorpaySubscription>(cfg, "POST", `/subscriptions/${encodeURIComponent(id)}/cancel`, { cancel_at_cycle_end: 0 });
+  return subscriptionCall(cfg, "POST", `/subscriptions/${encodeURIComponent(id)}/cancel`, { cancel_at_cycle_end: 0 });
 }

@@ -11,6 +11,7 @@ import { FormField, fieldAria } from "@/components/ui-extra/form-field";
 import { relativeDay } from "@/lib/date-format";
 import { formatMoney, minorToInput } from "@/lib/money";
 import { confirmDue, ruleAction } from "@/server/actions/recurring";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 export type WaitingItem = {
   ruleId: string;
@@ -26,7 +27,9 @@ export type WaitingItem = {
 
 function RecordForm({ item, currency, today, onDone }: { item: WaitingItem; currency: string; today: string; onDone: () => void }) {
   const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof confirmDue>[0], fd: FormData) => {
-    const result = await confirmDue(prev, fd);
+    // A failed send keeps the form as typed and says so inline.
+    const result = await callAction(() => confirmDue(prev, fd), { notify: false });
+    if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
     if (result?.ok) {
       toast.success(`${item.description} recorded`);
       onDone();
@@ -91,8 +94,9 @@ function WaitingRow({ item, currency, today }: { item: WaitingItem; currency: st
           disabled={skipping}
           onClick={async () => {
             setSkipping(true);
-            const result = await ruleAction("skip", item.ruleId);
+            const result = await callAction(() => ruleAction("skip", item.ruleId));
             setSkipping(false);
+            if (result === NOT_SENT) return;
             if (result?.ok) toast.success(`Skipped ${item.description} this time`);
             else toast.error(result?.error ?? "Couldn't skip it. Try again.");
           }}

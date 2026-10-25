@@ -15,6 +15,7 @@ import { addDays } from "@/lib/dates";
 import { minorToInput } from "@/lib/money";
 import { type Frequency, occurrenceOnOrAfter, REPEAT_OPTIONS } from "@/lib/recurring";
 import { saveRule } from "@/server/actions/recurring";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 export type RuleFormData = {
   currency: string;
@@ -68,7 +69,9 @@ function RuleForm({ data, rule, preset, onDone }: { data: RuleFormData; rule?: E
     : null;
 
   const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveRule>[0], fd: FormData) => {
-    const result = await saveRule(prev, fd);
+    // A failed send keeps the form as typed and says so inline.
+    const result = await callAction(() => saveRule(prev, fd), { notify: false });
+    if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
     if (result?.ok) {
       toast.success(rule ? "Changes saved" : "Recurring item added");
       onDone();

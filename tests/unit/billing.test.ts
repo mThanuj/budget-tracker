@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { planFromSubscriptions } from "@/server/billing/plan";
-import { razorpayConfig, razorpayKeys, verifyCheckoutSignature, verifyWebhookSignature } from "@/server/billing/razorpay";
+import { razorpayConfig, razorpayKeys, razorpaySubscriptionSchema, verifyCheckoutSignature, verifyWebhookSignature } from "@/server/billing/razorpay";
 
 const now = new Date("2026-10-24T12:00:00Z");
 const later = new Date("2026-11-24T12:00:00Z");
@@ -84,5 +84,24 @@ describe("Razorpay signatures", () => {
     expect(razorpayConfig({ ...env, BILLING_ENABLED: undefined })).toBeNull();
     // ...but they can still cancel renewals when someone deletes their account.
     expect(razorpayKeys({ ...env, BILLING_ENABLED: undefined })).toMatchObject({ keyId: "rzp_test_1" });
+  });
+});
+
+describe("Razorpay responses are checked, not trusted", () => {
+  const good = { id: "sub_1", plan_id: "plan_m", status: "active", current_start: 1792833694, current_end: 1795458600, ended_at: null, notes: { userId: "u1" } };
+
+  it("accepts a real subscription, with [] or missing notes and missing timestamps", () => {
+    expect(razorpaySubscriptionSchema.parse(good)).toMatchObject({ id: "sub_1", current_end: 1795458600, ended_at: null });
+    expect(razorpaySubscriptionSchema.parse({ ...good, notes: [] }).notes).toEqual([]);
+    const noEnd: Record<string, unknown> = { ...good };
+    delete noEnd.current_end;
+    expect(razorpaySubscriptionSchema.parse(noEnd).current_end).toBeNull();
+  });
+
+  it("rejects shapes that could grant Pro by mistake", () => {
+    expect(razorpaySubscriptionSchema.safeParse({ ...good, status: undefined }).success).toBe(false);
+    expect(razorpaySubscriptionSchema.safeParse({ ...good, current_end: "1795458600" }).success).toBe(false);
+    expect(razorpaySubscriptionSchema.safeParse({ ...good, id: "" }).success).toBe(false);
+    expect(razorpaySubscriptionSchema.safeParse("<html>error</html>").success).toBe(false);
   });
 });

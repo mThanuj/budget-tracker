@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { cn } from "cn";
 import { dismissAlert } from "@/server/actions/alerts";
 import type { Alert } from "@/server/services/alerts";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 const TONE = {
   info: { Icon: CalendarClockIcon, className: "text-muted-foreground", ring: "ring-foreground/10" },
@@ -49,8 +50,8 @@ export function AlertList({ alerts }: { alerts: Alert[] }) {
                 onClick={() =>
                   startTransition(async () => {
                     hide(a.key);
-                    const result = await dismissAlert(a.key);
-                    if (!result?.ok) toast.error("Couldn't dismiss that. Try again.");
+                    const result = await callAction(() => dismissAlert(a.key));
+                    if (result !== NOT_SENT && !result?.ok) toast.error("Couldn't dismiss that. Try again.");
                   })
                 }
                 className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"

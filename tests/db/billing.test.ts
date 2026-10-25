@@ -91,6 +91,20 @@ describe("Razorpay webhooks", () => {
     expect(await t.db.select().from(subscription).where(eq(subscription.razorpaySubscriptionId, "sub_3"))).toHaveLength(0);
   });
 
+  it("rejects a signed but malformed body without calling Razorpay", async () => {
+    const before = fetches;
+    const res = await handleRazorpayWebhook(t.db, cfg, deliver({ event: "subscription.activated", payload: { subscription: { entity: { id: 42 } } } }, "evt_bad_shape"), fetchLatest);
+    expect(res).toEqual({ status: 400, body: "Unexpected payload" });
+    expect(fetches).toBe(before);
+    expect(await t.db.select().from(paymentEvent).where(eq(paymentEvent.eventId, "evt_bad_shape"))).toHaveLength(0);
+  });
+
+  it("ignores note values that aren't strings when recreating a row", async () => {
+    remote = { ...remote, id: "sub_4", status: "active", notes: { userId: 12345, interval: "monthly" } };
+    await handleRazorpayWebhook(t.db, cfg, deliver(event("subscription.activated", "sub_4"), "evt_7"), fetchLatest);
+    expect(await t.db.select().from(subscription).where(eq(subscription.razorpaySubscriptionId, "sub_4"))).toHaveLength(0);
+  });
+
   it("gives Pro users Pro limits and the Pro chain when one is set up", async () => {
     const env = {
       BILLING_ENABLED: "true",

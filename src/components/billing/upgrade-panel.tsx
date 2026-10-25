@@ -9,6 +9,7 @@ import { Segmented } from "@/components/ui-extra/segmented";
 import { Button } from "@/components/ui/button";
 import { confirmCheckout, startCheckout } from "@/server/actions/billing";
 import { openCheckout } from "./checkout";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 export function UpgradePanel() {
   const router = useRouter();
@@ -19,7 +20,11 @@ export function UpgradePanel() {
 
   async function upgrade() {
     setBusy(true);
-    const start = await startCheckout(period);
+    const start = await callAction(() => startCheckout(period));
+    if (start === NOT_SENT) {
+      setBusy(false);
+      return;
+    }
     if (!start.ok) {
       toast.error(start.error);
       setBusy(false);
@@ -32,8 +37,14 @@ export function UpgradePanel() {
         {
           paid: (response) =>
             startConfirming(async () => {
-              const result = await confirmCheckout(response);
+              const result = await callAction(() => confirmCheckout(response), { notify: false });
               setBusy(false);
+              if (result === NOT_SENT) {
+                // The payment itself went through; Razorpay's webhook confirms it.
+                toast.message("Payment received. Pro will switch on within a few minutes.");
+                router.refresh();
+                return;
+              }
               if (!result.ok) toast.error(result.error);
               else toast.success(result.active ? "Pro is on. Thank you!" : "Payment received. Switching Pro on…");
             }),

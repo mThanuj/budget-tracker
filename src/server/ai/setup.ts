@@ -20,7 +20,8 @@ const names = (values: string[]) => {
 
 const day = z.number().int().nullable().describe("Day of the month (1-31) it happens, or null");
 
-function schemaFor(step: SetupStep, ctx: SetupContext) {
+/** One object schema per step; Output.object needs them as a single type. */
+function schemaFor(step: SetupStep, ctx: SetupContext): z.ZodType<Record<string, unknown>> {
   switch (step) {
     case "wallets":
       return z.object({
@@ -79,7 +80,7 @@ export async function extractSetupWithModel(m: ModelChoice, step: SetupStep, ctx
     ].join("\n"),
     prompt: text.slice(0, 500),
     // One step's schema at a time; the union confuses inference, so widen it here.
-    output: Output.object({ schema: schemaFor(step, ctx) as unknown as z.ZodType<Record<string, unknown>> }),
+    output: Output.object({ schema: schemaFor(step, ctx) }),
   });
   return output;
 }

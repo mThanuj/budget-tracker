@@ -23,6 +23,7 @@ import { describeRepeat, monthlyEquivalent } from "@/lib/recurring";
 import { ruleAction, subscriptionSuggestionAction } from "@/server/actions/recurring";
 import { type EditableRule, RuleDialog, type RuleFormData, type RulePreset } from "./rule-form";
 import { EmptyState } from "@/components/app/empty-state";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 export type RuleItem = EditableRule & {
   active: boolean;
@@ -56,7 +57,8 @@ function RuleRow({ r, data }: { r: RuleItem; data: RuleFormData }) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const run = async (op: "pause" | "resume" | "delete", done: string) => {
-    const result = await ruleAction(op, r.id);
+    const result = await callAction(() => ruleAction(op, r.id));
+    if (result === NOT_SENT) return false;
     if (result?.ok) toast.success(done);
     else toast.error(result?.error ?? "Something went wrong. Try again.");
     return Boolean(result?.ok);
@@ -137,8 +139,9 @@ function SuggestionRow({ s, currency, today }: { s: Suggestion; currency: string
   const [busy, setBusy] = useState(false);
   const act = async (op: "track" | "dismiss") => {
     setBusy(true);
-    const result = await subscriptionSuggestionAction(op, s.merchantKey);
+    const result = await callAction(() => subscriptionSuggestionAction(op, s.merchantKey));
     setBusy(false);
+    if (result === NOT_SENT) return;
     if (result?.ok) toast.success(op === "track" ? `Tracking ${s.name}` : "Got it, we won't suggest that again");
     else toast.error(result?.error ?? "Something went wrong. Try again.");
   };

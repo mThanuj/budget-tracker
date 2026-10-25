@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { checkPaymentStatus } from "@/server/actions/billing";
+import { callAction } from "@/lib/call-action";
 
 /** After paying, Razorpay takes a moment to confirm the first charge. */
 export function Activating() {
@@ -12,21 +13,21 @@ export function Activating() {
   useEffect(() => {
     let tries = 0;
     let stopped = false;
-    const timer = setInterval(async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // One check at a time: the next is scheduled only after this one finishes,
+    // so slow responses can't pile up. A failed check is simply retried.
+    const check = async () => {
       tries++;
-      const pro = await checkPaymentStatus();
+      const pro = await callAction(() => checkPaymentStatus(), { notify: false });
       if (stopped) return;
-      if (pro) {
-        clearInterval(timer);
-        router.refresh();
-      } else if (tries >= 15) {
-        clearInterval(timer);
-        setGaveUp(true);
-      }
-    }, 4_000);
+      if (pro === true) router.refresh();
+      else if (tries >= 15) setGaveUp(true);
+      else timer = setTimeout(check, 4_000);
+    };
+    timer = setTimeout(check, 4_000);
     return () => {
       stopped = true;
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [router]);
 

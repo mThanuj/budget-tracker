@@ -32,8 +32,7 @@ const incomeCategoryName = (name: string) =>
 
 /** Creates everything the user reviewed, in one transaction: all of it or none of it. */
 export async function applySetup(db: Db, userId: string, input: SetupInput, today: ISODate) {
-  return db.transaction(async (txRaw) => {
-    const tx = txRaw as unknown as Db;
+  return db.transaction(async (tx) => {
     const existing = await listWallets(tx, userId, { includeArchived: true });
     const byName = new Map(existing.map((w) => [w.name.toLowerCase(), { id: w.id, archived: w.archivedAt !== null }]));
     const counts = { wallets: 0, recurring: 0, budgets: 0, goals: 0 };

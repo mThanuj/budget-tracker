@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 import type { BillingInterval } from "@/config/plans";
 import type { Db } from "../db";
 import { isStale } from "./plan";
@@ -8,9 +9,11 @@ import { type RazorpayConfig, type RazorpaySubscription, verifyWebhookSignature 
 
 const fromUnix = (s: number | null | undefined) => (s ? new Date(s * 1000) : null);
 
-/** Razorpay sends notes as an object, or as [] when there are none. */
-const notesOf = (s: RazorpaySubscription): Record<string, string> =>
-  s.notes && !Array.isArray(s.notes) ? (s.notes as Record<string, string>) : {};
+/** Razorpay sends notes as an object, or as [] when there are none. Only string values are used. */
+function notesOf(s: RazorpaySubscription): Record<string, string> {
+  if (!s.notes || Array.isArray(s.notes)) return {};
+  return Object.fromEntries(Object.entries(s.notes).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+}
 
 function intervalOf(s: RazorpaySubscription, cfg: RazorpayConfig): BillingInterval | null {
   if (s.plan_id === cfg.plans.monthly) return "monthly";
@@ -50,7 +53,11 @@ export async function saveSubscriptionState(db: Db, s: RazorpaySubscription, cfg
   return true;
 }
 
-type WebhookEvent = { event?: string; payload?: { subscription?: { entity?: { id?: string } } } };
+// Only the parts we use; everything else in the body is ignored.
+const webhookEventSchema = z.object({
+  event: z.string(),
+  payload: z.object({ subscription: z.object({ entity: z.object({ id: z.string().min(1) }) }).optional() }).optional(),
+});
 
 /**
  * Handles one webhook delivery. Razorpay may send events twice or out of
@@ -64,18 +71,21 @@ export async function handleRazorpayWebhook(
   fetchLatest: (id: string) => Promise<RazorpaySubscription>,
 ): Promise<{ status: number; body: string }> {
   if (!verifyWebhookSignature(input.rawBody, input.signature, cfg.webhookSecret)) return { status: 400, body: "Bad signature" };
-  let event: WebhookEvent;
+  let json: unknown;
   try {
-    event = JSON.parse(input.rawBody) as WebhookEvent;
+    json = JSON.parse(input.rawBody);
   } catch {
     return { status: 400, body: "Bad JSON" };
   }
+  const parsed = webhookEventSchema.safeParse(json);
+  if (!parsed.success) return { status: 400, body: "Unexpected payload" };
+  const event = parsed.data;
   const eventId = input.eventId?.trim() || createHash("sha256").update(input.rawBody).digest("hex");
   const [seen] = await db.select().from(paymentEvent).where(eq(paymentEvent.eventId, eventId));
   if (seen) return { status: 200, body: "Already handled" };
 
   const subId = event.payload?.subscription?.entity?.id;
-  if (event.event?.startsWith("subscription.") && subId) {
+  if (event.event.startsWith("subscription.") && subId) {
     let latest: RazorpaySubscription;
     try {
       latest = await fetchLatest(subId);
@@ -85,7 +95,7 @@ export async function handleRazorpayWebhook(
     }
     if (!(await saveSubscriptionState(db, latest, cfg))) console.warn(`[billing] webhook for unknown subscription ${subId}`);
   }
-  await db.insert(paymentEvent).values({ eventId, eventType: event.event ?? "unknown" }).onConflictDoNothing();
+  await db.insert(paymentEvent).values({ eventId, eventType: event.event }).onConflictDoNothing();
   return { status: 200, body: "OK" };
 }
 

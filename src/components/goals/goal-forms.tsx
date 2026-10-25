@@ -13,6 +13,7 @@ import { Segmented } from "@/components/ui-extra/segmented";
 import { SWATCHES } from "@/lib/category-icons";
 import { formatMoney, minorToInput } from "@/lib/money";
 import { saveContribution, saveGoal } from "@/server/actions/goals";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 export type EditableGoal = {
   id: string;
@@ -29,7 +30,9 @@ function useSave<T extends (prev: Parameters<typeof saveGoal>[0], fd: FormData) 
   onDone: () => void,
 ) {
   return useActionState(async (prev: Parameters<T>[0], fd: FormData) => {
-    const result = await action(prev, fd);
+    // A failed send keeps the form as typed and says so inline.
+    const result = await callAction(() => action(prev, fd), { notify: false });
+    if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
     if (result?.ok) {
       toast.success(success);
       onDone();

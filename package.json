@@ -16,7 +16,8 @@
     "test:e2e": "node scripts/run-logged.mjs test-e2e.log playwright test",
     "ai:eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-eval.ts",
     "ai:chat-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-chat-eval.ts",
-    "ai:insights-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-insights-eval.ts"
+    "ai:insights-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-insights-eval.ts",
+    "check:bundle": "node scripts/check-client-bundle.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.77",

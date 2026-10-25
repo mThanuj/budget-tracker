@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { deleteAccount } from "@/server/actions/account";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 export function DeleteAccount({ pro }: { pro: boolean }) {
   const [open, setOpen] = useState(false);
@@ -50,9 +51,10 @@ export function DeleteAccount({ pro }: { pro: boolean }) {
             onSubmit={(e) => {
               e.preventDefault();
               startTransition(async () => {
-                const result = await deleteAccount(typed);
+                const result = await callAction(() => deleteAccount(typed), { notify: false });
                 // On success the server redirects, so only failures come back.
-                if (result && !result.ok) setError(result.error);
+                if (result === NOT_SENT) setError(NOT_SENT_MESSAGE);
+                else if (result && !result.ok) setError(result.error);
               });
             }}
           >

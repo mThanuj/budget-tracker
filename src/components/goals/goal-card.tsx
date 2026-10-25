@@ -21,6 +21,7 @@ import { goalProgress } from "@/lib/goals";
 import { formatMoney } from "@/lib/money";
 import { goalAction } from "@/server/actions/goals";
 import { ContributionDialog, type EditableGoal, GoalDialog } from "./goal-forms";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 export type GoalCardData = EditableGoal & { savedMinor: number; archived: boolean };
 
@@ -38,7 +39,8 @@ export function NewGoalButton({ currency, today }: { currency: string; today: st
 }
 
 async function run(op: Parameters<typeof goalAction>[0], id: string, success: string) {
-  const result = await goalAction(op, id);
+  const result = await callAction(() => goalAction(op, id));
+  if (result === NOT_SENT) return false;
   if (result?.ok) {
     toast.success(success);
     return true;

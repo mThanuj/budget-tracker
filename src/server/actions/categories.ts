@@ -38,7 +38,8 @@ const OPS = {
 export async function categoryAction(op: CategoryOp, id: string): Promise<ActionResult> {
   const user = await requireUser();
   return runAction(async () => {
-    if (!(op in OPS)) throw new Error(`Unknown category operation: ${op}`);
+    // Own keys only: `in` would also accept inherited names like "toString".
+    if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown category operation: ${String(op)}`);
     await OPS[op](db, user.id, idSchema.parse(id));
     refresh();
   });

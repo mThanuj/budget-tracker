@@ -1,11 +1,12 @@
 "use client";
 
 import { RefreshCwIcon } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import type { InsightKind } from "@/lib/insights";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { writeInsight, type WriteInsightResult } from "@/server/actions/insights";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 const FAILURES: Record<Exclude<WriteInsightResult, { ok: true }>["reason"], string> = {
   pro: "Written reports are part of Pro.",
@@ -30,17 +31,21 @@ export function ReportWriter({ kind, auto = false, label, note }: { kind: Insigh
   function write() {
     setError(null);
     startTransition(async () => {
-      const result = await writeInsight(kind);
-      if (!result.ok) setError(FAILURES[result.reason]);
+      const result = await callAction(() => writeInsight(kind), { notify: false });
+      if (result === NOT_SENT) setError(NOT_SENT_MESSAGE);
+      else if (!result.ok) setError(FAILURES[result.reason]);
     });
   }
 
-  useEffect(() => {
+  // The included report starts writing on arrival, once.
+  const writeOnArrival = useEffectEvent(() => {
     if (auto && !started.current) {
       started.current = true;
       write();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on arrival
+  });
+  useEffect(() => {
+    writeOnArrival();
   }, []);
 
   if (pending) {

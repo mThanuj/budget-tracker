@@ -17,7 +17,10 @@ import { requireUser } from "@/server/session";
  */
 export async function deleteAccount(confirmation: string): Promise<{ ok: false; error: string }> {
   const user = await requireUser();
-  if (confirmation.trim().toUpperCase() !== "DELETE") return { ok: false, error: "Type DELETE to confirm." };
+  // Server actions are public endpoints: the argument may not be a string at all.
+  if (typeof confirmation !== "string" || confirmation.trim().toUpperCase() !== "DELETE") {
+    return { ok: false, error: "Type DELETE to confirm." };
+  }
 
   const live = await db
     .select()

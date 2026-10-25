@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { type BillRow, EMPTY_ROW, type GoalRow, type IncomeRow, type WalletRow } from "@/lib/setup-types";
-import { WALLET_KINDS, type WalletKind } from "@/lib/wallets";
+import { WALLET_KINDS } from "@/lib/wallets";
 
 type Editor<T> = { rows: T[]; onChange: (rows: T[]) => void };
 
@@ -52,7 +52,11 @@ export function WalletRows(props: Editor<WalletRow>) {
           </label>
           <label className={fieldLabel}>
             Type
-            <NativeSelect value={w.kind} onChange={(e) => set({ kind: e.target.value as WalletKind })} className="w-full">
+            <NativeSelect value={w.kind} onChange={(e) => {
+                // Look the value up instead of asserting it: only a listed kind is accepted.
+                const kind = WALLET_KINDS.find((k) => k.value === e.target.value)?.value;
+                if (kind) set({ kind });
+              }} className="w-full">
               {WALLET_KINDS.map((k) => (
                 <NativeSelectOption key={k.value} value={k.value}>
                   {k.label}

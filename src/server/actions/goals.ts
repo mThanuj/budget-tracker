@@ -43,7 +43,8 @@ const OPS = { archive: archiveGoal, restore: restoreGoal, delete: deleteGoal } s
 export async function goalAction(op: GoalOp, id: string): Promise<ActionResult> {
   const user = await requireUser();
   return runAction(async () => {
-    if (!(op in OPS)) throw new Error(`Unknown goal operation: ${op}`);
+    // Own keys only: `in` would also accept inherited names like "toString".
+    if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown goal operation: ${String(op)}`);
     await OPS[op](db, user.id, idSchema.parse(id));
     refresh();
   });

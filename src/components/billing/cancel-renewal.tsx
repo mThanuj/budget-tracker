@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui-extra/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { cancelPro } from "@/server/actions/billing";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 export function CancelRenewal({ until }: { until: string }) {
   const [open, setOpen] = useState(false);
@@ -22,7 +23,8 @@ export function CancelRenewal({ until }: { until: string }) {
         pendingLabel="Cancelling…"
         destructive
         onConfirm={async () => {
-          const result = await cancelPro();
+          const result = await callAction(() => cancelPro());
+          if (result === NOT_SENT) return false;
           if (!result.ok) {
             toast.error(result.error);
             return false;

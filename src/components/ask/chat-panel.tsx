@@ -2,7 +2,7 @@
 
 import { RotateCcwIcon, SendHorizontalIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import { cn } from "cn";
 import { BrandMark } from "@/components/app/brand";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { askMoney, type ChatReply } from "@/server/actions/chat";
 import { SimpleMarkdown } from "./simple-markdown";
 import { EmptyState } from "@/components/app/empty-state";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 type Message = { role: "user" | "assistant"; content: string; lookedUp?: string[]; failed?: boolean; upgrade?: boolean };
 
@@ -66,7 +67,11 @@ export function ChatPanel({
     setMessages((m) => [...m, { role: "user", content: text }]);
     setInput("");
     startTransition(async () => {
-      const reply = await askMoney(history.map(({ role, content }) => ({ role, content })));
+      const reply = await callAction(() => askMoney(history.map(({ role, content }) => ({ role, content }))), { notify: false });
+      if (reply === NOT_SENT) {
+        setMessages((m) => [...m, { role: "assistant", content: NOT_SENT_MESSAGE, failed: true }]);
+        return;
+      }
       setLeft(reply.left);
       setMessages((m) => [
         ...m,
@@ -78,16 +83,20 @@ export function ChatPanel({
   }
 
   // A question handed over from the home page is asked straight away, once.
-  useEffect(() => {
+  // useEffectEvent reads the latest props/send without re-running the effect.
+  const askHandedOver = useEffectEvent(() => {
     if (initialQuestion && available && !asked.current) {
       asked.current = true;
       send(initialQuestion);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on arrival
+  });
+  useEffect(() => {
+    askHandedOver();
   }, []);
 
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    end.current?.scrollIntoView({ block: "end", behavior: reduce ? "auto" : "smooth" });
   }, [messages, pending]);
 
   if (!available) {

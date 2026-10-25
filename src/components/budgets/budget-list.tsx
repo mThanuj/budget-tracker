@@ -20,6 +20,7 @@ import { formatMoney } from "@/lib/money";
 import { removeBudget } from "@/server/actions/budgets";
 import { BudgetDialog, type BudgetTarget } from "./budget-form";
 import { EmptyState } from "@/components/app/empty-state";
+import { callAction, NOT_SENT } from "@/lib/call-action";
 
 export type BudgetRowData = {
   id: string;
@@ -91,7 +92,8 @@ function BudgetMenu({ b, onEdit, label }: { b: BudgetRowData; onEdit: () => void
         pendingLabel="Removing…"
         destructive
         onConfirm={async () => {
-          const result = await removeBudget(b.id);
+          const result = await callAction(() => removeBudget(b.id));
+          if (result === NOT_SENT) return false;
           if (result?.ok) {
             toast.success("Budget removed");
             return true;

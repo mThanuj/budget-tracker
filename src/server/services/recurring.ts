@@ -240,7 +240,7 @@ export async function confirmOccurrence(
 ) {
   const r = await getDueConfirmRule(db, userId, id, today);
   await db.transaction(async (tx) => {
-    if (!(await advanceFrom(tx as unknown as Db, r))) throw new UserError("This was already recorded.");
+    if (!(await advanceFrom(tx, r))) throw new UserError("This was already recorded.");
     await tx.insert(transaction).values(entryFor(r, r.nextDueOn!, input)).onConflictDoNothing();
   });
 }

@@ -13,6 +13,19 @@ export function resetCooldowns() {
 }
 
 /**
+ * Usage counters feed the admin page. Failing to write one is logged, and never
+ * changes the answer, marks a working provider as down, or skips a fallback.
+ */
+async function note(record: ((provider: string, outcome: AiOutcome) => Promise<void>) | undefined, provider: string, outcome: AiOutcome) {
+  if (!record) return;
+  try {
+    await record(provider, outcome);
+  } catch (err) {
+    console.error(`[ai] couldn't record a ${outcome} result for ${provider}:`, err instanceof Error ? err.message : err);
+  }
+}
+
+/**
  * Runs `task` on the first provider/model that works. Any failure moves on to
  * the next model, then the next provider; the user only sees an error when
  * everything failed.
@@ -29,19 +42,22 @@ export async function runWithFallback<T>(
     for (const lane of lanesFor(p, prefer)) {
       const key = `${lane.provider}/${lane.modelId}`;
       if ((coolingDown.get(key) ?? 0) > now()) continue;
+      let value: T;
       try {
-        const value = await task(lane);
-        await record?.(p.name, "ok");
-        return { ok: true, value, provider: p.name };
+        value = await task(lane);
       } catch (err) {
         const { kind, cooldownMs } = classifyError(err);
         if (cooldownMs > 0) coolingDown.set(key, now() + cooldownMs);
         if (kind === "bad_output") sawBadOutput = true;
         console.warn(`[ai] ${key} failed (${kind}):`, err instanceof Error ? err.message : err);
-        await record?.(p.name, kind);
+        await note(record, p.name, kind);
         // A bad key won't work for the provider's other model either.
         if (kind === "auth") break;
+        continue;
       }
+      // Recorded only after the answer is safely in hand.
+      await note(record, p.name, "ok");
+      return { ok: true, value, provider: p.name };
     }
   }
   return { ok: false, reason: sawBadOutput ? "unreadable" : "busy" };

@@ -19,6 +19,7 @@ import { type ParseResult, parseEntryText, suggestCategoryFor } from "@/server/a
 import type { EntryFormData } from "@/server/actions/entry-form";
 import type { EntryPrefill } from "@/server/ai/parse-entry";
 import { removeTransaction, saveTransaction } from "@/server/actions/transactions";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 export type EntryType = "expense" | "income" | "transfer";
 
@@ -56,8 +57,9 @@ function TypeItBox({ onFilled }: { onFilled: (prefill: EntryPrefill) => void }) 
       onSubmit={(e) => {
         e.preventDefault();
         startTransition(async () => {
-          const result = await parseEntryText(text);
-          if (result.ok) {
+          const result = await callAction(() => parseEntryText(text), { notify: false });
+          if (result === NOT_SENT) setMessage({ tone: "error", text: NOT_SENT_MESSAGE });
+          else if (result.ok) {
             onFilled(result.prefill);
             setMessage({ tone: "ok", text: "Filled in from your note. Check it, then save." });
           } else {
@@ -160,7 +162,9 @@ function EntryFields({
   const otherWallet = wallets.find((w) => w.id !== firstWallet)?.id ?? "";
 
   const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveTransaction>[0], fd: FormData) => {
-    const result = await saveTransaction(prev, fd);
+    // A failed send keeps the form as typed and says so inline.
+    const result = await callAction(() => saveTransaction(prev, fd), { notify: false });
+    if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
     if (result?.ok) {
       toast.success(entry ? "Changes saved" : "Entry saved");
       onDone();
@@ -188,7 +192,8 @@ function EntryFields({
   async function suggestFor(description: string) {
     const text = description.trim();
     if (userPicked.current || type === "transfer" || text.length < 2) return;
-    const result = await suggestCategoryFor(text, type);
+    const result = await callAction(() => suggestCategoryFor(text, type), { notify: false });
+    if (result === NOT_SENT) return;
     if (result && !userPicked.current && descriptionRef.current.trim() === text) {
       setCategoryId(result.categoryId);
       setSuggestedId(result.categoryId);
@@ -381,7 +386,8 @@ function EntryFields({
           pendingLabel="Deleting…"
           destructive
           onConfirm={async () => {
-            const result = await removeTransaction(entry.id);
+            const result = await callAction(() => removeTransaction(entry.id));
+            if (result === NOT_SENT) return false;
             if (result?.ok) {
               toast.success("Entry deleted");
               onDone();

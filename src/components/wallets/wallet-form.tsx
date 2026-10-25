@@ -12,6 +12,7 @@ import { minorToInput } from "@/lib/money";
 import { DEFAULT_WALLET_COLOR, WALLET_KINDS, type WalletKind } from "@/lib/wallets";
 import { saveWallet } from "@/server/actions/wallets";
 import { WALLET_KIND_ICON } from "./wallet-icon";
+import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
 export type EditableWallet = {
   id: string;
@@ -30,7 +31,9 @@ function WalletForm({ wallet, currency, onDone }: { wallet?: EditableWallet; cur
   const opening = wallet ? Math.abs(wallet.openingBalanceMinor) : 0;
 
   const [state, formAction, pending] = useActionState(async (prev: Parameters<typeof saveWallet>[0], fd: FormData) => {
-    const result = await saveWallet(prev, fd);
+    // A failed send keeps the form as typed and says so inline.
+    const result = await callAction(() => saveWallet(prev, fd), { notify: false });
+    if (result === NOT_SENT) return { ok: false as const, error: NOT_SENT_MESSAGE };
     if (result?.ok) {
       toast.success(wallet ? "Changes saved" : "Wallet added");
       onDone();

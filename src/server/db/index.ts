@@ -7,7 +7,10 @@ import * as schema from "./schema";
 /** Any Drizzle Postgres database using our schema (node-postgres in the app, PGlite in tests). */
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-const globalForDb = globalThis as unknown as { pgPool?: Pool };
+declare global {
+  // Survives dev hot reloads, so each reload doesn't open a new pool.
+  var pgPool: Pool | undefined;
+}
 
 // A dead connection (dropped Wi-Fi, a proxy reset) otherwise makes a query
 // wait forever without an error. These fail it fast instead, and the pool
@@ -23,12 +26,12 @@ const POOL_TIMEOUTS = {
 // On Vercel each function instance gets its own small pool that lets idle
 // connections go quickly (Neon's pooled URL absorbs the many instances).
 const pool =
-  globalForDb.pgPool ??
+  globalThis.pgPool ??
   new Pool({
     connectionString: process.env.DATABASE_URL,
     ...POOL_TIMEOUTS,
     ...(process.env.VERCEL ? { max: 3, idleTimeoutMillis: 5_000 } : { max: 10 }),
   });
-if (process.env.NODE_ENV !== "production") globalForDb.pgPool = pool;
+if (process.env.NODE_ENV !== "production") globalThis.pgPool = pool;
 
 export const db = drizzle({ client: pool, schema, casing: "snake_case" });
