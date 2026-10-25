@@ -49,5 +49,5 @@ next-env.d.ts
 /blob-report/
 /tests/e2e/.tour/
 
-# Test run logs (see scripts/run-logged.mjs)
+# Test run logs (written by tests/support/vitest-log-reporter.ts and tests/e2e/support/ordered-list.ts)
 test-*.log

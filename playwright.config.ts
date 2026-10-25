@@ -18,7 +18,9 @@ export default defineConfig({
   // PW_WORKERS=8 (or "50%"), or pass --workers=N.
   workers: process.env.CI ? 2 : workersFromEnv(process.env.PW_WORKERS) ?? "75%",
   retries: process.env.CI ? 2 : 0,
-  reporter: [["list"]],
+  // Live progress in the terminal ("list"), plus a clean log in test-e2e.log
+  // with the tests in number order (1, 2, 3…).
+  reporter: [["list"], ["./tests/e2e/support/ordered-list.ts", { outputFile: "test-e2e.log" }]],
   timeout: 45_000,
   use: {
     baseURL: "http://localhost:3000",

@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Test output: generated, and Playwright deletes it at the start of a run
+    // (linting during a run then fails on a vanished folder).
+    "test-results/**",
+    "playwright-report/**",
+    "blob-report/**",
+    "coverage/**",
   ]),
 ]);
 
