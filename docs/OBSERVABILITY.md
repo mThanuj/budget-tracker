@@ -206,8 +206,8 @@ Thresholds are a starting point for a small site; revisit them after a month
 | A1  | New or returning     | Sentry issue alert                         | a new issue is created, or an issue changes from resolved to unresolved; environment `production`; at most once per 30 minutes | [Incident checklist](#incident-checklist)                      |
 | A2  | Error burst          | Sentry issue alert                         | an issue is seen more than 10 times in 1 hour; environment `production`                                                        | the same; probably affects several people                      |
 | A3  | Daily job            | Sentry Crons, monitor `recurring-entries`  | a run is missed (30 minutes late), fails, or takes over 5 minutes (from `src/config/monitoring.ts`)                            | Vercel → Cron Jobs, then the logs for `cron.*`                 |
-| A4  | Site down            | uptime monitor on `/api/health/live`       | two failed checks in a row (checked every 5 minutes)                                                                           | Vercel status page and Deployments; roll back the last deploy  |
-| A5  | Database unreachable | uptime monitor on `/api/health`            | two failed checks in a row (checked hourly)                                                                                    | Neon status page and console; `health.db_unreachable` in logs  |
+| A4  | Site down            | UptimeRobot on `/api/health/live`          | a failed check, confirmed by UptimeRobot's re-check (every 5 minutes)                                                          | Vercel status page and Deployments; roll back the last deploy  |
+| A5  | Database unreachable | UptimeRobot on `/api/health`               | no `"ok":true` in the reply, confirmed by a re-check (hourly)                                                                  | Neon status page and console; `health.db_unreachable` in logs  |
 | A6  | Error rate           | Sentry metric alert, if your plan has them | more than 5% of transactions failing over 15 minutes                                                                           | as A2                                                          |
 | A7  | Slow                 | Sentry metric alert, if your plan has them | p95 transaction duration over 3 s for 30 minutes (excluding `/ask`, where AI answers take longer)                              | Insights → Backend: which spans (database, outside calls) grew |
 
@@ -225,14 +225,17 @@ steps 2, 4 and 5; most alert editors also have a "send test notification" button
 
 ## Uptime monitors
 
-Use Sentry's uptime monitoring if your plan includes it (alerts in one place),
-otherwise UptimeRobot's free plan (5-minute checks, email alerts). Both only
-send requests to the two public endpoints; no user data is involved.
+**UptimeRobot**, free plan (the owner's choice, 2026-10-26; set up in its
+dashboard, nothing in the code), emailing the owner. It re-checks a failure
+before alerting. It only sends requests to the two public endpoints; no user
+data is involved. The readiness check is a Keyword monitor: down when the
+reply lacks `"ok":true`. Its free plan is for non-commercial use: review it
+when payments go on.
 
-| Monitor   | URL                              | Every     | Healthy when                     | Alert               |
-| --------- | -------------------------------- | --------- | -------------------------------- | ------------------- |
-| Liveness  | `https://<site>/api/health/live` | 5 minutes | 200 (a `HEAD` request works too) | 2 failures in a row |
-| Readiness | `https://<site>/api/health`      | 1 hour    | 200 with `{"ok":true}`           | 2 failures in a row |
+| Monitor   | URL                              | Every     | Healthy when                     | Alert                  |
+| --------- | -------------------------------- | --------- | -------------------------------- | ---------------------- |
+| Liveness  | `https://<site>/api/health/live` | 5 minutes | 200 (a `HEAD` request works too) | HTTP(s) monitor, email |
+| Readiness | `https://<site>/api/health`      | 1 hour    | 200 with `{"ok":true}`           | Keyword monitor, email |
 
 `/api/health/live` answers as soon as the app runs, without the database.
 `/api/health` runs `select 1` and answers 503 `{"ok":false}` if the database
@@ -368,7 +371,9 @@ commit while doing this.
   the source file (source maps uploaded); Sentry's default high-priority alert
   emailed the owner; a browser test error came with a replay in which every
   word, number and image was masked. A1 hasn't been created separately; the
-  default alert covers new issues for now.
+  default alert covers new issues for now. Both UptimeRobot monitors were up,
+  and a temporary monitor on a missing page emailed the owner (A4 and A5's
+  delivery).
 - **Verified locally** (2026-10-26): what the server SDK would send for
   an unexpected error, a handled failure and trace spans, and the data
   collection settings it resolved (`tests/unit/monitoring.test.ts`; the browser
@@ -376,9 +381,8 @@ commit while doing this.
   Sentry code in the browser without a DSN, and the bundle sizes above; no source
   maps in the browser files with a DSN; `pnpm check:bundle` clean; the replay
   options, scrubbers and pause rule (unit tests). **Not yet verified:** the cron
-  monitor, the uptime monitors (not set up), the replay pause on addresses with
-  a query string (on the live site), unexpected-error reporting from a real
-  failure. See
+  monitor, the replay pause on addresses with a query string (on the live
+  site), unexpected-error reporting from a real failure. See
   [Checking that it works](#checking-that-it-works).
 
 ## Rules for changing monitoring (people and agents)
