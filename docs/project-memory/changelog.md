@@ -6,6 +6,9 @@ when you merge something a future agent should know about.
 
 ## 2026-10-26
 
+- Vercel settings confirmed by the owner: Node 24.x, Fluid compute on,
+  previews without the production `DATABASE_URL`. The roadmap's uptime monitor
+  proposal is done (UptimeRobot, docs/OBSERVABILITY.md).
 - TypeScript 6.0.3 (Dependabot #3; no code or config changes needed).
   Dependabot no longer proposes `@types/node` majors: they must follow the
   Node 24 runtime (#4 closed for that reason).

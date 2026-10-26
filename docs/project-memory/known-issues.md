@@ -12,8 +12,8 @@ here only by name).
 From the independent assessment on 2026-10-26. Details are in the sections
 below; keep this list in step when an item is done or a new one outranks it.
 
-- **High, needs the owner:** a first backup restore; the daily job's cron monitor; the Vercel
-  settings to confirm (all under [Operations](#operations)).
+- **High, needs the owner:** a first backup restore; the daily job's cron
+  monitor (both under [Operations](#operations)).
 - **Next:** browser tests in CI and the actions without direct tests (under
   [Not covered by automated tests](#not-covered-by-automated-tests)); the
   manual cross-user list (under [Security](#security-deferred-details-in-securitymd)).
@@ -87,11 +87,6 @@ below; keep this list in step when an item is done or a new one outranks it.
   preloading, so the first visit may shift layout. Not measured: check with
   PageSpeed Insights on the live site; if CLS > 0.1, switch to `next/font/local`
   (mind the unicode-range subsets: ₹ may be outside the latin one).
-- Settings only visible in the dashboards, to confirm (the last one matters
-  more now that every change goes through a branch with a preview deployment):
-  Vercel's Node version
-  (should be 24.x like `.nvmrc`), Fluid compute on (a chat answer can take up to
-  45 s), Preview deployments not using the production `DATABASE_URL`.
 
 ## Code quality
 
