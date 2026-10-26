@@ -36,6 +36,10 @@ jobs:
           cache: pnpm
       - name: Install (lockfile must match package.json)
         run: pnpm install --frozen-lockfile
+      # The same rule as the pre-push hook, enforced here because hooks can be skipped.
+      - name: Branch name
+        if: github.event_name == 'pull_request'
+        run: node scripts/check-branch-name.mjs "$GITHUB_HEAD_REF"
       - name: Lint
         run: pnpm lint
       - name: Formatting

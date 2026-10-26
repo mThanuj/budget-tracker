@@ -30,7 +30,9 @@
     "ai:chat-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-chat-eval.ts",
     "ai:insights-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-insights-eval.ts",
     "check:bundle": "node scripts/check-client-bundle.mjs",
-    "docs:check": "node scripts/check-docs.mjs"
+    "docs:check": "node scripts/check-docs.mjs",
+    "check:branch": "node scripts/check-branch-name.mjs",
+    "prepare": "node -e \"try { require('node:child_process').execSync('git config core.hooksPath .githooks', { stdio: 'ignore' }) } catch { /* no git here (Docker, Vercel): no hooks to install */ }\""
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.77",
