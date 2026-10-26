@@ -48,6 +48,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-022 | Next.js dev-server MCP and bundle-optimizer skill for agents             | accepted                               |
 | D-023 | CI fails on high or critical dependency advisories                       | accepted                               |
 | D-024 | Observability: structured logs, Sentry, health checks                    | accepted                               |
+| D-025 | Plain git hooks; branch names checked in CI                              | accepted                               |
 
 ### D-001 Product scope
 
@@ -384,3 +385,30 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   `src/lib/security-headers.ts`, `/privacy`, `/admin`. **References:**
   `tests/unit/monitoring.test.ts`, `tests/unit/log.test.ts`,
   `tests/unit/observability.test.ts`, [docs/OBSERVABILITY.md](../OBSERVABILITY.md).
+
+### D-025 Plain git hooks; branch names checked in CI
+
+- **Status:** accepted · **Date:** 2026-10-26
+- **Context:** with `main` protected (D-020), the owner asked for checks before
+  commits and pushes, a branch naming convention, and merged branches cleaned up.
+- **Decision:** shell hooks in `.githooks/`, which `pnpm install` turns on
+  (`prepare` sets `core.hooksPath`): pre-commit refuses commits on `main` and
+  runs Prettier and ESLint on staged files; pre-push checks the branch name,
+  then runs `pnpm check`; post-merge reminds to install when `pnpm-lock.yaml`
+  changed. Branch names are `<type>/<short-description>`
+  (`scripts/check-branch-name.mjs`), and CI fails a pull request from a branch
+  that doesn't follow it. Commit messages aren't checked.
+- **Rationale:** hooks give fast feedback; CI is the gate, because hooks can be
+  skipped. **Alternatives:** Husky (it does the same `core.hooksPath` setup,
+  as a dependency); lint-staged (checks only the staged version of each file
+  and can auto-fix: worth adding if partial staging or failing commits become a
+  nuisance); Lefthook (a binary installed by a script, which pnpm's
+  `allowBuilds` blocks). The owner chose plain hooks and a full `pnpm check`
+  before each push.
+- **Trade-offs / consequences:** a push waits 1–2 minutes for `pnpm check`. The
+  pre-commit hook checks the working copy of each staged file, so a partly
+  staged file is judged as a whole. Hooks skip themselves when `pnpm` isn't on
+  the PATH (some GUI git clients).
+- **Affected:** `.githooks/`, `scripts/check-branch-name.mjs`, `package.json`
+  (`prepare`, `check:branch`), `.github/workflows/ci.yml`. **References:**
+  `tests/unit/dev-workflow.test.ts`.

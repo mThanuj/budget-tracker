@@ -130,6 +130,15 @@ how to run a single test.
   and a dependency audit, and its `checks` job must pass (on a branch up to
   date with `main`) before the merge. Run `pnpm check` locally first, and
   `pnpm test:e2e` for UI changes.
+- Branch names are `<type>/<short-description>`, lowercase with hyphens:
+  `feat/csv-import`, `fix/budget-rollover`. Types: `feat`, `fix`, `docs`,
+  `chore`, `refactor`, `test`, `perf`, `ci`, `deps` (`pnpm check:branch`; CI
+  enforces it on pull requests).
+- Git hooks in `.githooks/` are set up by `pnpm install` (in an existing clone:
+  `pnpm prepare`). Before a commit: not on `main`, and Prettier and ESLint
+  on the staged files. Before a push: the branch name, then `pnpm check`
+  (1–2 minutes). After a pull that changed `pnpm-lock.yaml`: a reminder to
+  install and restart `pnpm dev`. `--no-verify` skips a hook; CI still checks.
 - Coding agents (and people new to the code) start with [AGENTS.md](AGENTS.md):
   where code goes, the rules, the checks, and what needs the owner's approval.
   Durable knowledge (decisions, business rules, known issues) lives in

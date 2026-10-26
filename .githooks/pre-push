@@ -1,0 +1,18 @@
+#!/bin/sh
+# Before a push: branch names, then everything CI checks (pnpm check, 1-2
+# minutes), so a failing branch doesn't use a CI run. `git push --no-verify`
+# skips this; CI still runs every check.
+command -v pnpm >/dev/null 2>&1 || { echo "pnpm not found: skipping the pre-push checks (CI still runs them)." >&2; exit 0; }
+
+pushing=""
+# One line per ref being pushed: <local ref> <local sha> <remote ref> <remote sha>.
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac # a branch deletion
+  case "$remote_ref" in
+    refs/heads/*) node scripts/check-branch-name.mjs "${remote_ref#refs/heads/}" || exit 1 ;;
+  esac
+  pushing=yes
+done
+
+[ -n "$pushing" ] || exit 0
+pnpm check
