@@ -1,0 +1,21 @@
+#!/bin/sh
+# Quick checks on what's being committed: not on main, and the staged files
+# pass Prettier and ESLint. The full checks run before a push (pre-push) and in
+# CI. Installed by `pnpm install` (package.json "prepare"); docs: README.md.
+command -v pnpm >/dev/null 2>&1 || { echo "pnpm not found: skipping the pre-commit checks (CI still runs them)." >&2; exit 0; }
+
+if [ "$(git symbolic-ref --short HEAD 2>/dev/null)" = "main" ]; then
+  echo "main is protected: commit on a branch (git switch -c fix/short-description)." >&2
+  exit 1
+fi
+
+# Staged files only (added, copied, modified, renamed). Prettier skips files it
+# doesn't handle; ESLint skips files its config ignores.
+if [ -n "$(git diff --cached --name-only --diff-filter=ACMR)" ]; then
+  git diff --cached --name-only --diff-filter=ACMR -z | xargs -0 pnpm exec prettier --check --ignore-unknown ||
+    { echo "Formatting: run pnpm format, then stage the changes." >&2; exit 1; }
+fi
+if [ -n "$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs')" ]; then
+  git diff --cached --name-only --diff-filter=ACMR -z -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' |
+    xargs -0 pnpm exec eslint --no-warn-ignored || exit 1
+fi

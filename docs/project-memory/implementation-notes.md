@@ -164,6 +164,16 @@ has more. Add new ones under the right heading.
 - Browser tests need `.env.local` and write to its database (a development one).
   They sign in with Better Auth's test helpers, so no Google account is used.
 
+## Git hooks
+
+- `prepare` is an inline `node -e` command, not a script file: the Docker
+  image's dependency stage copies only the manifests, so a script file wouldn't
+  be there, and Docker, Vercel and plain directories have no git repository (the
+  command does nothing then).
+- `pnpm install` skips lifecycle scripts when nothing changed ("Already up to
+  date"), so an existing clone turns the hooks on with `pnpm prepare`; a
+  fresh install runs it by itself (checked 2026-10-26).
+
 ## Sandboxed agent sessions
 
 Seen in the owner's Claude Code setup; other environments may differ.

@@ -141,8 +141,10 @@ names are kebab-case; plain, short user-facing text (`docs/DESIGN.md`).
 
 ## Before you finish
 
-1. Run the narrowest relevant tests first (one file, then the suite), then
-   `pnpm check`. CI also builds and audits every change; run `pnpm build`
+1. Work on a branch named `<type>/<short-description>` (types in README,
+   "Working on it"). Run the narrowest relevant tests first (one file, then the
+   suite), then `pnpm check`. The git hooks also run checks on commit and push:
+   fix what they report; don't skip them with `--no-verify`. CI also builds and audits every change; run `pnpm build`
    yourself when you changed config, routes, rendering or dependencies, and
    `pnpm test:e2e` (or ask the owner) for UI changes.
 2. Review your diff: only intended files changed; no stray generated files

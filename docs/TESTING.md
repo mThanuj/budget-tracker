@@ -20,7 +20,8 @@ git), while the terminal output stays live.
 | `pnpm test:e2e`         | `tests/e2e`: Playwright on desktop Chrome and iPhone (iPad: tour) | `.env.local`, a dev database | `test-e2e.log`         |
 | `pnpm test:e2e:live`    | Only the e2e tests that call the real AI provider (`@live-ai`)    | the same, plus an AI key     | `test-e2e.log`         |
 
-A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "export"`
+Before every push, the pre-push git hook runs `pnpm check` (README, "Working on
+it"). A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "export"`
 (writes its folder's log, here `test-integration.log`),
 `pnpm test:e2e smoke.spec.ts --project desktop-chrome`.
 

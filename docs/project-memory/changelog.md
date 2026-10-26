@@ -6,6 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-10-26
 
+- Git hooks (`.githooks/`, D-025): pre-commit (not on `main`; Prettier and
+  ESLint on staged files), pre-push (branch name, `pnpm check`), post-merge
+  (install reminder). Branch names `<type>/<short-description>`, enforced in CI
+  on pull requests.
 - `main` is protected: changes go through pull requests, and CI's `checks` job
   must pass on an up-to-date branch before a merge (and so a deploy).
 - Sentry switched on in production and checked end to end (test error, source
