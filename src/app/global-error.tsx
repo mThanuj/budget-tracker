@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
+import { reportClientError } from "@/lib/report-client-error";
+
 // Last resort when the root layout itself fails. It replaces the whole
 // document, so it can't rely on the app's stylesheet: inline styles only,
 // using the app's paper/ink/primary colours.
-export default function GlobalError({ retry }: { error: unknown; retry: () => void }) {
+export default function GlobalError({ error, retry }: { error: unknown; retry: () => void }) {
+  useEffect(() => reportClientError(error), [error]);
   return (
     <html lang="en">
       <body style={{ margin: 0, background: "#f6f7f4", color: "#18211e", fontFamily: "system-ui, sans-serif" }}>

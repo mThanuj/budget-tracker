@@ -6,6 +6,12 @@ when you merge something a future agent should know about.
 
 ## 2026-10-26
 
+- Observability (D-024, [docs/OBSERVABILITY.md](../OBSERVABILITY.md)): a
+  structured, redacted logger replaces `console.*` on the server; request ids;
+  `/api/health/live` beside the readiness check (now with a 3 s timeout; the
+  Docker health check uses liveness); Sentry for errors, traces, Web Vitals and
+  the daily job's check-ins, off until `NEXT_PUBLIC_SENTRY_DSN` is set; `/admin`
+  can send a test error; the privacy page mentions Sentry when it's on.
 - Independent maintainability assessment: dismissed subscription suggestions now
   count toward the daily dismissal limit; writes after an ownership check also
   filter by `userId`; CI runs `pnpm audit --audit-level=high` (D-023); a settings

@@ -21,6 +21,8 @@ import {
 import { db } from "@/server/db";
 import { subscription } from "@/server/db/schema";
 import { requireUser } from "@/server/session";
+import { log } from "@/server/log";
+import { currentRequestId } from "@/server/request-id";
 
 const NOT_SET_UP = "Pro isn't available yet. Please check back soon.";
 const TRY_AGAIN = "We couldn't reach the payment service. Try again in a minute.";
@@ -82,7 +84,7 @@ export async function startCheckout(interval: "monthly" | "yearly"): Promise<Che
       prefill: { name: user.name, email: user.email },
     };
   } catch (err) {
-    console.error("[billing] start checkout failed:", err instanceof Error ? err.message : err);
+    log.error("billing.checkout_start_failed", { err, requestId: await currentRequestId() });
     return { ok: false, error: TRY_AGAIN };
   }
 }
@@ -135,7 +137,7 @@ export async function confirmCheckout(response: unknown): Promise<CheckoutConfir
     // The payment is verified, so it's at least authenticated even if Razorpay hasn't caught up.
     await saveSubscriptionState(db, latest.status === "created" ? { ...latest, status: "authenticated" } : latest, cfg);
   } catch (err) {
-    console.error("[billing] confirm fetch failed:", err instanceof Error ? err.message : err);
+    log.error("billing.checkout_confirm_fetch_failed", { err, requestId: await currentRequestId() });
     // Only move forward: never overwrite a state Razorpay already confirmed.
     if (row.status === "created")
       await db.update(subscription).set({ status: "authenticated" }).where(eq(subscription.id, row.id));
@@ -155,7 +157,7 @@ export async function checkPaymentStatus(): Promise<boolean> {
         await saveSubscriptionState(db, await fetchSubscription(cfg, row.razorpaySubscriptionId), cfg);
     }
   } catch (err) {
-    console.error("[billing] status check failed:", err instanceof Error ? err.message : err);
+    log.error("billing.status_check_failed", { err, requestId: await currentRequestId() });
   }
   const pro = (await getUserPlan(db, user.id)).id === "pro";
   if (pro) refresh();
@@ -174,7 +176,7 @@ export async function cancelPro(): Promise<{ ok: true } | { ok: false; error: st
     const latest = await cancelSubscriptionAtCycleEnd(cfg, plan.subscription.razorpaySubscriptionId);
     await saveSubscriptionState(db, latest, cfg);
   } catch (err) {
-    console.error("[billing] cancel failed:", err instanceof Error ? err.message : err);
+    log.error("billing.cancel_failed", { err, requestId: await currentRequestId() });
     return { ok: false, error: TRY_AGAIN };
   }
   await db

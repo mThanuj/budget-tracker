@@ -32,6 +32,7 @@ region **AWS Asia Pacific (Singapore)**. Copy both connection strings: pooled
    - `BILLING_ENABLED=false`; leave the `RAZORPAY_*` values out.
    - `NEXT_PUBLIC_APP_NAME`, `ADMIN_EMAILS`, `LEGAL_NAME`, `SUPPORT_EMAIL`, `SUPPORT_PHONE`, `BUSINESS_ADDRESS`, `LEGAL_CITY`.
    - `ENABLE_EXPERIMENTAL_COREPACK=1`, so Vercel uses the pnpm version in `package.json`.
+   - Optional, error monitoring: `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` ([OBSERVABILITY.md](OBSERVABILITY.md)).
 4. Deploy. `vercel.json` runs the app in Singapore (next to the database) and
    applies database migrations during production builds; a failed migration fails
    the deploy and the previous version keeps serving.
@@ -73,7 +74,7 @@ Neon's free plan keeps only 6 hours of history, so a GitHub Action
 - [ ] Add an entry by typing a note; ask a question in Ask; open Insights.
 - [ ] The daily job shows a successful run in Vercel.
 - [ ] Last night's backup exists and a restore was tried.
-- [ ] Uptime monitor (any free one) on `https://<your-project>.vercel.app/api/health`.
+- [ ] Uptime monitors on `/api/health/live` (every 5 minutes) and `/api/health` (hourly), and Sentry with a test error that reached your inbox: [OBSERVABILITY.md](OBSERVABILITY.md).
 - [ ] Check each AI provider's terms allow your use of its free tier.
 - [ ] Have the legal pages reviewed if you can; they're written in plain English, not by a lawyer.
 
@@ -108,7 +109,7 @@ notifications (email or Discord) for failed deployments. Then:
 
 1. **Sources → GitHub App**: connect it to the `budget-tracker` repository.
 2. **New resource → Application** from that repo, branch `main`, build pack **Dockerfile**, port **3000**.
-3. **Health check**: path `/api/health`, port 3000.
+3. **Health check**: path `/api/health/live`, port 3000 (the database is checked by the uptime monitor; see [OBSERVABILITY.md](OBSERVABILITY.md)).
 4. **Domains**: `https://<your-domain>`. Coolify gets the HTTPS certificate.
 
 ## 3. DNS
@@ -128,6 +129,8 @@ In the application's **Environment Variables**, add everything from
 - The AI block (`LLM_*`, `AI_GLOBAL_DAILY_LIMIT`).
 - `RAZORPAY_*`: test-mode keys first (step 7).
 - `ADMIN_EMAILS`, `LEGAL_NAME`, `SUPPORT_EMAIL`, `SUPPORT_PHONE`, `BUSINESS_ADDRESS`, `LEGAL_CITY`.
+- Optional, error monitoring: `NEXT_PUBLIC_SENTRY_DSN`, ticked as a **build variable** (the
+  Dockerfile reads it while building). Source maps aren't uploaded from the image build.
 
 Deploy. On start the app applies database migrations by itself
 (`RUN_MIGRATIONS=1` in the image). If one fails, the new version doesn't start
@@ -178,7 +181,7 @@ In Google Cloud Console → APIs & Services:
 - [ ] Add an entry by typing a note; ask a question in Ask.
 - [ ] The hourly task shows a successful run in Coolify.
 - [ ] Last night's backup exists and a restore was tried.
-- [ ] Uptime monitor (any free one) on `https://<your-domain>/api/health`.
+- [ ] Uptime monitors on `/api/health/live` and `/api/health`, and Sentry checked: [OBSERVABILITY.md](OBSERVABILITY.md).
 - [ ] Server: `unattended-upgrades` on for security updates; SSH by key only.
 - [ ] Check each AI provider's terms allow commercial use on its free tier, or move to paid keys.
 - [ ] Ask an accountant about GST once revenue grows.

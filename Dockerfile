@@ -10,7 +10,9 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Secrets are only needed at runtime, not to build.
+# Secrets are only needed at runtime, not to build. The Sentry DSN is public and
+# read at build time; empty leaves error monitoring off (docs/OBSERVABILITY.md).
+ARG NEXT_PUBLIC_SENTRY_DSN=""
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
@@ -25,6 +27,8 @@ COPY --from=builder --chown=app:app /app/drizzle ./drizzle
 USER app
 EXPOSE 3000
 # Migrations can take a few seconds on a cold database, hence the start period.
+# Liveness, not /api/health: restarting the app doesn't help when the database
+# is down, and a query every 30 s would keep Neon awake.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:3000/api/health/live >/dev/null || exit 1
 CMD ["node", "server.js"]

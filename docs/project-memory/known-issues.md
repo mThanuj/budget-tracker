@@ -13,8 +13,8 @@ From the independent assessment on 2026-10-26. Details are in the sections
 below; keep this list in step when an item is done or a new one outranks it.
 
 - **High, needs the owner:** branch protection on `main`; a first backup
-  restore; error monitoring; the Vercel settings to confirm (all under
-  [Operations](#operations)).
+  restore; switching on error monitoring, alerts and uptime monitors; the Vercel
+  settings to confirm (all under [Operations](#operations)).
 - **Next:** browser tests in CI and the actions without direct tests (under
   [Not covered by automated tests](#not-covered-by-automated-tests)); the
   manual cross-user list (under [Security](#security-deferred-details-in-securitymd)).
@@ -71,7 +71,12 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 ## Operations
 
-- No error monitoring service; Vercel Hobby keeps runtime logs only briefly.
+- **Error monitoring is built but not switched on** (2026-10-26): Sentry needs
+  the owner's account and the Vercel settings, then the checks in
+  [docs/OBSERVABILITY.md](../OBSERVABILITY.md#checking-that-it-works). Until a
+  test error has reached the owner's inbox, alerts are unverified; so are the
+  uptime monitors, which don't exist yet. Vercel Hobby keeps runtime logs only
+  briefly.
 - **A backup has never been restored.** The nightly encrypted backups (D-011)
   run, but nobody has tried restoring one, so they're unproven. Do it once
   with [docs/RESTORE.md](../RESTORE.md) into a throwaway Neon branch.

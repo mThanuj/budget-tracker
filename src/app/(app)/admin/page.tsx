@@ -1,9 +1,11 @@
 import { CircleCheckIcon, TriangleAlertIcon } from "lucide-react";
 import { type ReactNode, Suspense } from "react";
 import { PageHeader } from "@/components/app/page-header";
+import { TestErrorButton } from "@/components/admin/test-error-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { billingEnabled } from "@/config/features";
 import { missingLegalDetails } from "@/config/legal";
+import { sentryDsn } from "@/lib/monitoring";
 import { formatMoney } from "@/lib/money";
 import { adminEmails, requireAdmin } from "@/server/admin";
 import { globalAiLimit, providerChain } from "@/server/ai/config";
@@ -215,6 +217,12 @@ async function AdminContent() {
                 ? "set"
                 : "missing (recurring entries only record when someone opens the app)"}
             </Check>
+            <Check ok={Boolean(sentryDsn())}>
+              Error monitoring:{" "}
+              {sentryDsn()
+                ? `Sentry on${process.env.SENTRY_AUTH_TOKEN?.trim() ? "" : " (no SENTRY_AUTH_TOKEN, so stack traces point at built code)"}`
+                : "off (set NEXT_PUBLIC_SENTRY_DSN; see docs/OBSERVABILITY.md)"}
+            </Check>
             <Check ok={legalMissing.length === 0}>
               Legal pages: {legalMissing.length === 0 ? "all details set" : `missing ${legalMissing.join(", ")}`}
             </Check>
@@ -223,6 +231,14 @@ async function AdminContent() {
             </Check>
             <Check ok>Admins: {[...adminEmails()].length}</Check>
           </ul>
+        </Card>
+
+        <Card title="Error monitoring">
+          <p className="text-sm text-muted-foreground">
+            Checks that an error reaches Sentry and that its alert reaches you. Use it after changing the monitoring
+            setup; the steps are in docs/OBSERVABILITY.md.
+          </p>
+          <TestErrorButton />
         </Card>
       </div>
     </>

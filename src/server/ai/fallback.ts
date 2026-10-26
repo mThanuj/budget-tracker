@@ -1,6 +1,7 @@
 import type { ProviderConfig } from "./config";
 import { classifyError, type ProviderFailure } from "./errors";
 import { lanesFor, type ModelChoice } from "./providers";
+import { log } from "../log";
 
 export type AiOutcome = "ok" | ProviderFailure;
 
@@ -25,10 +26,7 @@ async function note(
   try {
     await record(provider, outcome);
   } catch (err) {
-    console.error(
-      `[ai] couldn't record a ${outcome} result for ${provider}:`,
-      err instanceof Error ? err.message : err,
-    );
+    log.error("ai.usage_record_failed", { provider, outcome, err });
   }
 }
 
@@ -56,7 +54,7 @@ export async function runWithFallback<T>(
         const { kind, cooldownMs } = classifyError(err);
         if (cooldownMs > 0) coolingDown.set(key, now() + cooldownMs);
         if (kind === "bad_output") sawBadOutput = true;
-        console.warn(`[ai] ${key} failed (${kind}):`, err instanceof Error ? err.message : err);
+        log.warn("ai.provider_failed", { model: key, kind, err: err instanceof Error ? err.message : err });
         await note(record, p.name, kind);
         // A bad key won't work for the provider's other model either.
         if (kind === "auth") break;

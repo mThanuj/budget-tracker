@@ -43,17 +43,19 @@ platform's settings in production. The core settings (database, sign-in,
 fails loudly; the optional ones (AI, payments, admin, legal details) switch their
 feature off or show a warning on `/admin` when missing.
 
-| Group     | Variables                                                                                                                | Needed                                   |
-| --------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| Database  | `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (migrations)                                                            | yes                                      |
-| Sign-in   | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                      | yes                                      |
-| Daily job | `CRON_SECRET` (at least 24 characters)                                                                                   | in production                            |
-| AI        | `LLM_CHAIN_FREE`, `LLM_CHAIN_PRO`, `LLM_<PROVIDER>_*`, `AI_GLOBAL_DAILY_LIMIT`                                           | no (AI features hide without a key)      |
-| Payments  | `BILLING_ENABLED`, `RAZORPAY_*`                                                                                          | no (off unless `BILLING_ENABLED="true"`) |
-| Site      | `NEXT_PUBLIC_APP_NAME`, `ADMIN_EMAILS`, `LEGAL_NAME`, `SUPPORT_EMAIL`, `SUPPORT_PHONE`, `BUSINESS_ADDRESS`, `LEGAL_CITY` | legal details in production              |
+| Group      | Variables                                                                                                                | Needed                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Database   | `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (migrations)                                                            | yes                                                                              |
+| Sign-in    | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                      | yes                                                                              |
+| Daily job  | `CRON_SECRET` (at least 24 characters)                                                                                   | in production                                                                    |
+| AI         | `LLM_CHAIN_FREE`, `LLM_CHAIN_PRO`, `LLM_<PROVIDER>_*`, `AI_GLOBAL_DAILY_LIMIT`                                           | no (AI features hide without a key)                                              |
+| Payments   | `BILLING_ENABLED`, `RAZORPAY_*`                                                                                          | no (off unless `BILLING_ENABLED="true"`)                                         |
+| Site       | `NEXT_PUBLIC_APP_NAME`, `ADMIN_EMAILS`, `LEGAL_NAME`, `SUPPORT_EMAIL`, `SUPPORT_PHONE`, `BUSINESS_ADDRESS`, `LEGAL_CITY` | legal details in production                                                      |
+| Monitoring | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `LOG_LEVEL`                               | no (Sentry is off without a DSN; [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md)) |
 
-Only `NEXT_PUBLIC_APP_NAME` reaches the browser; `pnpm check:bundle` (after a
-build) fails if any secret's value ends up in client files.
+Only `NEXT_PUBLIC_APP_NAME` and `NEXT_PUBLIC_SENTRY_DSN` (public by design)
+reach the browser; `pnpm check:bundle` (after a build) fails if any secret's
+value ends up in client files.
 
 Developer knobs, not for `.env.local`: `LIVE_AI=1` (run the browser tests that
 call the real AI), `PW_WORKERS` (parallel browsers), `NEXT_WORKER_THREADS=1`
@@ -145,8 +147,9 @@ how to run a single test.
 production: `scripts/vercel-build.mjs` applies pending migrations (production
 only, never previews), then builds. `vercel.json` runs the functions in
 Singapore next to the Neon database and calls `/api/cron/recurring` once a day.
-`/api/health` reports whether the app can reach the database, for uptime
-monitors. A nightly GitHub Action saves an encrypted database backup.
+`/api/health/live` says the app is up and `/api/health` whether it can reach
+the database, for uptime monitors; errors and slow requests go to Sentry when
+it's configured ([docs/OBSERVABILITY.md](docs/OBSERVABILITY.md)). A nightly GitHub Action saves an encrypted database backup.
 
 **Later: own server (Hetzner + Coolify), payments on.** The `Dockerfile` builds
 the standalone server; the container applies migrations on start and has a
@@ -154,5 +157,6 @@ health check. Vercel's free plan doesn't allow commercial use, hence the move
 once payments are on.
 
 Step-by-step guides: [docs/DEPLOY.md](docs/DEPLOY.md) (both setups),
+[docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) (logs, errors, alerts, incidents),
 [docs/RESTORE.md](docs/RESTORE.md) (backups), [SECURITY.md](SECURITY.md)
 (security model and reporting).

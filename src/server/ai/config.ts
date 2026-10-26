@@ -11,6 +11,8 @@
 // run this in plain Node, where it throws. Keys can't reach the browser anyway
 // (Next only inlines NEXT_PUBLIC_ variables), and `pnpm check:bundle` verifies it.
 
+import { log } from "../log";
+
 export type ProviderConfig = {
   name: string;
   baseURL: string;
@@ -49,7 +51,7 @@ const reported = new Set<string>();
 function reportOnce(message: string) {
   if (reported.has(message)) return;
   reported.add(message);
-  console.error(message);
+  log.error("config.ai_setting_invalid", { err: new Error(message) }); // an Error, so monitoring raises it
 }
 
 export function providerChain(env: Env = process.env, chainVar = "LLM_CHAIN_FREE"): ProviderConfig[] {

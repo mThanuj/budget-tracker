@@ -13,6 +13,20 @@ const RAZORPAY_FRAME = "https://checkout.razorpay.com https://api.razorpay.com";
 const GOOGLE_IMG = "https://*.googleusercontent.com";
 
 /**
+ * Where the browser sends error reports: the origin of the Sentry DSN, e.g.
+ * https://o123.ingest.de.sentry.io. Nothing when monitoring is off or the DSN
+ * isn't a valid https URL.
+ */
+export function monitoringOrigin(dsn = process.env.NEXT_PUBLIC_SENTRY_DSN): string | undefined {
+  try {
+    const url = new URL(dsn?.trim() ?? "");
+    return url.protocol === "https:" ? url.origin : undefined;
+  } catch {
+    return undefined; // no DSN or not a URL: monitoring is off, nothing to allow
+  }
+}
+
+/**
  * The Content-Security-Policy.
  *
  * Next's App Router emits per-page inline bootstrap scripts whose content isn't
@@ -28,7 +42,13 @@ const GOOGLE_IMG = "https://*.googleusercontent.com";
  * To move to a nonce-based strict CSP later, generate a nonce in proxy.ts,
  * pass it through, and accept that document responses become dynamic.
  */
-export function contentSecurityPolicy({ dev }: { dev: boolean }): string {
+export function contentSecurityPolicy({
+  dev,
+  monitoring = monitoringOrigin(),
+}: {
+  dev: boolean;
+  monitoring?: string;
+}): string {
   const directives: Record<string, string> = {
     "default-src": "'self'",
     // 'unsafe-eval' is needed ONLY in development: React Fast Refresh and the
@@ -38,7 +58,7 @@ export function contentSecurityPolicy({ dev }: { dev: boolean }): string {
     "img-src": `'self' data: ${GOOGLE_IMG}`,
     "font-src": "'self'",
     // ws:/wss: lets Turbopack's hot reload connect in development.
-    "connect-src": `'self' ${RAZORPAY_CONNECT}${dev ? " ws: wss:" : ""}`,
+    "connect-src": `'self' ${RAZORPAY_CONNECT}${monitoring ? ` ${monitoring}` : ""}${dev ? " ws: wss:" : ""}`,
     "frame-src": RAZORPAY_FRAME,
     "worker-src": "'self' blob:",
     "object-src": "'none'",

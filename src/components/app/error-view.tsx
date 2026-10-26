@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { cn } from "cn";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { StatusView } from "./status-view";
+import { reportClientError } from "@/lib/report-client-error";
 
 /** Shown by the error boundaries. retry() re-fetches and re-renders the page. */
 export function ErrorView({ error, retry }: { error: unknown; retry: () => void }) {
@@ -14,6 +15,7 @@ export function ErrorView({ error, retry }: { error: unknown; retry: () => void 
 
   useEffect(() => {
     console.error(error);
+    reportClientError(error);
   }, [error]);
 
   return (

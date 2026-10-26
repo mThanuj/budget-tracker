@@ -32,6 +32,9 @@ flowchart LR
   A --> BL[src/server/billing/*] --> RZ[Razorpay API]
   RZ -->|webhook| H
   CR[Vercel cron, daily] --> H
+  H -.->|errors, traces, check-ins<br/>scrubbed| SE[Sentry, optional]
+  A -.-> SE
+  R -.-> SE
 ```
 
 ## Layers and where code belongs
@@ -103,7 +106,8 @@ may import server code (e.g. `src/components/app/user-menu.tsx`).
 | Route                         | Who may call                             | Responses                                          |
 | ----------------------------- | ---------------------------------------- | -------------------------------------------------- |
 | `GET/POST /api/auth/*`        | Better Auth (sign-in, session, sign-out) | Better Auth's                                      |
-| `GET /api/health`             | anyone                                   | `{ok:true}` 200 or `{ok:false}` 503, `no-store`    |
+| `GET /api/health`             | anyone (readiness: database within 3 s)  | `{ok:true}` 200 or `{ok:false}` 503, `no-store`    |
+| `GET/HEAD /api/health/live`   | anyone (liveness: no database)           | `{ok:true}` 200, `no-store`                        |
 | `GET /api/export`             | the signed-in user                       | CSV of their entries, or 401                       |
 | `GET /api/cron/recurring`     | scheduler with `Bearer CRON_SECRET`      | 503 unset, 401 wrong, 200 `{users, recorded}`      |
 | `POST /api/webhooks/razorpay` | Razorpay (HMAC signature)                | 503 off, 400 bad signature/payload, 502 retry, 200 |
@@ -111,8 +115,12 @@ may import server code (e.g. `src/components/app/user-menu.tsx`).
 - **Error pages:** `src/app/error.tsx` and `src/app/(app)/error.tsx` (props
   `{ error, retry }`) show the error's digest as a reference; `global-error.tsx`
   is a plain last resort without it. `not-found.tsx` at the root and in `(app)`.
-- **Logging:** `console.error/warn` with a `[area]` prefix and `err.message`
-  only; never secrets or request bodies.
+- **Logging and monitoring:** `log.*` from `src/server/log.ts` (one redacted
+  JSON line per event; `log.error(event, { err })` also reports to Sentry).
+  Unexpected errors reach `onRequestError` in `src/instrumentation.ts`, which
+  reports and logs them once. Sentry is on only with `NEXT_PUBLIC_SENTRY_DSN`;
+  every event passes `scrubEvent` (`src/lib/monitoring.ts`). Details, alerts
+  and the incident checklist: [docs/OBSERVABILITY.md](../OBSERVABILITY.md) (D-024).
 
 ## Data model
 
@@ -146,14 +154,15 @@ Also: `merchant_rule` (learned description → category), `alert_dismissal`,
 
 ## External services
 
-| Service                        | Used for                        | Code                                      | Settings                                |
-| ------------------------------ | ------------------------------- | ----------------------------------------- | --------------------------------------- |
-| Neon Postgres                  | everything stored               | `src/server/db/`                          | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` |
-| Google OAuth (via Better Auth) | sign-in                         | `src/server/auth.ts`                      | `BETTER_AUTH_*`, `GOOGLE_*`             |
-| Groq / Cerebras / OpenRouter   | AI features, optional           | `src/server/ai/`                          | `LLM_*`, `AI_GLOBAL_DAILY_LIMIT`        |
-| Razorpay                       | Pro subscriptions, switched off | `src/server/billing/`                     | `BILLING_ENABLED`, `RAZORPAY_*`         |
-| Vercel                         | hosting, daily cron             | `vercel.json`, `scripts/vercel-build.mjs` | project settings                        |
-| GitHub Actions                 | CI, nightly encrypted backup    | `.github/workflows/`                      | repo secrets                            |
+| Service                        | Used for                        | Code                                              | Settings                                |
+| ------------------------------ | ------------------------------- | ------------------------------------------------- | --------------------------------------- |
+| Neon Postgres                  | everything stored               | `src/server/db/`                                  | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` |
+| Google OAuth (via Better Auth) | sign-in                         | `src/server/auth.ts`                              | `BETTER_AUTH_*`, `GOOGLE_*`             |
+| Groq / Cerebras / OpenRouter   | AI features, optional           | `src/server/ai/`                                  | `LLM_*`, `AI_GLOBAL_DAILY_LIMIT`        |
+| Razorpay                       | Pro subscriptions, switched off | `src/server/billing/`                             | `BILLING_ENABLED`, `RAZORPAY_*`         |
+| Vercel                         | hosting, daily cron             | `vercel.json`, `scripts/vercel-build.mjs`         | project settings                        |
+| GitHub Actions                 | CI, nightly encrypted backup    | `.github/workflows/`                              | repo secrets                            |
+| Sentry, optional               | errors, traces, cron check-ins  | `src/lib/monitoring.ts`, `src/instrumentation.ts` | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_*`    |
 
 ## Feature map
 
@@ -171,7 +180,7 @@ Also: `merchant_rule` (learned description → category), `alert_dismissal`,
 | Insights                 | `(app)/insights`           | `insights/`              | `insights.ts`                      | `services/insight-facts.ts`, `insights.ts`, `server/ai/insights.ts`                             | `unit/insights`, `db/insights`, `e2e/billing`                                                 |
 | Plans, billing           | `(app)/billing`            | `billing/`               | `billing.ts`                       | `server/billing/*`, `api/webhooks/razorpay`                                                     | `unit/billing`, `db/billing`, `integration/`                                                  |
 | Settings, export, delete | `(app)/settings`           | `settings/`              | `settings.ts`, `account.ts`        | `services/account.ts`, `api/export`                                                             | `db/account`, `unit/account`, `integration/routes`, `component/delete-account`, `e2e/account` |
-| Admin                    | `(app)/admin`              | —                        | —                                  | `server/admin.ts`, `services/admin-stats.ts`                                                    | `e2e/account`                                                                                 |
+| Admin                    | `(app)/admin`              | `admin/`                 | `admin.ts` (test error)            | `server/admin.ts`, `services/admin-stats.ts`                                                    | `e2e/account`, `unit/observability`                                                           |
 | Legal pages              | `(legal)/*`                | `legal/`                 | —                                  | `config/legal.ts`                                                                               | `e2e/account`                                                                                 |
 
 Page, Components and Actions paths are relative to `src/app/`,

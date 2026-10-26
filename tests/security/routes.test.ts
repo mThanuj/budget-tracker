@@ -75,6 +75,21 @@ const REVIEWED: Record<string, { rule: string; methods: Record<string, (h: Handl
       },
     },
   },
+  "api/health/live/route.ts": {
+    rule: "public liveness: says only that the app is running, touches nothing else",
+    methods: {
+      GET: async (h) => {
+        const res = await h(req("/api/health/live"));
+        expect(await res.json()).toEqual({ ok: true }); // nothing else, ever
+        expect(res.headers.get("cache-control")).toBe("no-store");
+      },
+      HEAD: async (h) => {
+        const res = await h(req("/api/health/live", { method: "HEAD" }));
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe("");
+      },
+    },
+  },
   "api/webhooks/razorpay/route.ts": {
     rule: "Razorpay only: HMAC signature over the raw body",
     methods: {

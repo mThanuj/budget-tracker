@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { log } from "@/server/log";
 
 const schema = z.object({
   DATABASE_URL: z.url(),
@@ -13,7 +14,12 @@ const schema = z.object({
   CRON_SECRET: z
     .preprocess((v) => (v === "" ? undefined : v), z.string().min(24).optional())
     .catch(() => {
-      console.error("CRON_SECRET is shorter than 24 characters, so the recurring-entries job is off until it's fixed.");
+      // An Error, so monitoring raises it.
+      log.error("config.cron_secret_too_short", {
+        err: new Error(
+          "CRON_SECRET is shorter than 24 characters, so the recurring-entries job is off until it's fixed.",
+        ),
+      });
       return undefined;
     }),
 });

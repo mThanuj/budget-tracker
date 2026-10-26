@@ -18,7 +18,12 @@ export function proxy(request: NextRequest) {
   if (!PUBLIC_PATHS.has(pathname) && !hasSession) {
     return NextResponse.redirect(new URL("/", request.url));
   }
-  return NextResponse.next();
+  // Vercel gives every request an x-vercel-id; elsewhere, add an id so a
+  // request's log lines and error reports can be tied together.
+  if (request.headers.has("x-vercel-id") || request.headers.has("x-request-id")) return NextResponse.next();
+  const headers = new Headers(request.headers);
+  headers.set("x-request-id", crypto.randomUUID());
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

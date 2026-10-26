@@ -27,7 +27,7 @@ A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "exp
 ### Vitest suites never touch real services
 
 `tests/stubs/clean-env.ts` removes the app's settings (database URL, AI and
-Razorpay keys, secrets) from the environment before any test runs, even if
+Razorpay keys, Sentry settings, secrets) from the environment before any test runs, even if
 your shell has them exported. The database is PGlite in memory, created fresh
 for each test file from the real migrations. In integration tests only the
 outside world is replaced: the session (`@/server/session`), Next's
@@ -64,7 +64,10 @@ used.
 
 - **Unit:** rules that are easy to get subtly wrong: money parsing and
   rounding, month boundaries and time zones, plan resolution, the AI fallback
-  chain, webhook payload checks. (AI quotas are tested in `tests/db/ai.test.ts`,
+  chain, webhook payload checks; and observability: log redaction
+  (`log.test.ts`), request ids, `onRequestError` and the admin test error
+  (`observability.test.ts`), and what Sentry would receive, through the real SDK
+  with the app's server setup and an in-memory transport (`monitoring.test.ts`). (AI quotas are tested in `tests/db/ai.test.ts`,
   security headers in `tests/security/headers.test.ts`.)
 - **DB (PGlite):** services and queries against real Postgres: balances and
   transfers, budgets across months, recurring entries without duplicates,

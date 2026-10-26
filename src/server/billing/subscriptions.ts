@@ -6,6 +6,7 @@ import type { Db } from "../db";
 import { isStale } from "./plan";
 import { paymentEvent, subscription, user } from "../db/schema";
 import { type RazorpayConfig, type RazorpaySubscription, verifyWebhookSignature } from "./razorpay";
+import { log } from "../log";
 
 const fromUnix = (s: number | null | undefined) => (s ? new Date(s * 1000) : null);
 
@@ -93,11 +94,11 @@ export async function handleRazorpayWebhook(
     try {
       latest = await fetchLatest(subId);
     } catch (err) {
-      console.error("[billing] couldn't fetch subscription for webhook:", err instanceof Error ? err.message : err);
+      log.error("billing.webhook_fetch_failed", { err, eventType: event.event });
       return { status: 502, body: "Try again" };
     }
     if (!(await saveSubscriptionState(db, latest, cfg)))
-      console.warn(`[billing] webhook for unknown subscription ${subId}`);
+      log.warn("billing.webhook_unknown_subscription", { subscriptionId: subId, eventType: event.event });
   }
   await db.insert(paymentEvent).values({ eventId, eventType: event.event }).onConflictDoNothing();
   return { status: 200, body: "OK" };

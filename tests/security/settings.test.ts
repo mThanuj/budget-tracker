@@ -8,7 +8,7 @@ import { APP_SETTINGS } from "../stubs/clean-env";
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const documented = [...read(".env.example").matchAll(/^([A-Z0-9_]+)=/gm)].map((m) => m[1]);
 // Settings tests may see: they change nothing a test depends on and hold no secret.
-const HARMLESS = new Set(["NEXT_TELEMETRY_DISABLED"]);
+const HARMLESS = new Set(["NEXT_TELEMETRY_DISABLED", "LOG_LEVEL"]);
 
 describe("settings", () => {
   it("every setting in .env.example is removed before tests run, or is harmless", () => {

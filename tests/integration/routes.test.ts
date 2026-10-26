@@ -88,6 +88,34 @@ describe("GET /api/health", async () => {
     expect(await res.text()).toBe('{"ok":false}');
     expect(log).toHaveBeenCalled();
   });
+
+  it("gives up on a database that doesn't answer within 3 seconds", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(db, "execute").mockReturnValueOnce(new Promise(() => {}) as never); // hangs
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const pending = GET();
+      await vi.advanceTimersByTimeAsync(3_000);
+      const res = await pending;
+      expect(res.status).toBe(503);
+      expect(String(log.mock.calls[0][0])).toContain("no answer within 3000 ms");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("GET /api/health/live", async () => {
+  const { GET, HEAD } = await import("@/app/api/health/live/route");
+
+  it("says the app is up without touching the database, even when it's down", async () => {
+    const execute = vi.spyOn(db, "execute").mockRejectedValue(new Error("down"));
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect((await HEAD()).status).toBe(200);
+    expect(execute).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/export", async () => {

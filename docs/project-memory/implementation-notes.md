@@ -88,6 +88,47 @@ has more. Add new ones under the right heading.
 - Webhooks can't reach localhost; in development the app confirms checkout by
   asking Razorpay directly (`confirmCheckout`, `checkPaymentStatus`).
 
+## Observability (Sentry, logs)
+
+- **Sentry 11 collects everything by default.** `sendDefaultPii` no longer
+  exists (nothing reads it); what's collected is `dataCollection`, whose
+  defaults include user details and IPs, headers, cookies, request bodies,
+  query strings and database values. Traces are streamed span by span
+  (`traceLifecycle: "stream"`), so `beforeSendTransaction` never runs; scrub
+  in `beforeSendSpan`. The trace header (dynamic sampling context) copies the
+  root span's name, outside both. Found by review on 2026-10-26, before
+  monitoring was ever switched on; `baseOptions` now `satisfies` the SDK's
+  option type so a dropped option fails the type check.
+- `withSentryConfig` is imported from `@sentry/nextjs/config`, not the package
+  root. `next.config.ts` applies it only when a DSN is set at build time.
+- A dynamic `import("@sentry/nextjs")` in the browser pulls in the whole SDK
+  (replay and feedback included: 139 KB gzipped); importing through the named
+  re-exports in `src/lib/sentry-browser.ts` cut it to 52.6 KB (2026-10-26).
+- Next passes `onRequestError` the raw path with its query string and all
+  request headers (cookies included), and Drizzle puts query parameter values
+  in its error messages (`params: …`). Sentry's Next.js context also carries the
+  raw `request_path`. `scrubEvent` handles all three; keep it that way.
+- Next sets the error's `digest` (the reference on the error page) before
+  `onRequestError` runs, so it can be tagged.
+- Turbopack builds don't wrap handlers, so a handled `captureException` isn't
+  flushed before a serverless function freezes: the reporter schedules
+  `Sentry.flush` with `after()`, and the cron route awaits it.
+  `captureRequestError` flushes by itself.
+- Sentry's default server integrations include AI ones (Vercel AI, OpenAI,
+  Anthropic, Google GenAI, Groq…) that can record prompts; `withoutAiIntegrations`
+  removes them by name. Check the list after an SDK upgrade (the test does).
+- `src/server/log.ts` and `src/server/request-id.ts` don't import `server-only`:
+  the eval scripts and `onRequestError` load them outside React's server
+  environment, where it throws.
+- In a Vitest mock of `@sentry/nextjs`, spreading the module loses most exports
+  (they're on its prototype through CommonJS interop); inherit with
+  `Object.create(sdk)`. Its ContextLines integration copies nearby source lines
+  into stack frames, so a test that spells out fake secrets must turn it off.
+- Runtime checks of a production build (`next start`, a real Sentry project)
+  can't run in the agent sandbox (binding ports fails with `EPERM`): delivery,
+  alerts and the cron monitor are checked on the live site
+  ([docs/OBSERVABILITY.md](../OBSERVABILITY.md#checking-that-it-works)).
+
 ## Tests and tooling
 
 - `tests/stubs/clean-env.ts` removes app settings before Vitest runs, so no

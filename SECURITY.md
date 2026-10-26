@@ -30,7 +30,10 @@ within 2 working days.
   are set on every response — see `src/lib/security-headers.ts`.
 - **Secrets**: the core settings are validated on first use (`src/env.ts`);
   optional ones (AI, payments, admin) switch their feature off when missing.
-  Only `NEXT_PUBLIC_APP_NAME` reaches the client; nothing logs secrets.
+  Only `NEXT_PUBLIC_APP_NAME` and the public Sentry DSN reach the client. Logs
+  and error reports are redacted (credentials, user-written text, emails,
+  query strings, query parameters) and carry no user identity; see
+  docs/OBSERVABILITY.md.
 - **Side effects need a click**: links can't make the app act for someone. A
   `/ask?q=` link only fills in the question; it's sent straight away only when
   it came from the home page's ask box in the same tab.

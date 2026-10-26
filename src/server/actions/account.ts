@@ -9,6 +9,8 @@ import { db } from "@/server/db";
 import { subscription } from "@/server/db/schema";
 import { deleteAccountData } from "@/server/services/account";
 import { requireUser } from "@/server/session";
+import { log } from "@/server/log";
+import { currentRequestId } from "@/server/request-id";
 
 /**
  * Ends this session on the server and clears its cookies (Better Auth's
@@ -56,10 +58,7 @@ export async function deleteAccount(confirmation: string): Promise<{ ok: false; 
       } catch (err) {
         // A checkout that was never paid can't always be cancelled; that's fine.
         if (s.status === "created") continue;
-        console.error(
-          "[account] couldn't cancel subscription before deleting:",
-          err instanceof Error ? err.message : err,
-        );
+        log.error("account.cancel_before_delete_failed", { err, requestId: await currentRequestId() });
         return {
           ok: false,
           error: "We couldn't cancel your Pro renewal, so nothing was deleted. Try again in a minute.",

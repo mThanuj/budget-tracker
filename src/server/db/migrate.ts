@@ -2,6 +2,7 @@ import path from "node:path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
+import { log } from "../log";
 
 /**
  * Applies pending migrations from ./drizzle. Runs once when the production
@@ -17,7 +18,7 @@ export async function runMigrations() {
   try {
     const started = Date.now();
     await migrate(drizzle({ client: pool }), { migrationsFolder: path.join(process.cwd(), "drizzle") });
-    console.log(`[db] migrations up to date (${Date.now() - started} ms)`);
+    log.info("db.migrations_done", { ms: Date.now() - started });
   } finally {
     await pool.end();
   }

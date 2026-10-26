@@ -3,6 +3,7 @@ import { EmailLink, LegalPage, operatorName } from "@/components/legal/legal-pag
 import { APP_NAME } from "@/config/app";
 import { billingEnabled } from "@/config/features";
 import { legalDetails } from "@/config/legal";
+import { sentryDsn } from "@/lib/monitoring";
 
 export const metadata = { title: "Privacy policy" };
 
@@ -21,6 +22,7 @@ async function PrivacyBody() {
   await connection();
   const d = legalDetails();
   const billing = billingEnabled();
+  const monitoring = Boolean(sentryDsn());
   return (
     <>
       <h2>Who we are</h2>
@@ -93,6 +95,13 @@ async function PrivacyBody() {
         </li>
         <li>GitHub, which keeps our encrypted nightly backups;</li>
         {billing && <li>Razorpay, for payments;</li>}
+        {monitoring && (
+          <li>
+            Sentry, which records technical details when something goes wrong or a page is slow (the error, the page,
+            your browser type), so we can fix it. It never receives your entries, questions, email address or IP
+            address;
+          </li>
+        )}
         <li>the AI providers above, only while AI features are on.</li>
       </ul>
       <p>We&rsquo;ll share data with authorities only when the law requires it.</p>

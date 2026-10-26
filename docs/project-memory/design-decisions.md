@@ -47,6 +47,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-021 | Agent instructions and project memory in the repo; no MCP or hooks       | accepted; MCP part superseded by D-022 |
 | D-022 | Next.js dev-server MCP and bundle-optimizer skill for agents             | accepted                               |
 | D-023 | CI fails on high or critical dependency advisories                       | accepted                               |
+| D-024 | Observability: structured logs, Sentry, health checks                    | accepted                               |
 
 ### D-001 Product scope
 
@@ -329,3 +330,49 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   didn't change dependencies; fix it (upgrade or a scoped override, as in D-022)
   or record why it's accepted. The audit needs the registry, so CI needs network.
 - **Affected:** `.github/workflows/ci.yml`.
+
+### D-024 Observability: structured logs, Sentry, health checks
+
+- **Status:** accepted · **Date:** 2026-10-26
+- **Context:** the live site had no error monitoring, unstructured
+  `console.error` lines that Vercel Hobby keeps only briefly, one health check
+  that queried the database, and no alerts. The owner asked for errors,
+  slowness and a missed daily job to be detected and actionable, with privacy
+  safeguards and no new costs, and approved Sentry's free plan, its browser SDK
+  (with the CSP change), a privacy-policy line, one production test error and
+  an uptime service.
+- **Decision:** a structured JSON logger with shared redaction
+  (`src/server/log.ts`, `src/lib/redact.ts`); request ids (`x-vercel-id`, or
+  `x-request-id` from `src/proxy.ts`); liveness (`/api/health/live`) split from
+  readiness (`/api/health`, 3 s database timeout); Sentry (`@sentry/nextjs`) for
+  errors, traces, Web Vitals and the daily job's check-ins, switched on only by
+  `NEXT_PUBLIC_SENTRY_DSN`. The SDK is told to collect no user data
+  (`DATA_COLLECTION`: its defaults collect headers, bodies, query strings,
+  user details and IPs), and every error, span, breadcrumb and trace header
+  passes a scrubber (`src/lib/monitoring.ts`). Policy values in `src/config/monitoring.ts`: all
+  errors, 20% of server and 10% of browser requests traced; the cron monitor's
+  schedule, margin (30 min) and maximum runtime (5 min). Alerts, uptime
+  monitors and SLOs are defined in [docs/OBSERVABILITY.md](../OBSERVABILITY.md).
+- **Rationale:** Sentry covers errors, tracing, Web Vitals, cron and uptime
+  monitoring in one free service with an official Next.js SDK.
+  **Alternatives:** Vercel Observability alone (no error grouping or alerts on
+  Hobby; log drains need Pro); OpenTelemetry to a self-run backend (more to
+  operate); Highlight/PostHog-style session tools (record behaviour, which the
+  owner ruled out without a privacy decision); logs only (no alerting).
+- **Trade-offs / consequences:** no user ids are sent, so Sentry can't count
+  affected users; the AI integrations are removed so prompts and answers can't
+  reach traces; click and typing breadcrumbs are dropped; no session replay.
+  With a DSN, the landing page's first-load JS grows 3.6 KB gzipped and the SDK
+  (52.6 KB gzipped) loads after the page starts. Free-plan quotas cap volume;
+  when they run out, events are dropped, not billed. Rules for future code:
+  `log.*` instead of `console.*` on the server, `area.what_happened` event names,
+  no user-written text in log fields; sampling, retention, what is sent, or
+  adding replay or user ids need the owner's approval and an update here and in
+  the privacy policy.
+- **Affected:** `src/server/log.ts`, `src/lib/redact.ts`, `src/lib/monitoring.ts`,
+  `src/config/monitoring.ts`, `src/instrumentation.ts`,
+  `src/instrumentation-client.ts`, `src/sentry.server.config.ts`,
+  `src/sentry.edge.config.ts`, `src/app/api/health/`, `next.config.ts`,
+  `src/lib/security-headers.ts`, `/privacy`, `/admin`. **References:**
+  `tests/unit/monitoring.test.ts`, `tests/unit/log.test.ts`,
+  `tests/unit/observability.test.ts`, [docs/OBSERVABILITY.md](../OBSERVABILITY.md).

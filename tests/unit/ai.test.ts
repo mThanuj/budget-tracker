@@ -174,10 +174,8 @@ describe("runWithFallback", () => {
     expect(tried).toEqual(["first"]);
     await runWithFallback([p("first"), p("second")], task, brokenRecord, () => 2_000);
     expect(tried).toEqual(["first", "first"]);
-    expect(logged).toHaveBeenCalledWith(
-      expect.stringContaining("couldn't record a ok result for first"),
-      "db connection lost",
-    );
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("ai.usage_record_failed"));
+    expect(String(logged.mock.calls[0][0])).toMatch(/"provider":"first".*"outcome":"ok".*db connection lost/);
     logged.mockRestore();
   });
 

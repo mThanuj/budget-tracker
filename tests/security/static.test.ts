@@ -61,9 +61,11 @@ describe("client code", () => {
     expect(bad).toEqual([]);
   });
 
-  it("uses only the one public setting the app has", () => {
+  it("uses only the public settings meant to be public", () => {
+    // The app name, Sentry's DSN (public by design: it only lets a browser send
+    // events) and the environment name Vercel sets. Anything else would be a leak.
     const names = new Set(files.flatMap((f) => [...source(f).matchAll(/\bNEXT_PUBLIC_\w+/g)].map((m) => m[0])));
-    expect([...names]).toEqual(["NEXT_PUBLIC_APP_NAME"]);
+    expect([...names].sort()).toEqual(["NEXT_PUBLIC_APP_NAME", "NEXT_PUBLIC_SENTRY_DSN", "NEXT_PUBLIC_VERCEL_ENV"]);
   });
 });
 
