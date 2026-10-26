@@ -6,6 +6,8 @@ when you merge something a future agent should know about.
 
 ## 2026-10-26
 
+- `main` is protected: changes go through pull requests, and CI's `checks` job
+  must pass on an up-to-date branch before a merge (and so a deploy).
 - Sentry switched on in production and checked end to end (test error, source
   maps, alert email). Fixes: handled errors weren't reported (the logger's
   reporter wasn't shared across bundles; `40ef54d`). Added error-only session

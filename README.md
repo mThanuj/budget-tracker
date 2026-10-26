@@ -124,10 +124,12 @@ how to run a single test.
 
 ## Working on it
 
-- Branch from `main` and open a pull request. CI (`.github/workflows/ci.yml`)
-  runs lint, formatting, type checks, the migration and docs checks, every
-  Vitest suite, a production build and a dependency audit; run `pnpm check` locally first, and `pnpm test:e2e`
-  for UI changes.
+- Branch from `main` and open a pull request; `main` is protected, so that's
+  the only way in. CI (`.github/workflows/ci.yml`) runs lint, formatting, type
+  checks, the migration and docs checks, every Vitest suite, a production build
+  and a dependency audit, and its `checks` job must pass (on a branch up to
+  date with `main`) before the merge. Run `pnpm check` locally first, and
+  `pnpm test:e2e` for UI changes.
 - Coding agents (and people new to the code) start with [AGENTS.md](AGENTS.md):
   where code goes, the rules, the checks, and what needs the owner's approval.
   Durable knowledge (decisions, business rules, known issues) lives in
@@ -143,8 +145,8 @@ how to run a single test.
 
 ## Deployment
 
-**Now: Vercel (Hobby), payments off.** Every push to `main` deploys to
-production: `scripts/vercel-build.mjs` applies pending migrations (production
+**Now: Vercel (Hobby), payments off.** Every merge to `main` deploys to
+production (branches get preview deployments): `scripts/vercel-build.mjs` applies pending migrations (production
 only, never previews), then builds. `vercel.json` runs the functions in
 Singapore next to the Neon database and calls `/api/cron/recurring` once a day.
 `/api/health/live` says the app is up and `/api/health` whether it can reach
