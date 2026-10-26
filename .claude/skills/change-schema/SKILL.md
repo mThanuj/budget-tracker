@@ -16,7 +16,8 @@ description: Change the ClearPaisa database schema - add or change a table, colu
 
 1. Edit `schema.ts`. Money is `bigint({ mode: "number" })` in minor units; dates
    `date({ mode: "string" })`; user-owned tables get `userId` referencing
-   `user.id` with `onDelete: "cascade"`, and an index starting with `userId`.
+   `user.id` with `onDelete: "cascade"`, and an index starting with `userId` if
+   anything looks rows up by user (counts for limits do).
 2. `pnpm db:generate --name <short_snake_name>` and read the SQL it wrote.
 3. Make it **backward compatible**: production applies migrations while the
    previous version is still serving (decision D-004). Add before you remove: a
@@ -28,8 +29,9 @@ description: Change the ClearPaisa database schema - add or change a table, colu
 
 ## Approval points
 
-- `pnpm db:migrate` applies to the database in `.env.local`. Ask the owner first,
-  even for the development database.
+- `pnpm db:migrate` applies to `DATABASE_URL_UNPOOLED` (or `DATABASE_URL`), taken
+  from your shell if set, otherwise from `.env.local`. Ask the owner first, even
+  for the development database.
 - Production gets the migration on the next deploy (`scripts/vercel-build.mjs`),
   which needs the owner's approval to push.
 

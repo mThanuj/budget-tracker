@@ -9,12 +9,14 @@ within 2 working days.
 ## Posture
 
 - **Auth**: Google sign-in only (no password to leak); email/password and
-  change-email are disabled. Sessions are httpOnly, `SameSite=lax`, secure in
-  production (Better Auth defaults). The admin area requires a Google-verified
+  change-email are disabled. Sessions are httpOnly and `SameSite=lax`, and secure
+  when the site is served over https (Better Auth defaults). The admin area requires a Google-verified
   email in `ADMIN_EMAILS` and otherwise returns 404.
-- **Access control**: every server action and route handler calls
-  `requireUser()`; services take `(db, userId, …)` and re-scope every query by
-  `userId`, including ownership checks on all client-supplied ids. Custom user
+- **Access control**: every page and server action calls `requireUser()`.
+  Route handlers check a session (`getSession()`, else 401), the cron secret or
+  Razorpay's signature; only `/api/health` is public. Services take
+  `(db, userId, …)`, check that client-supplied ids belong to the user
+  (`getOwned*`) and filter their reads and writes by `userId`. Custom user
   fields are `input: false`, so the client can't set them.
 - **Injection**: Drizzle parameterises all queries; the few `sql.raw` uses take
   only hardcoded literals; search escapes LIKE wildcards. AI output renders as
@@ -22,28 +24,33 @@ within 2 working days.
   neutralises spreadsheet formulas.
 - **Payments**: Razorpay checkout and webhook signatures are verified; webhooks
   are deduplicated and reconciled against Razorpay's API rather than trusting
-  the payload. See the M7 notes.
+  the payload. See decision D-008 in docs/project-memory/design-decisions.md.
 - **Transport & headers**: a Content-Security-Policy and the supporting headers
   (HSTS, nosniff, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`)
   are set on every response — see `src/lib/security-headers.ts`.
-- **Secrets**: validated at startup (`src/env.ts`); only `NEXT_PUBLIC_APP_NAME`
-  reaches the client; nothing logs secrets.
+- **Secrets**: the core settings are validated on first use (`src/env.ts`);
+  optional ones (AI, payments, admin) switch their feature off when missing.
+  Only `NEXT_PUBLIC_APP_NAME` reaches the client; nothing logs secrets.
 - **Side effects need a click**: links can't make the app act for someone. A
   `/ask?q=` link only fills in the question; it's sent straight away only when
   it came from the home page's ask box in the same tab.
 - **Per-account limits**: one account can only create so much (wallets,
   categories, goals and recurring items in total; entries, goal savings and
-  dismissed alerts per 24 hours), so a scripted account can't fill the shared
+  dismissed alerts or subscription suggestions per 24 hours), so a scripted account can't fill the shared
   database and stop saves for everyone. The numbers are far above normal use
   and live in `src/config/limits.ts`; the check is a count in the same
   database, so it needs no shared store. Two simultaneous requests can
   overshoot a limit by a little, which doesn't matter for its purpose.
-- **Regression tests**: `pnpm test:security` checks these rules across the
-  whole app (every action, route, page and client file), so a new one can't
-  skip a control unnoticed. See docs/TESTING.md.
+- **Regression tests**: `pnpm test:security` checks some rules across the whole
+  app automatically: every action needs a session, every route is on a reviewed
+  list, every signed-in page checks the session, client files import no server
+  code. Cross-user checks are a listed set of actions (wallets, categories,
+  goals, recurring items, budgets, entries); a new action that takes an id
+  needs its own entry there. See docs/TESTING.md.
 - **Supply chain**: pinned registry, install scripts restricted
-  (`pnpm-workspace.yaml` allowBuilds), a release-age delay on new versions, and
-  Dependabot for known CVEs.
+  (`pnpm-workspace.yaml` allowBuilds), a release-age delay on new versions (pnpm 11's
+  default `minimumReleaseAge`), Dependabot for known CVEs, and CI failing on
+  high or critical advisories (`pnpm audit --audit-level=high`).
 
 ## Known trade-offs and deferred hardening
 

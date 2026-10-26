@@ -2,7 +2,7 @@
 
 How the system is put together today. Why it's this way is in
 [design-decisions.md](design-decisions.md); rules the code must keep are in
-[business-rules.md](business-rules.md). Verified against the code on 2026-10-25.
+[business-rules.md](business-rules.md). Verified against the code on 2026-10-26 (independent audit).
 
 ## What the app is
 
@@ -36,21 +36,25 @@ flowchart LR
 
 ## Layers and where code belongs
 
-| Layer                      | Folder                                  | Holds                                                                                                                      | May import                                 |
-| -------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Routes                     | `src/app/`                              | pages, layouts, error/not-found pages, route handlers                                                                      | everything below                           |
-| UI                         | `src/components/`                       | `ui/` shadcn primitives (generated, don't hand-edit), `ui-extra/` shared form pieces, `app/` shell, one folder per feature | `lib/`, `config/`, server actions (as RPC) |
-| Server actions             | `src/server/actions/`                   | the app's API: `requireUser()`, validate with Zod, call a service, `refresh()`                                             | services, `lib/`, `config/`                |
-| Data access + domain logic | `src/server/services/`                  | every query, scoped by `userId`; ownership checks; `UserError` for expected failures                                       | `db/`, `lib/`, `config/`                   |
-| Integrations               | `src/server/ai/`, `src/server/billing/` | AI providers, quotas, fallback; Razorpay calls, webhooks, plan resolution                                                  | services, `db/`                            |
-| Shared logic               | `src/lib/`                              | pure helpers used by client and server: money, dates, validation schemas, budget/goal/recurring maths                      | `config/` only (no server code)            |
-| Settings                   | `src/config/`                           | app name, plans, limits, feature switches, legal details                                                                   | nothing app-specific                       |
-| Database                   | `src/server/db/`                        | `schema.ts` (the source of truth), pool, migration runner, signup seeding                                                  | —                                          |
+| Layer                      | Folder                                  | Holds                                                                                                                      | May import                                                                                  |
+| -------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Routes                     | `src/app/`                              | pages, layouts, error/not-found pages, route handlers                                                                      | everything below                                                                            |
+| UI                         | `src/components/`                       | `ui/` shadcn primitives (generated, don't hand-edit), `ui-extra/` shared form pieces, `app/` shell, one folder per feature | `lib/`, `config/`, server actions (as RPC)                                                  |
+| Server actions             | `src/server/actions/`                   | the app's API: `requireUser()`, validate with Zod, call a service, `refresh()`                                             | services, `lib/`, `config/` (account, settings and billing also query `db/` directly: debt) |
+| Data access + domain logic | `src/server/services/`                  | most queries, filtered by `userId`; ownership checks (`getOwned*`); `UserError` for expected failures                      | `db/`, `lib/`, `config/`                                                                    |
+| Integrations               | `src/server/ai/`, `src/server/billing/` | AI providers, quotas, fallback; Razorpay calls, webhooks, plan resolution                                                  | services, `db/`                                                                             |
+| Shared logic               | `src/lib/`                              | pure helpers used by client and server: money, dates, validation schemas, budget/goal/recurring maths                      | `config/` only (no server code)                                                             |
+| Settings                   | `src/config/`                           | app name, plans, limits, feature switches, legal details                                                                   | nothing app-specific                                                                        |
+| Database                   | `src/server/db/`                        | `schema.ts` (the source of truth), pool, migration runner, signup seeding                                                  | —                                                                                           |
 
-Server-only modules start with `import "server-only"` (aliased to a stub in
-tests). `tests/security/static.test.ts` enforces the client side of this:
-client components may import server actions but nothing else from
-`src/server/`, nor `@/env`, the database or Node built-ins.
+Modules that hold secrets or read the session (`env.ts`, `auth.ts`,
+`session.ts`, `admin.ts`, `action-utils.ts`, `db/index.ts`, `ai/index.ts`,
+`ai/access.ts`, `billing/razorpay.ts`, `recurring-sync.ts`) start with
+`import "server-only"` (a stub in tests); services don't, and are reached only
+through those. `tests/security/static.test.ts` checks files marked
+`"use client"`: they may import server actions, but nothing else from
+`@/server/`, nor `@/env`, the database or `node:` built-ins. Server Components
+may import server code (e.g. `src/components/app/user-menu.tsx`).
 
 ## Request flow
 
@@ -61,8 +65,9 @@ client components may import server actions but nothing else from
 3. That component calls `requireUser()`, which verifies the session through
    Better Auth (once per request, React `cache`) and redirects to
    `/?signed-out=1` if there's none, then calls services with `(db, userId, …)`.
-4. A change is a server action: `requireUser()` → parse with a schema from
-   `src/lib/validation.ts` → service → `refresh()` (from `next/cache`) → result.
+4. A change is a server action: `requireUser()` → parse with Zod (shared
+   schemas in `src/lib/validation.ts`) → service → `refresh()` (from
+   `next/cache`) → result.
 5. The client calls it through `callAction()` or a form via `useFormAction()`;
    the result (or "didn't go through") is shown in place.
 
@@ -103,16 +108,18 @@ client components may import server actions but nothing else from
 | `GET /api/cron/recurring`     | scheduler with `Bearer CRON_SECRET`      | 503 unset, 401 wrong, 200 `{users, recorded}`      |
 | `POST /api/webhooks/razorpay` | Razorpay (HMAC signature)                | 503 off, 400 bad signature/payload, 502 retry, 200 |
 
-- **Error pages:** `src/app/error.tsx`, `src/app/(app)/error.tsx` and
-  `global-error.tsx` (props `{ error, retry }`), `not-found.tsx` per group;
-  they show the error's digest as a reference.
+- **Error pages:** `src/app/error.tsx` and `src/app/(app)/error.tsx` (props
+  `{ error, retry }`) show the error's digest as a reference; `global-error.tsx`
+  is a plain last resort without it. `not-found.tsx` at the root and in `(app)`.
 - **Logging:** `console.error/warn` with a `[area]` prefix and `err.message`
   only; never secrets or request bodies.
 
 ## Data model
 
 All money columns are `bigint` minor units, all calendar dates `date` strings.
-Every user-owned table has `user_id` with `on delete cascade`.
+Every user-owned table has `user_id` with `on delete cascade`, except
+`ai_usage`, whose per-user rows are keyed by `scope = "user:<id>"` and removed
+by `deleteAccountData` (`src/server/services/account.ts`).
 
 ```mermaid
 erDiagram
@@ -150,25 +157,27 @@ Also: `merchant_rule` (learned description → category), `alert_dismissal`,
 
 ## Feature map
 
-| Feature                  | Page                       | Components               | Actions                            | Logic                                                                                           | Tests (besides security/)                                     |
-| ------------------------ | -------------------------- | ------------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Entries                  | `(app)/transactions`       | `transactions/`          | `transactions.ts`, `entry-form.ts` | `services/transactions.ts`                                                                      | `db/wallets-transactions`, `e2e/smoke`                        |
-| Wallets, transfers       | `(app)/wallets`            | `wallets/`               | `wallets.ts`                       | `services/wallets.ts`, `lib/wallets.ts`                                                         | `db/wallets-transactions`, `component/wallet-form`            |
-| Categories               | `(app)/categories`         | `categories/`            | `categories.ts`                    | `services/categories.ts`, `lib/default-categories.ts`                                           | `db/category-order`, `db/seed-defaults`                       |
-| Budgets, alerts          | `(app)/budgets`, dashboard | `budgets/`, `dashboard/` | `budgets.ts`, `alerts.ts`          | `services/budgets.ts`, `alerts.ts`, `reports.ts`, `lib/budgets.ts`                              | `unit/budgets-goals`, `db/budgets-goals`, `e2e/budgets-goals` |
-| Goals                    | `(app)/goals`              | `goals/`                 | `goals.ts`                         | `services/goals.ts`, `lib/goals.ts`                                                             | same as budgets                                               |
-| Recurring, subscriptions | `(app)/recurring`          | `recurring/`             | `recurring.ts`                     | `services/recurring.ts`, `lib/recurring.ts`, `lib/subscriptions.ts`, `server/recurring-sync.ts` | `unit/recurring`, `db/recurring`, `e2e/recurring`             |
-| AI entry and categories  | entry dialog               | `transactions/`          | `ai.ts`                            | `server/ai/index.ts`, `parse-entry.ts`, `categorize.ts`                                         | `unit/ai`, `db/ai`                                            |
-| Money chat               | `(app)/ask`                | `ask/`                   | `chat.ts`                          | `server/ai/chat.ts`, `quota.ts`                                                                 | `db/chat-tools`, `component/chat-panel`, `e2e/ai`             |
-| Onboarding               | `/welcome`, `/setup`       | `setup/`                 | `settings.ts`, `setup.ts`          | `services/setup.ts`, `lib/setup-plan.ts`, `server/ai/setup.ts`                                  | `db/setup`, `unit/setup-plan`, `e2e/setup`                    |
-| Insights                 | `(app)/insights`           | `insights/`              | `insights.ts`                      | `services/insight-facts.ts`, `insights.ts`, `server/ai/insights.ts`                             | `unit/insights`, `db/insights`, `e2e/billing`                 |
-| Plans, billing           | `(app)/billing`            | `billing/`               | `billing.ts`                       | `server/billing/*`, `api/webhooks/razorpay`                                                     | `unit/billing`, `db/billing`, `integration/`                  |
-| Settings, export, delete | `(app)/settings`           | `settings/`              | `settings.ts`, `account.ts`        | `services/account.ts`, `api/export`                                                             | `db/account`, `component/delete-account`, `e2e/account`       |
-| Admin                    | `(app)/admin`              | —                        | —                                  | `server/admin.ts`, `services/admin-stats.ts`                                                    | `e2e/account`                                                 |
-| Legal pages              | `(legal)/*`                | `legal/`                 | —                                  | `config/legal.ts`                                                                               | `e2e/account`                                                 |
+| Feature                  | Page                       | Components               | Actions                            | Logic                                                                                           | Tests (besides security/)                                                                     |
+| ------------------------ | -------------------------- | ------------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Entries                  | `(app)/transactions`       | `transactions/`          | `transactions.ts`, `entry-form.ts` | `services/transactions.ts`                                                                      | `db/wallets-transactions`, `e2e/smoke`                                                        |
+| Wallets, transfers       | `(app)/wallets`            | `wallets/`               | `wallets.ts`                       | `services/wallets.ts`, `lib/wallets.ts`                                                         | `db/wallets-transactions`, `component/wallet-form`                                            |
+| Categories               | `(app)/categories`         | `categories/`            | `categories.ts`                    | `services/categories.ts`, `lib/default-categories.ts`                                           | `db/category-order`, `db/seed-defaults`                                                       |
+| Budgets, alerts          | `(app)/budgets`, dashboard | `budgets/`, `dashboard/` | `budgets.ts`, `alerts.ts`          | `services/budgets.ts`, `alerts.ts`, `reports.ts`, `lib/budgets.ts`                              | `unit/budgets-goals`, `db/budgets-goals`, `e2e/budgets-goals`                                 |
+| Goals                    | `(app)/goals`              | `goals/`                 | `goals.ts`                         | `services/goals.ts`, `lib/goals.ts`                                                             | same as budgets                                                                               |
+| Recurring, subscriptions | `(app)/recurring`          | `recurring/`             | `recurring.ts`                     | `services/recurring.ts`, `lib/recurring.ts`, `lib/subscriptions.ts`, `server/recurring-sync.ts` | `unit/recurring`, `db/recurring`, `e2e/recurring`                                             |
+| AI entry and categories  | entry dialog               | `transactions/`          | `ai.ts`                            | `server/ai/index.ts`, `parse-entry.ts`, `categorize.ts`                                         | `unit/ai`, `db/ai`                                                                            |
+| Money chat               | `(app)/ask`                | `ask/`                   | `chat.ts`                          | `server/ai/chat.ts`, `quota.ts`                                                                 | `db/chat-tools`, `component/chat-panel`, `e2e/ai`                                             |
+| Onboarding               | `/welcome`, `/setup`       | `setup/`                 | `settings.ts`, `setup.ts`          | `services/setup.ts`, `lib/setup-plan.ts`, `server/ai/setup.ts`                                  | `db/setup`, `unit/setup-plan`, `e2e/setup`                                                    |
+| Insights                 | `(app)/insights`           | `insights/`              | `insights.ts`                      | `services/insight-facts.ts`, `insights.ts`, `server/ai/insights.ts`                             | `unit/insights`, `db/insights`, `e2e/billing`                                                 |
+| Plans, billing           | `(app)/billing`            | `billing/`               | `billing.ts`                       | `server/billing/*`, `api/webhooks/razorpay`                                                     | `unit/billing`, `db/billing`, `integration/`                                                  |
+| Settings, export, delete | `(app)/settings`           | `settings/`              | `settings.ts`, `account.ts`        | `services/account.ts`, `api/export`                                                             | `db/account`, `unit/account`, `integration/routes`, `component/delete-account`, `e2e/account` |
+| Admin                    | `(app)/admin`              | —                        | —                                  | `server/admin.ts`, `services/admin-stats.ts`                                                    | `e2e/account`                                                                                 |
+| Legal pages              | `(legal)/*`                | `legal/`                 | —                                  | `config/legal.ts`                                                                               | `e2e/account`                                                                                 |
 
-Paths are relative to `src/app/`, `src/components/`, `src/server/actions/`,
-`src/` and `tests/` respectively.
+Page, Components and Actions paths are relative to `src/app/`,
+`src/components/` and `src/server/actions/`. In Logic, `services/…` is under
+`src/server/`, `api/…` under `src/app/`, and the rest under `src/`. Tests are
+under `tests/`.
 
 ## Tracing a feature
 

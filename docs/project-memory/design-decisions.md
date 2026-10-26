@@ -46,6 +46,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-020 | Prettier, CI on GitHub Actions, exact dependency pins                    | accepted                               |
 | D-021 | Agent instructions and project memory in the repo; no MCP or hooks       | accepted; MCP part superseded by D-022 |
 | D-022 | Next.js dev-server MCP and bundle-optimizer skill for agents             | accepted                               |
+| D-023 | CI fails on high or critical dependency advisories                       | accepted                               |
 
 ### D-001 Product scope
 
@@ -80,7 +81,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   app's user fields (`currency`, `timezone`, `onboardedAt`, `aiEnabled`,
   `defaultWalletId`) are `input: false`.
 - **Rationale:** no passwords to store or leak. **Alternatives:** next-auth v5,
-  rejected in the plan because it was still in beta.
+  rejected in the original plan (kept outside the repo) because it was still in beta.
 - **Consequences:** people without a Google account can't sign up; only our
   server actions change app fields. **Affected:** `src/server/auth.ts`,
   `session.ts`. **References:** `tests/security/auth.test.ts`.
@@ -92,8 +93,8 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   SQL migrations generated into `drizzle/` and committed. Applied by the
   production build on Vercel (`scripts/vercel-build.mjs`) and on container start
   in the Docker image (`src/instrumentation.ts`, `RUN_MIGRATIONS=1`).
-- **Alternatives:** Prisma, rejected in the plan (its latest major was an
-  incompatible release candidate at the time).
+- **Alternatives:** Prisma, rejected in the original plan (kept outside the
+  repo): its latest major was an incompatible release candidate at the time.
 - **Consequences:** the previous version keeps serving while a migration runs,
   so migrations must be backward compatible. `pnpm db:check` fails when the
   schema and migrations disagree. **References:** `30ca6e0`, `480d15a`.
@@ -193,7 +194,8 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 - **Context:** React 19 resets a `<form action={…}>` after every submit, even
   when the action returned a validation error, so people lost what they typed.
 - **Decision:** `useFormAction` submits from `onSubmit` inside a transition;
-  the `action` prop stays for submits before hydration.
+  the `action` prop stays on the form so a submit before hydration still does
+  nothing, as React intends (see the hook's comment).
 - **Alternatives:** restoring `defaultValue`s before the reset (React re-applies
   them), controlled inputs everywhere (more code in every form).
 - **References:** `92dc43f`, `src/components/ui-extra/use-form-action.ts`,
@@ -251,8 +253,8 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 
 - **Status:** accepted · **Date:** 2026-10-25
 - **Decision:** Prettier (120 columns) with ESLint's Next rules; GitHub Actions
-  runs install, lint, formatting, types, tests, the migration check and a build
-  on every PR and push to `main`; direct dependencies pinned exactly, updated by
+  runs install, lint, formatting, types, tests and a build on every PR and push
+  to `main` (D-021 added the migration and docs checks, D-023 the audit); direct dependencies pinned exactly, updated by
   Dependabot. **References:** `e69ba32`, `.github/workflows/ci.yml`.
 
 ### D-021 Agent instructions and project memory in the repo
@@ -310,3 +312,20 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   item. Checked: tool schemas, `nextjs_docs` and argument validation still work.
   Remove the overrides when a `next-devtools-mcp` release depends on fixed versions.
 - **Affected:** `.mcp.json`, `package.json`, `.claude/skills/next-bundle-optimizer/`.
+
+### D-023 CI fails on high or critical dependency advisories
+
+- **Status:** accepted · **Date:** 2026-10-26
+- **Context:** the independent assessment found nothing checked advisories
+  automatically; the MCP SDK's high advisories (D-022) were noticed only because
+  `pnpm audit` was run by hand.
+- **Decision:** CI runs `pnpm audit --audit-level=high` on every PR and push.
+  Moderate and low ones don't fail the run; they're reviewed by hand and listed
+  in [known-issues.md](known-issues.md).
+- **Alternatives:** failing on any advisory (the accepted moderate `esbuild` one
+  would block everything); relying on Dependabot alerts alone (they don't stop
+  a merge).
+- **Trade-offs / consequences:** a newly published advisory can fail a PR that
+  didn't change dependencies; fix it (upgrade or a scoped override, as in D-022)
+  or record why it's accepted. The audit needs the registry, so CI needs network.
+- **Affected:** `.github/workflows/ci.yml`.

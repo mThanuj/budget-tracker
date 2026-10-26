@@ -7,20 +7,21 @@ git), while the terminal output stays live.
 
 ## Running the tests
 
-| Command                 | What runs                                                        | Needs                        | Log                    |
-| ----------------------- | ---------------------------------------------------------------- | ---------------------------- | ---------------------- |
-| `pnpm test`             | All Vitest suites below                                          | nothing                      | `test-unit.log`        |
-| `pnpm test:unit`        | `tests/unit`: pure logic (money, dates, plans, AI fallback…)     | nothing                      | `test-unit.log`        |
-| `pnpm test:db`          | `tests/db`: services on an in-memory Postgres (PGlite)           | nothing                      | `test-db.log`          |
-| `pnpm test:integration` | `tests/integration`: server actions and route handlers on PGlite | nothing                      | `test-integration.log` |
-| `pnpm test:component`   | `tests/component`: React components in jsdom                     | nothing                      | `test-component.log`   |
-| `pnpm test:security`    | `tests/security`: app-wide sweeps of the security rules (below)  | nothing                      | `test-security.log`    |
-| `pnpm test:coverage`    | All Vitest suites with coverage (`coverage/index.html`)          | nothing                      | `test-unit.log`        |
-| `pnpm test:watch`       | Vitest in watch mode                                             | nothing                      | `test-unit.log`        |
-| `pnpm test:e2e`         | `tests/e2e`: Playwright on desktop Chrome, iPhone, iPad          | `.env.local`, a dev database | `test-e2e.log`         |
-| `pnpm test:e2e:live`    | Only the e2e tests that call the real AI provider (`@live-ai`)   | the same, plus an AI key     | `test-e2e.log`         |
+| Command                 | What runs                                                         | Needs                        | Log                    |
+| ----------------------- | ----------------------------------------------------------------- | ---------------------------- | ---------------------- |
+| `pnpm test`             | All Vitest suites below                                           | nothing                      | `test-unit.log`        |
+| `pnpm test:unit`        | `tests/unit`: pure logic (money, dates, plans, AI fallback…)      | nothing                      | `test-unit.log`        |
+| `pnpm test:db`          | `tests/db`: services on an in-memory Postgres (PGlite)            | nothing                      | `test-db.log`          |
+| `pnpm test:integration` | `tests/integration`: server actions and route handlers on PGlite  | nothing                      | `test-integration.log` |
+| `pnpm test:component`   | `tests/component`: React components in jsdom                      | nothing                      | `test-component.log`   |
+| `pnpm test:security`    | `tests/security`: app-wide sweeps of the security rules (below)   | nothing                      | `test-security.log`    |
+| `pnpm test:coverage`    | All Vitest suites with coverage (`coverage/index.html`)           | nothing                      | `test-unit.log`        |
+| `pnpm test:watch`       | Vitest in watch mode                                              | nothing                      | `test-unit.log`        |
+| `pnpm test:e2e`         | `tests/e2e`: Playwright on desktop Chrome and iPhone (iPad: tour) | `.env.local`, a dev database | `test-e2e.log`         |
+| `pnpm test:e2e:live`    | Only the e2e tests that call the real AI provider (`@live-ai`)    | the same, plus an AI key     | `test-e2e.log`         |
 
-A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "export"`,
+A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "export"`
+(writes its folder's log, here `test-integration.log`),
 `pnpm test:e2e smoke.spec.ts --project desktop-chrome`.
 
 ### Vitest suites never touch real services
@@ -43,8 +44,8 @@ user (`e2e-<uuid>@example.test`) and deletes it afterwards; no real account is
 used.
 
 - **Point `.env.local` at a development database, never production.** The tests
-  write to whatever `DATABASE_URL` says. A separate Neon branch for development
-  is the safest setup.
+  write to `DATABASE_URL`: from your shell if it's set there, otherwise from
+  `.env.local`. A separate Neon branch for development is the safest setup.
 - **AI is off for test users by default**, so the tests never reach the AI
   provider by accident (the entry form asks it for a category as soon as a
   description is typed). Tests about AI switch it on with `test.use({ ai: true })`.
@@ -62,12 +63,14 @@ used.
 ## What each layer is for
 
 - **Unit:** rules that are easy to get subtly wrong: money parsing and
-  rounding, month boundaries and time zones, plan resolution, quota limits, the
-  AI fallback chain, webhook payload checks, security headers.
+  rounding, month boundaries and time zones, plan resolution, the AI fallback
+  chain, webhook payload checks. (AI quotas are tested in `tests/db/ai.test.ts`,
+  security headers in `tests/security/headers.test.ts`.)
 - **DB (PGlite):** services and queries against real Postgres: balances and
   transfers, budgets across months, recurring entries without duplicates,
   webhook idempotency, chat tools that only see the user's own rows.
-- **Integration:** each server action and route doing its job: success,
+- **Integration:** the main server actions and every route doing their job (not
+  every action has its own test yet; see known-issues.md): success,
   validation errors, unknown operations, checkout and webhook handling, and
   failures from Razorpay or the database coming back as plain messages
   without details. (The app-wide access sweeps are in the security suite.)
@@ -75,12 +78,17 @@ used.
   chat or a toggle: a failed send keeps what they typed, a server refusal is
   shown, a switch goes back if saving fails.
 - **Security:** the security rules, checked across the whole app rather than
-  feature by feature, so a new action, route, page or client component can't
-  quietly skip one. Each file names the threat it covers:
-  - `access-control`: every server action refuses without a session; no action
-    reads or changes another user's records whatever id it's given (each
-    refusal must be the ownership check, not a form error); slipped-in
-    ownership fields are ignored.
+  feature by feature. The sweeps catch a new action without a session check, an
+  unreviewed route, a signed-in page that doesn't check the session, and client
+  code importing server code; cross-user checks are per listed action. Each
+  file names the threat it covers:
+  - `access-control`: every server action refuses without a session (found
+    automatically); a listed set of actions (wallets, categories, goals,
+    recurring items, budgets, entries) is tried with another user's ids, and each
+    refusal must be the ownership check, not a form error; slipped-in ownership
+    fields are ignored. A new action that takes an id needs its own entry here.
+  - `settings`: every setting in `.env.example` is removed before tests run (or
+    is harmless), and every one `src/env.ts` validates is documented.
   - `routes`: every route handler is on a reviewed list with who may call it,
     and is called anonymously to prove it. A new route fails until it's added.
   - `auth`: Better Auth as configured, through its HTTP handler with production

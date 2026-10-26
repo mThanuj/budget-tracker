@@ -4,10 +4,19 @@ Significant changes to architecture, behaviour or the development workflow,
 newest first. One line each, with the commit; `git log` has the rest. Add a line
 when you merge something a future agent should know about.
 
+## 2026-10-26
+
+- Independent maintainability assessment: dismissed subscription suggestions now
+  count toward the daily dismissal limit; writes after an ownership check also
+  filter by `userId`; CI runs `pnpm audit --audit-level=high` (D-023); a settings
+  drift test; agent worktrees ignored by git and ESLint; e2e cleanup removes AI
+  usage counters; more ask rules in `.claude/settings.json`; docs corrected
+  against the code (`97daa50`, docs in the next commit).
+
 ## 2026-10-25
 
 - Agent tools: Next.js dev-server MCP (`.mcp.json`, pinned `next-devtools-mcp`)
-  and Next's `next-bundle-optimizer` skill (decision D-022).
+  and Next's `next-bundle-optimizer` skill (decision D-022) (`8148e9b`).
 - Agent instructions and this project memory (`AGENTS.md`, `CLAUDE.md`,
   `.claude/`, `docs/project-memory/`); `pnpm db:check` and `pnpm docs:check` in CI (`85300c0`).
 - Dependabot: `react`/`react-dom` 19.3.1 (`cac5aa9`), `upload-artifact` v7 in the backup workflow (`004d025`).

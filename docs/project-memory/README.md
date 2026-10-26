@@ -55,7 +55,9 @@ Trivial changes (a typo, a style fix) don't need any of this.
 - Never invent history. If the reason for a past choice isn't recorded, write
   "Rationale: not recorded".
 - One place per fact: link instead of copying; link to source files instead of
-  pasting code. Keep each file short enough to read in one go.
+  pasting code. A value quoted for readability (a limit, a price) names its
+  source file, and the source wins if they differ. Keep each file short enough
+  to read in one go.
 - Decisions are never deleted: mark them superseded and add the new one
   (template at the top of `design-decisions.md`).
 - If the memory and the code disagree, don't silently change either: note the

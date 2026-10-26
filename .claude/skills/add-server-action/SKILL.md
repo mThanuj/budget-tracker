@@ -19,14 +19,16 @@ callers outside the app (webhooks, cron, downloads).
 
 ## Steps
 
-1. **Validation:** a Zod schema in `src/lib/validation.ts`, reusing its helpers
+1. **Validation:** a Zod schema, in `src/lib/validation.ts` if forms share it
+   (inline in the action for a small one-off), reusing the helpers
    (`moneyField`, `name`, `optionalId`, `idSchema` in `action-utils.ts`). Treat
    every argument as untrusted, including ones the UI never sends.
 2. **Service:** a function in `src/server/services/<area>.ts` taking
    `(db, userId, …)`. Scope every query by `userId`; check ids from the client
    with the area's `getOwned*` helper; throw `UserError` for expected failures.
    Creating rows a user controls? Call `assertRoomFor` / `assertDailyRoomFor`
-   (`services/limits.ts`) and add a limit in `src/config/limits.ts` if it's a new kind.
+   (`services/limits.ts`). A new kind needs a number in `src/config/limits.ts`
+   and an entry in `TOTALS` or `DAILY` in `services/limits.ts`.
 3. **Action:** in `src/server/actions/<area>.ts` (`"use server"` file). First
    line `const user = await requireUser();`, then `runAction(async () => { …;
 refresh(); })` for form-style results, or a typed result like the others.
@@ -40,7 +42,8 @@ refresh(); })` for form-style results, or a typed result like the others.
    - UI flow: `tests/e2e/` or a component test.
 6. **Route handler instead?** Add it to `REVIEWED` in
    `tests/security/routes.test.ts` with who may call it; check access first in
-   the handler; `Cache-Control: no-store` for user data; a `GET` that must run
+   the handler with `getSession()` and answer 401 (`requireUser()` redirects,
+   which is wrong for an API caller), or a secret or signature; `Cache-Control: no-store` for user data; a `GET` that must run
    per request calls `await connection()` first.
 
 ## Don't

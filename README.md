@@ -38,8 +38,10 @@ pnpm dev                     # http://localhost:3000
 
 `.env.example` lists every setting with a comment, and holds no real values.
 Keep real values in `.env.local` (git ignores it) locally, and in the hosting
-platform's settings in production. Settings are validated when first used
-(`src/env.ts`), so a missing one fails loudly instead of half-working.
+platform's settings in production. The core settings (database, sign-in,
+`CRON_SECRET`) are validated when first used (`src/env.ts`), so a missing one
+fails loudly; the optional ones (AI, payments, admin, legal details) switch their
+feature off or show a warning on `/admin` when missing.
 
 | Group     | Variables                                                                                                                | Needed                                   |
 | --------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
@@ -61,23 +63,23 @@ call the real AI), `PW_WORKERS` (parallel browsers), `NEXT_WORKER_THREADS=1`
 
 ## Scripts
 
-| Command                                                                                | What it does                                                                         |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `pnpm dev`                                                                             | Dev server on http://localhost:3000                                                  |
-| `pnpm build` · `pnpm start`                                                            | Production build, and serving it                                                     |
-| `pnpm lint` · `pnpm lint:fix`                                                          | ESLint (Next.js rules)                                                               |
-| `pnpm format` · `pnpm format:check`                                                    | Prettier: rewrite, or only check                                                     |
-| `pnpm typecheck`                                                                       | Generates Next's route types, then `tsc --noEmit`                                    |
-| `pnpm check`                                                                           | Lint, formatting, types, migrations, docs and all Vitest suites: run before pushing  |
-| `pnpm test`                                                                            | All Vitest suites (unit, db, integration, component, security)                       |
-| `pnpm test:unit` · `test:db` · `test:integration` · `test:component` · `test:security` | One suite                                                                            |
-| `pnpm test:coverage` · `pnpm test:watch`                                               | Coverage report · watch mode                                                         |
-| `pnpm test:e2e` · `pnpm test:e2e:live`                                                 | Browser tests against `pnpm dev` · only the ones that call the real AI               |
-| `pnpm db:generate` · `db:migrate` · `db:studio`                                        | New migration from the schema · apply migrations · browse the database               |
-| `pnpm db:check`                                                                        | Fails if `schema.ts` has changes no migration covers (no database needed)            |
-| `pnpm docs:check`                                                                      | Fails if a doc links to a missing file or heading, or names a missing path or script |
-| `pnpm ai:eval` · `ai:chat-eval` · `ai:insights-eval`                                   | Check AI output quality against real providers (after model or prompt changes)       |
-| `pnpm check:bundle`                                                                    | After a build: no secret values in files sent to browsers                            |
+| Command                                                                                | What it does                                                                                             |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                                                                             | Dev server on http://localhost:3000                                                                      |
+| `pnpm build` · `pnpm start`                                                            | Production build, and serving it                                                                         |
+| `pnpm lint` · `pnpm lint:fix`                                                          | ESLint (Next.js rules)                                                                                   |
+| `pnpm format` · `pnpm format:check`                                                    | Prettier: rewrite, or only check                                                                         |
+| `pnpm typecheck`                                                                       | Generates Next's route types, then `tsc --noEmit`                                                        |
+| `pnpm check`                                                                           | Lint, formatting, types, migrations, docs and all Vitest suites: run before pushing                      |
+| `pnpm test`                                                                            | All Vitest suites (unit, db, integration, component, security)                                           |
+| `pnpm test:unit` · `test:db` · `test:integration` · `test:component` · `test:security` | One suite                                                                                                |
+| `pnpm test:coverage` · `pnpm test:watch`                                               | Coverage report · watch mode                                                                             |
+| `pnpm test:e2e` · `pnpm test:e2e:live`                                                 | Browser tests against `pnpm dev` · only the ones that call the real AI                                   |
+| `pnpm db:generate` · `db:migrate` · `db:studio`                                        | New migration from the schema · apply migrations · browse the database                                   |
+| `pnpm db:check`                                                                        | Fails if `schema.ts` has changes no migration covers (no database needed)                                |
+| `pnpm docs:check`                                                                      | Fails if a doc links to a missing file or heading, or names a missing repo path (in backticks) or script |
+| `pnpm ai:eval` · `ai:chat-eval` · `ai:insights-eval`                                   | Check AI output quality against real providers (after model or prompt changes)                           |
+| `pnpm check:bundle`                                                                    | After a build: no secret values in files sent to browsers                                                |
 
 Every test run also writes its results to `test-<suite>.log` (ignored by git).
 
@@ -114,15 +116,15 @@ the UI rules are in [docs/DESIGN.md](docs/DESIGN.md).
 
 Five Vitest suites run without any external service (Postgres runs in memory
 through PGlite; app settings are stripped so no real key is used), plus
-Playwright browser tests against the dev server on desktop, iPhone and iPad
-sizes. [docs/TESTING.md](docs/TESTING.md) covers what each suite is for and
+Playwright browser tests against the dev server on desktop and iPhone sizes
+(and a visual tour on iPad). [docs/TESTING.md](docs/TESTING.md) covers what each suite is for and
 how to run a single test.
 
 ## Working on it
 
 - Branch from `main` and open a pull request. CI (`.github/workflows/ci.yml`)
-  runs lint, formatting, type checks, the migration check, every Vitest suite
-  and a production build; run `pnpm check` locally first, and `pnpm test:e2e`
+  runs lint, formatting, type checks, the migration and docs checks, every
+  Vitest suite, a production build and a dependency audit; run `pnpm check` locally first, and `pnpm test:e2e`
   for UI changes.
 - Coding agents (and people new to the code) start with [AGENTS.md](AGENTS.md):
   where code goes, the rules, the checks, and what needs the owner's approval.

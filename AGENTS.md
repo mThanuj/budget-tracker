@@ -17,8 +17,10 @@ setup and scripts: `README.md`.
 
 ## Start here
 
-1. **Read `docs/project-memory/README.md`**, then the memory files it lists for
-   your area. For anything beyond a small, isolated change, read
+1. If `node_modules` is missing, run `pnpm install` first (the Next.js docs the
+   top of this file points to live there). Then **read
+   `docs/project-memory/README.md`** and the memory files it lists for your
+   area. For anything beyond a small, isolated change, read
    `docs/project-memory/architecture.md` first.
 2. Read the code you'll change, its callers, and its tests. Check the memory
    against the code; the code is what runs.
@@ -37,12 +39,16 @@ setup and scripts: `README.md`.
 - `pnpm install` (CI uses `pnpm install --frozen-lockfile`).
 - Settings: `.env.example` documents every variable. Real values are in
   `.env.local`, which you must not read, print or copy. Vitest needs no settings
-  at all; `pnpm dev`, `pnpm test:e2e` and `pnpm db:*` use `.env.local`.
+  at all; `pnpm dev`, `pnpm test:e2e`, `pnpm db:migrate`, `db:generate` and
+  `db:studio` read `.env.local`, but a variable already set in your shell wins
+  (`pnpm db:check` needs none).
 
 ## Commands
 
-Every command exits non-zero on failure. Test runs also write `test-<suite>.log`
-(ending in `[exit N]`); read it instead of piping output through `tee`/`head`.
+Every command exits non-zero on failure. Test runs also write a log ending in
+`[exit N]`; read it instead of piping output through `tee`/`head`. A Vitest run
+of one folder or file writes its folder's log (`tests/db/<file>` → `test-db.log`);
+`pnpm test` and `pnpm test:unit` both write `test-unit.log`.
 
 | To check                             | Run                                                                                                     |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
@@ -60,9 +66,9 @@ Every command exits non-zero on failure. Test runs also write `test-<suite>.log`
 
 Browser tests need `.env.local` and a running or startable dev server, and
 write to the development database. If your environment can't run them, ask the
-owner to and read `test-e2e.log`. Tests that call the real AI run only with
-`pnpm test:e2e:live`; don't run them (or the `ai:*` scripts) unless asked:
-they spend real provider quota.
+owner to and read `test-e2e.log`. Tests that call the real AI run only when
+`LIVE_AI=1` is set (`pnpm test:e2e:live` runs just those); don't run them, or
+the `ai:*` scripts, unless asked: they spend real provider quota.
 
 ## Where code goes
 
@@ -71,14 +77,19 @@ Details and a feature-by-feature map: `docs/project-memory/architecture.md`.
 - `src/app/`: routes. Pages are Server Components; user-specific parts sit
   under `<Suspense>` and call `requireUser()` from `src/server/session.ts`.
 - `src/server/actions/`: server actions, the app's API. Each one calls
-  `requireUser()`, parses input with a schema from `src/lib/validation.ts`,
-  calls a service, then `refresh()`. Use `runAction()` for form-style results.
-- `src/server/services/`: all database access and domain logic. Functions take
-  `(db, userId, …)`; every query is scoped to `userId`; ids from the client are
-  ownership-checked (`getOwned*`). Expected failures throw `UserError`.
-- `src/app/api/*/route.ts`: only for callers outside the app (auth, health,
-  export, cron, webhook). A new one must be added to the reviewed list in
-  `tests/security/routes.test.ts`.
+  `requireUser()` first, parses input with Zod (shared schemas in
+  `src/lib/validation.ts`, small one-offs inline), calls a service, then
+  `refresh()`. Use `runAction()` for form-style results.
+- `src/server/services/`: database access and domain logic. Functions take
+  `(db, userId, …)`, check that ids from the client belong to the user
+  (`getOwned*`), and filter reads and writes by `userId`. Expected failures throw
+  `UserError`. Put new queries here: the account, settings and billing actions
+  still query the user and subscription tables directly (known debt), and
+  `src/server/billing/` and `src/server/ai/quota.ts` keep their own tables.
+- `src/app/api/**/route.ts`: only for callers outside the app (auth, health,
+  export, cron, webhook). Check access with `getSession()` and answer 401, or a
+  secret or signature; not `requireUser()`, which redirects. A new route must be
+  added to the reviewed list in `tests/security/routes.test.ts`.
 - `src/lib/`: pure logic shared by client and server (money, dates, validation,
   budget/goal/recurring maths). No server imports. `src/config/`: settings.
 - `src/components/<feature>/`: UI. `"use client"` only where needed; client
@@ -104,10 +115,10 @@ names are kebab-case; plain, short user-facing text (`docs/DESIGN.md`).
   and updates to `.env.example`, the schema plus a migration, or the security
   test lists as relevant.
 - **Don't hide errors**: no `@ts-ignore`/`@ts-expect-error`, `as any`,
-  `as unknown as`, empty `catch`, or `eslint-disable` to get a check passing.
-  Fix the cause, or report it.
+  `as unknown as`, `eslint-disable`, or a `catch` that swallows an error without
+  a comment saying why, to get a check passing. Fix the cause, or report it.
 - **Never weaken access control**: every action and page keeps `requireUser()`,
-  every query keeps its `userId` scope, every route keeps its check. The
+  every query keeps its `userId` filter, every route keeps its check. The
   security suite must stay green; don't edit it to make a change pass.
 - **Stay in scope**: the smallest change that does the job, in the existing
   style. No unrelated refactors or renames, no reformatting of untouched code,
@@ -121,8 +132,9 @@ names are kebab-case; plain, short user-facing text (`docs/DESIGN.md`).
 ## Before you finish
 
 1. Run the narrowest relevant tests first (one file, then the suite), then
-   `pnpm check`. Run `pnpm build` when you changed config, routes, rendering
-   or dependencies; `pnpm test:e2e` (or ask the owner) for UI changes.
+   `pnpm check`. CI also builds and audits every change; run `pnpm build`
+   yourself when you changed config, routes, rendering or dependencies, and
+   `pnpm test:e2e` (or ask the owner) for UI changes.
 2. Review your diff: only intended files changed; no stray generated files
    (`.next/`, `test-*.log`, `coverage/`), no edits to `pnpm-lock.yaml` unless
    dependencies changed on purpose, no secrets.
@@ -152,11 +164,14 @@ names are kebab-case; plain, short user-facing text (`docs/DESIGN.md`).
   reads its errors, routes and logs, so compile and runtime errors show up
   without a full build. It only reaches local dev servers (development data)
   and logs to `~/.next-devtools-mcp/mcp.log`. Your agent client asks before
-  enabling a project MCP server.
+  enabling a project MCP server. Its `browser_eval` tool suggests installing the
+  `agent-browser` CLI globally: don't (a new tool needs the owner's approval).
 - **`next-bundle-optimizer` skill** (`.claude/skills/next-bundle-optimizer/`,
   copied from Next.js `v16.4.2`, see its `PROVENANCE.md`): bundle-size audits
-  from `next analyze`; it changes code only when asked for "fix" mode. In
-  sandboxes, run the capture as `NEXT_WORKER_THREADS=1 pnpm exec next analyze --output`.
+  from `next analyze`; it changes code only when asked for "fix" mode. Its note
+  says to capture outside sandboxes that block ports; `--output` serves nothing,
+  and in the owner's sandbox `NEXT_WORKER_THREADS=1 pnpm exec next analyze --output`
+  works (implementation-notes.md).
 - **Database inspection:** `pnpm db:studio`, against the development database only.
 - **Browser checks:** Playwright (`pnpm test:e2e`). Next's `next-dev-loop` skill
   isn't installed (it needs the separate `agent-browser` CLI).

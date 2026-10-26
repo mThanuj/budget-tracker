@@ -10,16 +10,18 @@ security-sensitive areas below need the owner's review.
 
 ## Gates
 
-Mandatory for every change (CI runs these on each PR):
-`pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm db:check`, `pnpm docs:check`,
-`pnpm test` (together: `pnpm check`), and `pnpm build`.
+Mandatory for every change: `pnpm check` (`pnpm lint`, `pnpm format:check`,
+`pnpm typecheck`, `pnpm db:check`, `pnpm docs:check`, `pnpm test`). CI runs these
+plus `pnpm build` and `pnpm audit --audit-level=high` on every PR; run `pnpm build`
+locally when config, routes, rendering or dependencies changed.
 When relevant: `pnpm check:bundle` after a build (client code or env changes),
 `pnpm test:e2e` (UI changes; needs the owner's environment),
 `pnpm test:e2e:live` and `pnpm ai:*` (AI prompt or model changes; spend real quota, ask first).
 
 ## Steps
 
-1. `git diff --stat main...HEAD`, then read the full diff.
+1. See what changed: `git status` and `git diff` for uncommitted work, or
+   `git diff --stat main...HEAD` for a branch. Then read the full diff.
 2. Run the gates above; record actual results.
 3. Check each point:
    - **Access:** actions call `requireUser()` first; queries are scoped by

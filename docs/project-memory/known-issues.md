@@ -14,6 +14,13 @@ here only by name).
 - Shared free AI tier: one user can use a share of the global daily budget.
 - CSP allows inline scripts (decision D-012).
 - Display name and avatar URL are unvalidated (self-only).
+- Cross-user checks in `tests/security/access-control.test.ts` are a listed set
+  of actions (wallets, categories, goals, recurring items, budgets, entries);
+  billing, setup, alerts, subscription suggestions and insights aren't in the
+  list, and a new action that takes an id isn't caught automatically
+  (confirmed 2026-10-26).
+- `.claude/settings.json` rules are prefix matches for Claude Code only: other
+  forms of a command, and other agents, aren't covered.
 
 ## Dependencies
 
@@ -36,7 +43,15 @@ here only by name).
   successful `cancelPro`; AI answer quality (only `pnpm test:e2e:live` and the
   `ai:*` scripts); the admin stats page; restoring a backup.
 - Browser tests aren't in CI: they need a database and an auth secret on the
-  runner. Run `pnpm test:e2e` locally for UI changes.
+  runner. Run `pnpm test:e2e` locally for UI changes. Without them CI barely
+  covers the UI: Vitest line coverage on 2026-10-26 was 0% for pages and 14%
+  for components (services 92%, `lib` 94%, actions 67%, API routes 100%).
+- Actions with no direct test outside the browser tests: `parseEntryText`,
+  `suggestCategoryFor`, `parseSetupAnswer`, `completeWelcome`; only refused
+  cross-user calls or a mock for `saveCategory`, `categoryAction`, `confirmDue`,
+  `checkPaymentStatus` (confirmed 2026-10-26).
+- `pnpm check:bundle` compares the build with the secret values in `.env.local`
+  and the environment; CI has none, so it isn't run there.
 
 ## Operations
 
@@ -47,12 +62,20 @@ here only by name).
   preloading, so the first visit may shift layout. Not measured: check with
   PageSpeed Insights on the live site; if CLS > 0.1, switch to `next/font/local`
   (mind the unicode-range subsets: ₹ may be outside the latin one).
+- **`main` has no branch protection** (GitHub API, 2026-10-26): a push deploys
+  to production whether or not CI passes. Turn it on and require the CI
+  `checks` job.
 - Settings only visible in the dashboards, to confirm: Vercel's Node version
   (should be 24.x like `.nvmrc`), Fluid compute on (a chat answer can take up to
-  45 s), Preview deployments not using the production `DATABASE_URL`, GitHub
-  branch protection on `main` requiring CI.
+  45 s), Preview deployments not using the production `DATABASE_URL`.
 
 ## Code quality
+
+- Layering: the account, settings and billing actions query the user and
+  subscription tables directly instead of through services (user-scoped, so not
+  a security issue; confirmed 2026-10-26). Move new queries into services.
+- `goal_contribution` has no index starting with `user_id`, though the daily
+  limit counts it by user (fine at current sizes).
 
 - `noUncheckedIndexedAccess` is off; the code often destructures query results
   (`const [row] = …`). Turning it on would flag many spots: adopt deliberately.

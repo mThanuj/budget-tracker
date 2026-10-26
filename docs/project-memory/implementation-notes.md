@@ -23,6 +23,12 @@ has more. Add new ones under the right heading.
   generated and gitignored, so `pnpm typecheck` runs `next typegen` before `tsc`.
 - Next's dev badge sits bottom-right and can cover buttons on phone-sized
   screens; the e2e fixture hides it (`tests/e2e/support/fixtures.ts`).
+- Restart `pnpm dev` after `pnpm install` changes dependencies. A dev server left
+  running across the React 19.3.1 upgrade served blank pages, with "Could not
+  validate `instant`" errors in the browser console, and made the first desktop
+  browser tests fail; after a restart all passed (2026-10-26). Those validation
+  messages themselves are dev-only (instant-navigation checks flag any route that
+  reads the session) and don't affect production builds.
 
 ## React 19
 
@@ -50,6 +56,9 @@ has more. Add new ones under the right heading.
 - The app uses the pooled Neon URL; migrations need the direct one
   (`DATABASE_URL_UNPOOLED`, see `drizzle.config.ts`). Client-side timeouts on the
   pool make a dropped connection fail fast (`src/server/db/index.ts`).
+- `drizzle.config.ts` and the browser-test fixtures load `.env.local` with
+  `process.loadEnvFile`, which doesn't override variables already set in the
+  shell: an exported `DATABASE_URL` wins over the file.
 - Tests create a fresh PGlite database per file with the real migrations:
   `createTestDb()` in `tests/db/helpers.ts`. Its `db` has the same type (`Db`) as
   the app's, so services run unchanged.
@@ -106,7 +115,8 @@ Seen in the owner's Claude Code setup; other environments may differ.
   `localhost:3000` may be blocked here.
 - Binding local ports and reaching `localhost` or `*.vercel.app` may be blocked:
   the owner runs `pnpm dev` and `pnpm test:e2e` and the agent reads `test-e2e.log`.
-- Builds: `NEXT_WORKER_THREADS=1 pnpm build` (Turbopack's default workers need
-  local sockets). Node scripts that use the network: `NODE_USE_ENV_PROXY=1`.
+- Builds: if plain `pnpm build` fails because Turbopack's workers can't open
+  local sockets, use `NEXT_WORKER_THREADS=1 pnpm build` (plain worked in a
+  2026-10-26 session, so it varies). Node scripts that use the network: `NODE_USE_ENV_PROXY=1`.
 - Run TypeScript scripts with `node --import tsx` (the package scripts do); the
   `tsx` CLI needs an IPC pipe some sandboxes block.

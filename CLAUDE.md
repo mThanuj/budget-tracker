@@ -16,9 +16,10 @@ to Claude Code.
   while `pnpm dev` is running.
 - **Permissions:** `.claude/settings.json` blocks reading `.env` files with
   real values and asks before `git push`, merging PRs, `pnpm db:migrate`, the
-  Vercel CLI and commands that spend real AI quota. If a command is denied or
-  declined, don't look for another way to run it; ask the owner. These rules
-  prevent accidents; they aren't a security boundary.
+  Vercel CLI and commands that spend real AI quota. They're prefix rules for the
+  usual forms of those commands. If a command is denied or declined, don't look
+  for another way to run it; ask the owner. These rules prevent accidents; they
+  aren't a security boundary.
 - **Memory:** durable project knowledge goes in `docs/project-memory/` (in
   git, visible to every agent), not in Claude's per-user memory. Use that only
   for the owner's personal preferences.
