@@ -156,8 +156,10 @@ names are kebab-case; plain, short user-facing text (`docs/DESIGN.md`).
 
 ## Needs the owner's explicit approval
 
-- `git push` (every push to `main` deploys to production; any branch push
-  creates a preview deployment) and merging pull requests.
+- `git push` (a branch push creates a preview deployment) and merging pull
+  requests (a merge to `main` deploys to production). `main` is protected:
+  changes reach it only through a pull request whose CI `checks` job passed,
+  on a branch that's up to date with `main`. Never try to get around that.
 - Anything touching production or its data: deploys, `pnpm db:migrate` against
   anything but a development database, Vercel/GitHub/Neon/Razorpay settings,
   credentials and their rotation.

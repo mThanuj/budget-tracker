@@ -256,7 +256,9 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 - **Decision:** Prettier (120 columns) with ESLint's Next rules; GitHub Actions
   runs install, lint, formatting, types, tests and a build on every PR and push
   to `main` (D-021 added the migration and docs checks, D-023 the audit); direct dependencies pinned exactly, updated by
-  Dependabot. **References:** `e69ba32`, `.github/workflows/ci.yml`.
+  Dependabot. Since 2026-10-26 `main` is protected (owner's setting in GitHub):
+  pull requests only, the `checks` job must pass on an up-to-date branch, no
+  bypass for admins. **References:** `e69ba32`, `.github/workflows/ci.yml`.
 
 ### D-021 Agent instructions and project memory in the repo
 
