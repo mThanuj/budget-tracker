@@ -117,6 +117,14 @@ has more. Add new ones under the right heading.
 - Sentry's default server integrations include AI ones (Vercel AI, OpenAI,
   Anthropic, Google GenAI, Groq…) that can record prompts; `withoutAiIntegrations`
   removes them by name. Check the list after an SDK upgrade (the test does).
+- **Module state isn't shared between `src/instrumentation.ts` and the app.**
+  Next bundles them separately (the 2026-10-26 build had 12 copies of
+  `src/server/log.ts`), so a module variable set at startup is invisible to
+  pages and actions. The logger's error reporter lives on `globalThis` for this
+  reason; it was a module variable at first, and the first production test
+  error never reached Sentry. Sentry's own state is global, so `onRequestError`
+  and cron check-ins were unaffected. Tests load one copy, so
+  `tests/unit/log.test.ts` imports the logger twice to cover it.
 - `src/server/log.ts` and `src/server/request-id.ts` don't import `server-only`:
   the eval scripts and `onRequestError` load them outside React's server
   environment, where it throws.

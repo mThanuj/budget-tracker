@@ -20,7 +20,13 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 type Fields = Record<string, unknown>;
 
 type ErrorReporter = (err: unknown, event: string, fields: Fields) => void;
-let reporter: ErrorReporter | undefined;
+
+declare global {
+  // Kept on globalThis, not in this module: Next bundles src/instrumentation.ts
+  // (which registers the reporter) apart from the pages and actions, and each
+  // bundle has its own copy of this module.
+  var logErrorReporter: ErrorReporter | undefined;
+}
 
 /**
  * Error monitoring registers here when it starts (src/sentry.server.config.ts),
@@ -28,7 +34,7 @@ let reporter: ErrorReporter | undefined;
  * itself depends on nothing.
  */
 export function setErrorReporter(fn: ErrorReporter | undefined) {
-  reporter = fn;
+  globalThis.logErrorReporter = fn;
 }
 
 const pretty = process.env.NODE_ENV !== "production";
@@ -68,6 +74,7 @@ export const log = {
   /** Also reported to error monitoring when `fields.err` is set, unless `report: false` (it's reported elsewhere). */
   error: (event: string, fields?: Fields, { report = true }: { report?: boolean } = {}) => {
     write("error", event, fields);
+    const reporter = globalThis.logErrorReporter;
     if (report && reporter && fields?.err !== undefined) reporter(fields.err, event, redact(fields) as Fields);
   },
 };

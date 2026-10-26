@@ -84,6 +84,22 @@ describe("log", () => {
     expect(new Date(line.ts).toString()).not.toBe("Invalid Date");
   });
 
+  it("reports through the reporter another copy of the module registered", async () => {
+    // Next bundles src/instrumentation.ts (which registers Sentry's reporter)
+    // apart from the app, so the app's copy of the logger is a different module.
+    const reporter = vi.fn();
+    (await import("@/server/log")).setErrorReporter(reporter);
+    vi.resetModules();
+    const appCopy = await import("@/server/log");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      appCopy.log.error("monitoring.test_error", { err: new Error("x") });
+      expect(reporter).toHaveBeenCalledTimes(1);
+    } finally {
+      appCopy.setErrorReporter(undefined);
+    }
+  });
+
   it("sends each level to the matching console stream and skips debug unless asked", () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
