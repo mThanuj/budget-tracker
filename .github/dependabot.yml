@@ -6,6 +6,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # The types must match the Node version the app runs on (24: .nvmrc,
+      # Vercel); newer majors describe APIs that don't exist at runtime. Move
+      # them together with the runtime.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       # One PR for routine updates; majors still come separately.
       minor-and-patch:
