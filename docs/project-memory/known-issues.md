@@ -1,11 +1,27 @@
 # Known issues and technical debt
 
-Confirmed open items as of 2026-10-25. Nothing here is a current outage. When
+Confirmed open items as of 2026-10-26. Nothing here is a current outage. When
 you fix one, delete it here and add a line to [changelog.md](changelog.md);
 when you find one, add it with how it was confirmed. Approved future work is in
 [roadmap.md](roadmap.md); deferred security items are kept in
 [SECURITY.md](../../SECURITY.md#known-trade-offs-and-deferred-hardening) (listed
 here only by name).
+
+## Priorities
+
+From the independent assessment on 2026-10-26. Details are in the sections
+below; keep this list in step when an item is done or a new one outranks it.
+
+- **High, needs the owner:** branch protection on `main`; a first backup
+  restore; error monitoring; the Vercel settings to confirm (all under
+  [Operations](#operations)).
+- **Next:** browser tests in CI and the actions without direct tests (under
+  [Not covered by automated tests](#not-covered-by-automated-tests)); the
+  manual cross-user list (under [Security](#security-deferred-details-in-securitymd)).
+- **Later:** moving the three actions' queries into services
+  ([Code quality](#code-quality)); request rate limiting
+  ([Security](#security-deferred-details-in-securitymd)); Dependabot PRs #3 and #4
+  ([Dependencies](#dependencies)).
 
 ## Security (deferred; details in SECURITY.md)
 
@@ -56,6 +72,9 @@ here only by name).
 ## Operations
 
 - No error monitoring service; Vercel Hobby keeps runtime logs only briefly.
+- **A backup has never been restored.** The nightly encrypted backups (D-011)
+  run, but nobody has tried restoring one, so they're unproven. Do it once
+  with [docs/RESTORE.md](../RESTORE.md) into a throwaway Neon branch.
 - The live site's security headers haven't been checked from outside (agent sandboxes
   get 403 from vercel.app): `curl -sI https://clearpaisa-seven.vercel.app | grep -i content-security`.
 - Fonts (Onest, Young Serif, Spline Sans Mono via Fontsource) swap in without
