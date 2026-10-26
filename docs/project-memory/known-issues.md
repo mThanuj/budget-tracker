@@ -19,8 +19,7 @@ below; keep this list in step when an item is done or a new one outranks it.
   manual cross-user list (under [Security](#security-deferred-details-in-securitymd)).
 - **Later:** moving the three actions' queries into services
   ([Code quality](#code-quality)); request rate limiting
-  ([Security](#security-deferred-details-in-securitymd)); Dependabot PRs #3 and #4
-  ([Dependencies](#dependencies)).
+  ([Security](#security-deferred-details-in-securitymd)).
 
 ## Security (deferred; details in SECURITY.md)
 
@@ -47,9 +46,8 @@ below; keep this list in step when an item is done or a new one outranks it.
   its own dependencies, then check `pnpm audit`.
 - ESLint 9 is marked deprecated upstream (`pnpm install` warns). Moving to
   ESLint 10 depends on `eslint-config-next` supporting it; not started.
-- Open Dependabot PRs: #3 TypeScript 5 → 6 (major, needs testing), #4
-  `@types/node` 24 → 26 (doesn't match the Node 24 runtime; should be closed,
-  with Dependabot told to skip `@types/node` majors).
+- TypeScript 7 (the native compiler) is out; Dependabot will propose it.
+  Check that `eslint-config-next`'s TypeScript ESLint supports it first.
 
 ## Not covered by automated tests
 
