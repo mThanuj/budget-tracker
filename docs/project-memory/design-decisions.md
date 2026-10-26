@@ -361,9 +361,15 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   owner ruled out without a privacy decision); logs only (no alerting).
 - **Trade-offs / consequences:** no user ids are sent, so Sentry can't count
   affected users; the AI integrations are removed so prompts and answers can't
-  reach traces; click and typing breadcrumbs are dropped; no session replay.
-  With a DSN, the landing page's first-load JS grows 3.6 KB gzipped and the SDK
-  (52.6 KB gzipped) loads after the page starts. Free-plan quotas cap volume;
+  reach traces; click and typing breadcrumbs are dropped. Session replay
+  (added the same day at the owner's request, error-only, D-024's
+  replay rules in [docs/OBSERVABILITY.md](../OBSERVABILITY.md)): every text and
+  number masked, media blocked, no network details, and paused wherever the
+  address has a query string, because the recording keeps the address and
+  `/ask?q=` and `/transactions?q=` carry what people typed. Retention: Sentry's 30 days (the owner
+  checked the plan on 2026-10-26), stated on `/privacy`.
+  With a DSN, the landing page's first-load JS grows 4.3 KB gzipped and the SDK
+  with replay (88.3 KB gzipped) loads after the page starts. Free-plan quotas cap volume;
   when they run out, events are dropped, not billed. Rules for future code:
   `log.*` instead of `console.*` on the server, `area.what_happened` event names,
   no user-written text in log fields; sampling, retention, what is sent, or

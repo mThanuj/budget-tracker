@@ -235,8 +235,8 @@ async function AdminContent() {
 
         <Card title="Error monitoring">
           <p className="text-sm text-muted-foreground">
-            Checks that an error reaches Sentry and that its alert reaches you. Use it after changing the monitoring
-            setup; the steps are in docs/OBSERVABILITY.md.
+            Checks that an error reaches Sentry and that its alert reaches you; the browser one also sends a masked
+            replay of this page. Use them after changing the monitoring setup; the steps are in docs/OBSERVABILITY.md.
           </p>
           <TestErrorButton />
         </Card>

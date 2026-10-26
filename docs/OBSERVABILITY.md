@@ -68,8 +68,23 @@ is (no user id, email or IP address: the SDK collects no user details and
 tells Sentry not to infer IPs, the scrubber removes `user`, and the Sentry
 project is set not to store IPs); local variables; database query values; on-screen or typed text (click and input breadcrumbs are dropped);
 AI prompts and answers (Sentry's AI integrations are removed; AI calls appear
-only as HTTP timings); session replays (not installed; adding them needs a
-privacy decision first, see the AI-agent rules below).
+only as HTTP timings).
+
+**Session replay** (browser, the owner's decision of 2026-10-26, D-024): only
+for a visit in which an error happens. The browser keeps about the last minute
+of the page; if an error is reported, that minute is sent with the error, and
+recording continues until the visit has been idle for 15 minutes or reaches an
+hour (the SDK's defaults). Ordinary visits send nothing. A replay shows the
+page's layout, scrolling, clicks and page changes; every piece of text and
+every number is shown as asterisks, typing isn't recorded, images and video
+are blocked, and labels, titles and link addresses are masked
+(`REPLAY_OPTIONS`). No request or response details. Replay's own click,
+navigation and network records are scrubbed (`scrubRecordingEvent`,
+`scrubReplayEvent`). The recording keeps the page's address in a part nothing
+can scrub, and some addresses carry what someone typed (`/ask?q=…`,
+`/transactions?q=…`), so recording **pauses, dropping what it hasn't sent,
+wherever the address has a query string** (`src/instrumentation-client.ts`):
+errors on those pages come without a replay.
 
 How it's enforced, in two layers (`src/lib/monitoring.ts`):
 
@@ -99,16 +114,20 @@ The privacy policy (`/privacy`) says this in plain words when monitoring is on.
 - **Sampling** (`src/config/monitoring.ts`): every error; 20% of server
   requests and 10% of browser page loads and navigations are traced.
 - **Sentry plan:** the free plan has monthly quotas for errors and spans, and
-  keeps data for a limited time (30 days for errors at the time of writing,
-  **unverified**; check sentry.io/pricing). When a quota runs out, Sentry drops
+  keeps data for 30 days (errors, traces and replays; the owner checked the
+  plan on 2026-10-26, and the privacy page says so: update it if the plan
+  changes). When a quota runs out, Sentry drops
   new events until the month resets; the free plan never charges. If you ever
   upgrade, keep the pay-as-you-go budget at 0 unless you mean to spend.
   Sentry's spike protection is on by default.
 - **Vercel logs:** the Hobby plan keeps runtime logs only briefly (check Vercel's
   limits page), so Sentry is the lasting record of errors.
 - **Page weight** (measured 2026-10-26, `pnpm build` with a placeholder DSN):
-  the landing page's first-load JavaScript grows by 3.6 KB gzipped (222.4 →
-  226.0 KB); the SDK itself (52.6 KB gzipped) loads after the page has started.
+  the landing page's first-load JavaScript grows by 4.3 KB gzipped (222.4 →
+  226.7 KB); the SDK with replay (88.3 KB gzipped, of which replay is about 36)
+  loads after the page has started.
+- **Replays:** the free plan includes a small monthly number (check Sentry →
+  Stats); with error-only sampling, each one is a visit that had an error.
   Without a DSN, nothing changes.
 - **Neon:** every readiness check runs a query and so wakes the database. Check
   `/api/health` at most hourly; the frequent check is `/api/health/live`, which
@@ -169,7 +188,11 @@ the live site. Write the date in [known-issues.md](project-memory/known-issues.m
 7. Browser: open the site with the developer tools open. No CSP errors in the
    console; on about one page load in ten, a request to Sentry's ingest host
    answers 200.
-8. After some traffic, Sentry → Insights → Backend shows page and action timings.
+8. Replay: on `/admin`, wait a few seconds, then press **Send a test browser
+   error**. The issue "Test browser error from the admin page (safe to ignore)"
+   gets a Replay tab. Play it and check that every word and number is
+   asterisks, images are grey boxes, and the URL list has no query strings.
+9. After some traffic, Sentry → Insights → Backend shows page and action timings.
 
 ## Alerts
 
@@ -340,14 +363,20 @@ commit while doing this.
   `x-request-id` to page requests only, so API routes there have no request id,
   and source maps aren't uploaded from the Docker build (stack traces point at
   built code).
-- **Verified so far** (2026-10-26, locally): what the server SDK would send for
+- **Verified on the live site** (2026-10-26): a handled test error reached
+  Sentry with no IP address, user, cookies or headers; its stack trace named
+  the source file (source maps uploaded); Sentry's default high-priority alert
+  emailed the owner. A1 hasn't been created separately; the default alert
+  covers new issues for now.
+- **Verified locally** (2026-10-26): what the server SDK would send for
   an unexpected error, a handled failure and trace spans, and the data
   collection settings it resolved (`tests/unit/monitoring.test.ts`; the browser
   SDK shares the options and scrubbers but isn't run in a test); no
   Sentry code in the browser without a DSN, and the bundle sizes above; no source
-  maps in the browser files with a DSN; `pnpm check:bundle` clean. **Not yet
-  verified:** delivery to a real Sentry project, alert emails, the cron
-  monitor, source map upload, the uptime monitors. See
+  maps in the browser files with a DSN; `pnpm check:bundle` clean; the replay
+  options, scrubbers and pause rule (unit tests). **Not yet verified:** the cron
+  monitor, the uptime monitors (not set up), a browser error and its replay on
+  the live site, unexpected-error reporting from a real failure. See
   [Checking that it works](#checking-that-it-works).
 
 ## Rules for changing monitoring (people and agents)
@@ -358,9 +387,11 @@ commit while doing this.
 - Sampling rates, retention, the cron monitor's settings and the list of what
   is sent are policy (`src/config/monitoring.ts`, this file, D-024): change them
   only with the owner's approval, and update D-024 and the privacy page.
-- No session replay, user feedback widgets, user ids or analytics without an
-  approved privacy decision (what is recorded, retention, consent) and an
-  updated privacy policy.
+- Session replay stays error-only and fully masked, pauses on addresses with a
+  query string, and records no network details. Sampling ordinary sessions,
+  unmasking anything, or recording requests needs the owner's approval, an
+  update to D-024 and to the privacy policy. No user feedback widgets, user
+  ids or analytics without the same.
 - New server code logs with `log.*` and an `area.what_happened` event; add new
   events to the table above. Unexpected errors aren't caught to be logged:
   let them reach `onRequestError`.

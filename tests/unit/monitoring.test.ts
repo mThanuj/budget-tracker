@@ -7,9 +7,14 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MONITORING } from "@/config/monitoring";
 import {
   baseOptions,
+  browserOptions,
   DATA_COLLECTION,
+  REPLAY_OPTIONS,
+  replayAllowedAt,
   scrubBreadcrumb,
   scrubEvent,
+  scrubRecordingEvent,
+  scrubReplayEvent,
   scrubSpan,
   withoutAiIntegrations,
 } from "@/lib/monitoring";
@@ -156,6 +161,80 @@ describe("scrubEvent", () => {
       "Console",
       "Mysql2",
     ]);
+  });
+});
+
+describe("session replay (browser)", () => {
+  it("records only visits with an error, with everything on screen masked and no network details", () => {
+    expect(MONITORING.replay).toEqual({ sessionSampleRate: 0, onErrorSampleRate: 1 });
+    expect(REPLAY_OPTIONS).toMatchObject({
+      maskAllText: true,
+      maskAllInputs: true,
+      blockAllMedia: true,
+      networkDetailAllowUrls: [],
+      networkCaptureBodies: false,
+    });
+    expect(REPLAY_OPTIONS.maskAttributes).toEqual(expect.arrayContaining(["aria-label", "title", "href", "alt"]));
+    const replay = vi.fn((options: unknown) => ({ name: "Replay", options }));
+    const options = browserOptions(replay as never);
+    expect(options).toMatchObject({ replaysSessionSampleRate: 0, replaysOnErrorSampleRate: 1 });
+    expect(replay).toHaveBeenCalledWith(REPLAY_OPTIONS);
+  });
+
+  it("pauses wherever the address has a query string (it can carry a question or a search)", () => {
+    expect(replayAllowedAt("")).toBe(true);
+    expect(replayAllowedAt("?q=how%20much")).toBe(false);
+    expect(replayAllowedAt("?month=2026-10")).toBe(false);
+  });
+
+  it("takes on-screen words out of replay's click records, and query strings out of its URLs", () => {
+    const click = scrubRecordingEvent({
+      type: 5,
+      timestamp: 1,
+      data: {
+        tag: "breadcrumb",
+        payload: {
+          timestamp: 1,
+          type: "default",
+          category: "ui.click",
+          message: 'button[aria-label="Delete Chai with Ravi"]',
+          data: {
+            nodeId: 3,
+            node: {
+              id: 3,
+              tagName: "button",
+              textContent: "****",
+              attributes: { "aria-label": "Delete Chai with Ravi" },
+            },
+          },
+        },
+      },
+    });
+    const navigation = scrubRecordingEvent({
+      type: 5,
+      timestamp: 1,
+      data: {
+        tag: "performanceSpan",
+        payload: {
+          op: "navigation.push",
+          description: "https://clearpaisa.app/ask?q=how%20much",
+          startTimestamp: 1,
+          endTimestamp: 1,
+          data: { previous: "https://clearpaisa.app/transactions?q=Chai%20with%20Ravi" },
+        },
+      },
+    });
+    const replayEvent = scrubReplayEvent({
+      type: "replay_event",
+      urls: ["https://clearpaisa.app/ask?q=how%20much"],
+      request: { url: "https://clearpaisa.app/ask?q=how%20much", headers: { "User-Agent": "x" } },
+      user: { ip_address: "203.0.113.7" },
+    } as Parameters<typeof scrubReplayEvent>[0]);
+    const all = JSON.stringify([click, navigation, replayEvent]);
+    expect(all).not.toMatch(SECRET_BITS);
+    expect(all).not.toMatch(/Chai%20with%20Ravi|Delete Chai/);
+    expect(all).toContain("/ask?[redacted]");
+    expect(click.data.payload).toMatchObject({ category: "ui.click", data: { node: { tagName: "button" } } });
   });
 });
 

@@ -99,6 +99,18 @@ has more. Add new ones under the right heading.
   root span's name, outside both. Found by review on 2026-10-26, before
   monitoring was ever switched on; `baseOptions` now `satisfies` the SDK's
   option type so a dropped option fails the type check.
+- **Session replay** (`@sentry/replay` 11.9): the recording library stores
+  `window.location.href`, query string included, in every full snapshot, and
+  `beforeAddRecordingEvent` only sees Replay's own events, not the recording
+  library's. Hence the pause on addresses with a query string:
+  `getReplay().stop({ flush: false })` drops the unsent buffer, and
+  `startBuffering()` resumes. Navigation breadcrumbs fire just before
+  `pushState` changes the address, so the resume waits a tick. Replay's click
+  records name the element with a selector that includes `aria-label` and
+  `title`; `scrubRecordingEvent` removes it. It masks `title`, `placeholder`
+  and `aria-label` attributes by default; `REPLAY_OPTIONS` adds `href`, `alt`
+  and `value`. The replay summary event (`urls`) doesn't pass `beforeSend`:
+  an event processor scrubs it.
 - `withSentryConfig` is imported from `@sentry/nextjs/config`, not the package
   root. `next.config.ts` applies it only when a DSN is set at build time.
 - A dynamic `import("@sentry/nextjs")` in the browser pulls in the whole SDK

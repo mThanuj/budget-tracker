@@ -8,7 +8,7 @@
 // displayed text (entry descriptions, AI questions), AI prompts or answers.
 // Two layers: DATA_COLLECTION stops the SDK collecting it, and the scrubbers
 // remove anything that gets through.
-import type { Breadcrumb, ErrorEvent, init } from "@sentry/nextjs";
+import type { Breadcrumb, ErrorEvent, Event, init, replayIntegration } from "@sentry/nextjs";
 import { MONITORING } from "@/config/monitoring";
 import { redact, scrubText } from "./redact";
 
@@ -16,6 +16,8 @@ import { redact, scrubText } from "./redact";
 type InitOptions = NonNullable<Parameters<typeof init>[0]>;
 type StreamedSpan = Parameters<NonNullable<InitOptions["beforeSendSpan"]>>[0];
 type Client = ReturnType<typeof init>;
+type ReplayOptions = NonNullable<Parameters<typeof replayIntegration>[0]>;
+type RecordingEvent = Parameters<NonNullable<ReplayOptions["beforeAddRecordingEvent"]>>[0];
 
 /**
  * What the SDK may collect in the first place. Its defaults collect everything
@@ -124,4 +126,75 @@ export function baseOptions(runtime: "server" | "edge" | "browser") {
     beforeSendSpan: (span: StreamedSpan) => scrubSpan(span),
     beforeBreadcrumb: (breadcrumb: Breadcrumb) => scrubBreadcrumb(breadcrumb),
   } satisfies InitOptions; // an option the SDK doesn't know is a type error, not silently ignored
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * Session replay, browser only. Everything on screen is masked: text and
+ * numbers become asterisks, typing isn't recorded, images and video are
+ * blocked, and the attributes that can carry words or a search (labels,
+ * titles, link addresses) are masked too. No request or response details.
+ */
+export const REPLAY_OPTIONS = {
+  maskAllText: true,
+  maskAllInputs: true,
+  blockAllMedia: true,
+  maskAttributes: ["title", "placeholder", "aria-label", "alt", "href", "value"],
+  networkDetailAllowUrls: [],
+  networkCaptureBodies: false,
+  beforeAddRecordingEvent: (event: RecordingEvent) => scrubRecordingEvent(event),
+} satisfies ReplayOptions;
+
+/**
+ * Replay's own records next to the screen recording: clicks and key presses
+ * (whose element selector can name what's on screen), navigation and network
+ * timings (whose URLs can carry a search).
+ */
+export function scrubRecordingEvent(event: RecordingEvent): RecordingEvent {
+  const payload: unknown = event.data.payload;
+  if (!isRecord(payload)) return event;
+  if (event.data.tag === "breadcrumb") {
+    if (typeof payload.category === "string" && payload.category.startsWith("ui.")) {
+      payload.message = "[redacted]";
+      if (isRecord(payload.data) && isRecord(payload.data.node)) payload.data.node.attributes = {};
+    } else {
+      if (typeof payload.message === "string") payload.message = scrubText(payload.message);
+      if (isRecord(payload.data)) payload.data = redact(payload.data);
+    }
+  }
+  if (event.data.tag === "performanceSpan") {
+    if (typeof payload.description === "string") payload.description = scrubText(payload.description);
+    if (isRecord(payload.data) && typeof payload.data.previous === "string")
+      payload.data.previous = scrubText(payload.data.previous);
+  }
+  return event;
+}
+
+/** A replay's summary event lists the addresses visited: without query strings, and no user. */
+export function scrubReplayEvent<E extends Event>(event: E): E {
+  if (event.type !== "replay_event") return event;
+  if ("urls" in event && Array.isArray(event.urls))
+    event.urls = event.urls.map((url: unknown) => (typeof url === "string" ? scrubText(url) : url));
+  if (event.request) event.request = { url: event.request.url ? scrubText(event.request.url) : undefined };
+  delete event.user;
+  return event;
+}
+
+/**
+ * Whether replay may record at this address. The recording keeps the page's
+ * address, query string included, in a part no hook can change, and some
+ * addresses carry what someone typed (`/ask?q=…`, `/transactions?q=…`), so
+ * recording pauses wherever there's a query string.
+ */
+export const replayAllowedAt = (search: string) => search === "" || search === "?";
+
+/** The browser's options: the shared ones, plus replays of the moments before an error. */
+export function browserOptions(replay: typeof replayIntegration) {
+  return {
+    ...baseOptions("browser"),
+    replaysSessionSampleRate: MONITORING.replay.sessionSampleRate,
+    replaysOnErrorSampleRate: MONITORING.replay.onErrorSampleRate,
+    integrations: [replay(REPLAY_OPTIONS)],
+  } satisfies InitOptions;
 }

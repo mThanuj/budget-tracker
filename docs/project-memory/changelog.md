@@ -6,6 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-10-26
 
+- Sentry switched on in production and checked end to end (test error, source
+  maps, alert email). Fixes: handled errors weren't reported (the logger's
+  reporter wasn't shared across bundles; `40ef54d`). Added error-only session
+  replay, fully masked and paused on addresses with a query string (D-024).
 - Observability (D-024, [docs/OBSERVABILITY.md](../OBSERVABILITY.md)): a
   structured, redacted logger replaces `console.*` on the server; request ids;
   `/api/health/live` beside the readiness check (now with a 3 s timeout; the

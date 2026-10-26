@@ -44,8 +44,8 @@ export default process.env.NEXT_PUBLIC_SENTRY_DSN?.trim()
       bundleSizeOptimizations: {
         excludeDebugStatements: true,
         excludeReplayIframe: true,
-        excludeReplayShadowDom: true,
-        excludeReplayWorker: true,
+        excludeReplayShadowDom: true, // replay is error-only and never records iframes or shadow DOM
+        // The replay worker (compression) stays.
       },
     })
   : nextConfig;

@@ -98,8 +98,10 @@ async function PrivacyBody() {
         {monitoring && (
           <li>
             Sentry, which records technical details when something goes wrong or a page is slow (the error, the page,
-            your browser type), so we can fix it. It never receives your entries, questions, email address or IP
-            address;
+            your browser type), so we can fix it. When an error happens in your browser, it also gets a short replay of
+            the page around it: the layout and your clicks, with every word, number, typed character and picture hidden.
+            It never receives your entries, questions, email address or IP address, and deletes all of this after 30
+            days;
           </li>
         )}
         <li>the AI providers above, only while AI features are on.</li>

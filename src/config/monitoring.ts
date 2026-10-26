@@ -9,6 +9,12 @@ export const MONITORING = {
   serverTracesSampleRate: 0.2,
   /** Share of page loads and navigations traced in the browser (includes Web Vitals). */
   clientTracesSampleRate: 0.1,
+  /**
+   * Session replays (browser, everything masked): none for ordinary visits;
+   * every visit where an error happens keeps the minute before it, and what
+   * follows. Owner's choice, 2026-10-26 (D-024).
+   */
+  replay: { sessionSampleRate: 0, onErrorSampleRate: 1 },
   /** The recurring-entries job, checked in to Sentry so a missed or failed run raises an alert. */
   recurringJob: {
     slug: "recurring-entries",
