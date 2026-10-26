@@ -3,8 +3,9 @@ import type { Reporter, SerializedError, TestModule, TestRunEndReason } from "vi
 
 // Writes a clean copy of the results to a log file, alongside Vitest's normal
 // live output in the terminal (reporters: ["default", this]). A full run
-// (pnpm test) writes test-unit.log; a run of one folder writes its own, e.g.
-// pnpm test:integration → test-integration.log, so it never overwrites the full run's.
+// (pnpm test) writes test-unit.log; a run of one folder, or of files in one
+// folder, writes that folder's log (pnpm test:integration → test-integration.log).
+// tests/unit runs share test-unit.log with the full run.
 
 const folders = new Set(
   process.argv

@@ -6,7 +6,7 @@ import { dismissAlert } from "@/server/services/alerts";
 import { createCategory } from "@/server/services/categories";
 import { UserError } from "@/server/services/errors";
 import { addContribution, createGoal } from "@/server/services/goals";
-import { createRule } from "@/server/services/recurring";
+import { createRule, dismissSubscriptionSuggestion } from "@/server/services/recurring";
 import { applySetup } from "@/server/services/setup";
 import { createTransaction } from "@/server/services/transactions";
 import { archiveWallet, createWallet, listWallets } from "@/server/services/wallets";
@@ -130,6 +130,12 @@ describe("per-account limits", () => {
     await dismissAlert(t.db, u.id, key(80));
     await dismissAlert(t.db, u.id, key(100));
     await refused(dismissAlert(t.db, u.id, key(80)));
+    // Dismissed subscription suggestions are stored the same way and share the limit.
+    await refused(dismissSubscriptionSuggestion(t.db, u.id, "netflix"));
+    const other = await newUser();
+    await dismissSubscriptionSuggestion(t.db, other.id, "netflix");
+    await dismissSubscriptionSuggestion(t.db, other.id, "spotify");
+    await refused(dismissSubscriptionSuggestion(t.db, other.id, "gym"));
   });
 
   it("checks the setup flow's new wallets too, and saves nothing when over", async () => {

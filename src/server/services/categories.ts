@@ -65,12 +65,18 @@ export async function updateCategory(db: Db, userId: string, categoryId: string,
 
 export async function archiveCategory(db: Db, userId: string, categoryId: string) {
   await getOwnedCategory(db, userId, categoryId);
-  await db.update(category).set({ archivedAt: new Date() }).where(eq(category.id, categoryId));
+  await db
+    .update(category)
+    .set({ archivedAt: new Date() })
+    .where(and(eq(category.id, categoryId), eq(category.userId, userId)));
 }
 
 export async function restoreCategory(db: Db, userId: string, categoryId: string) {
   await getOwnedCategory(db, userId, categoryId);
-  await db.update(category).set({ archivedAt: null }).where(eq(category.id, categoryId));
+  await db
+    .update(category)
+    .set({ archivedAt: null })
+    .where(and(eq(category.id, categoryId), eq(category.userId, userId)));
 }
 
 /** Only unused categories can be deleted; used ones are archived instead. */

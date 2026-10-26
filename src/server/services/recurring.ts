@@ -7,7 +7,7 @@ import type { RecurringInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { alertDismissal, category, recurringRule, transaction, user, wallet } from "../db/schema";
 import { UserError } from "./errors";
-import { assertRoomFor } from "./limits";
+import { assertDailyRoomFor, assertRoomFor } from "./limits";
 import { assertEntryReferences } from "./transactions";
 
 type Rule = typeof recurringRule.$inferSelect;
@@ -108,7 +108,10 @@ export async function updateRule(db: Db, userId: string, id: string, input: Recu
 
 export async function pauseRule(db: Db, userId: string, id: string) {
   await getOwnedRule(db, userId, id);
-  await db.update(recurringRule).set({ active: false }).where(eq(recurringRule.id, id));
+  await db
+    .update(recurringRule)
+    .set({ active: false })
+    .where(and(eq(recurringRule.id, id), eq(recurringRule.userId, userId)));
 }
 
 /** Resuming skips whatever came due while paused. */
@@ -117,7 +120,7 @@ export async function resumeRule(db: Db, userId: string, id: string, today: ISOD
   await db
     .update(recurringRule)
     .set({ active: true, nextDueOn: occurrenceOnOrAfter(scheduleOf(r), today) })
-    .where(eq(recurringRule.id, id));
+    .where(and(eq(recurringRule.id, id), eq(recurringRule.userId, userId)));
 }
 
 /** Past entries stay; they just stop being linked to the rule. */
@@ -188,7 +191,7 @@ export async function recordDueForUser(db: Db, userId: string, today: ISODate) {
   return count;
 }
 
-/** The hourly job: every user's due rules, using each user's own "today". */
+/** The scheduled job: every user's due rules, using each user's own "today". */
 export async function recordDueForEveryone(db: Db, now: Date = new Date()) {
   // Anywhere on Earth is at most one day ahead of UTC.
   const horizon = addDays(now.toISOString().slice(0, 10), 1);
@@ -358,6 +361,8 @@ export async function trackSubscription(db: Db, userId: string, merchantKey: str
 }
 
 export async function dismissSubscriptionSuggestion(db: Db, userId: string, merchantKey: string) {
+  // Stored as an alert dismissal, so it shares that daily limit.
+  await assertDailyRoomFor(db, userId, "alertDismissalsPerDay");
   await db
     .insert(alertDismissal)
     .values({ userId, alertKey: SUGGESTION_KEY(merchantKey) })

@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "../../../src/server/db/schema";
 import { seedNewUser } from "../../../src/server/db/seed-defaults";
+import { deleteAccountData } from "../../../src/server/services/account";
 
 process.loadEnvFile(".env.local");
 
@@ -61,8 +62,10 @@ async function signIn(page: Page, { onboarded, ai }: { onboarded: boolean; ai: b
   return user.id;
 }
 
+// The app's own account deletion: the user's rows cascade, and their AI usage
+// counters (keyed by "user:<id>", no foreign key) go too.
 async function cleanup(userId: string) {
-  await db.delete(schema.user).where(eq(schema.user.id, userId));
+  await deleteAccountData(db, userId);
 }
 
 // The fixture callback is named `provide` (not `use`) so the React hooks lint rule leaves it alone.

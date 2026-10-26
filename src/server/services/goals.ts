@@ -72,12 +72,18 @@ export async function updateGoal(db: Db, userId: string, id: string, input: Goal
 
 export async function archiveGoal(db: Db, userId: string, id: string) {
   await getOwnedGoal(db, userId, id);
-  await db.update(goal).set({ archivedAt: new Date() }).where(eq(goal.id, id));
+  await db
+    .update(goal)
+    .set({ archivedAt: new Date() })
+    .where(and(eq(goal.id, id), eq(goal.userId, userId)));
 }
 
 export async function restoreGoal(db: Db, userId: string, id: string) {
   await getOwnedGoal(db, userId, id);
-  await db.update(goal).set({ archivedAt: null }).where(eq(goal.id, id));
+  await db
+    .update(goal)
+    .set({ archivedAt: null })
+    .where(and(eq(goal.id, id), eq(goal.userId, userId)));
 }
 
 /** Deleting a goal releases everything set aside for it. */

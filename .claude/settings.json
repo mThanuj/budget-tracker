@@ -19,7 +19,14 @@
       "Bash(pnpm test:e2e:live:*)",
       "Bash(pnpm ai:eval:*)",
       "Bash(pnpm ai:chat-eval:*)",
-      "Bash(pnpm ai:insights-eval:*)"
+      "Bash(pnpm ai:insights-eval:*)",
+      "Bash(pnpm exec drizzle-kit migrate:*)",
+      "Bash(pnpm exec drizzle-kit push:*)",
+      "Bash(npx vercel:*)",
+      "Bash(pnpm dlx vercel:*)",
+      "Bash(pnpm exec vercel:*)",
+      "Bash(LIVE_AI=1:*)",
+      "Bash(node --import tsx scripts/ai-:*)"
     ]
   }
 }

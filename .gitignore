@@ -51,3 +51,6 @@ next-env.d.ts
 
 # Test run logs (written by tests/support/vitest-log-reporter.ts and tests/e2e/support/ordered-list.ts)
 test-*.log
+
+# Git worktrees that coding agents create for isolated work
+/.claude/worktrees/

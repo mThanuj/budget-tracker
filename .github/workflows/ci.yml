@@ -50,6 +50,10 @@ jobs:
         run: pnpm test
       - name: Production build
         run: pnpm build
+      # Known high or critical advisories in any dependency fail the run
+      # (moderate ones are reviewed by hand; see docs/project-memory/known-issues.md).
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
       - name: Keep the test log
         if: failure()
         uses: actions/upload-artifact@v7

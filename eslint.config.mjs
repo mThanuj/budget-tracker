@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "blob-report/**",
     "coverage/**",
+    // Agents' isolated git worktrees: full copies of the repo, linted in their own checkout.
+    ".claude/worktrees/**",
   ]),
 ]);
 

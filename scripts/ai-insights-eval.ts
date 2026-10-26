@@ -97,8 +97,9 @@ async function main() {
   const chain = providerChain();
   if (chain.length === 0) return console.log("No AI providers configured. Add keys in .env.local.");
   const client = new PGlite();
-  const db = drizzle({ client, schema, casing: "snake_case" }) as unknown as Db;
-  await migrate(db as never, { migrationsFolder: "./drizzle" });
+  const pglite = drizzle({ client, schema, casing: "snake_case" });
+  await migrate(pglite, { migrationsFolder: "./drizzle" });
+  const db: Db = pglite;
   const today = todayInTz("Asia/Kolkata");
   const [u] = await db.insert(schema.user).values({ id: "eval", name: "Eval", email: "eval@example.test" }).returning();
   await seed(db, u.id, today);

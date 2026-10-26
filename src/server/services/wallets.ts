@@ -98,7 +98,10 @@ const usesWallet = (walletId: string) =>
  */
 export async function archiveWallet(db: Db, userId: string, walletId: string) {
   await getOwnedWallet(db, userId, walletId);
-  await db.update(wallet).set({ archivedAt: new Date() }).where(eq(wallet.id, walletId));
+  await db
+    .update(wallet)
+    .set({ archivedAt: new Date() })
+    .where(and(eq(wallet.id, walletId), eq(wallet.userId, userId)));
   await db
     .update(recurringRule)
     .set({ active: false })
@@ -111,7 +114,10 @@ export async function archiveWallet(db: Db, userId: string, walletId: string) {
 
 export async function restoreWallet(db: Db, userId: string, walletId: string) {
   await getOwnedWallet(db, userId, walletId);
-  await db.update(wallet).set({ archivedAt: null }).where(eq(wallet.id, walletId));
+  await db
+    .update(wallet)
+    .set({ archivedAt: null })
+    .where(and(eq(wallet.id, walletId), eq(wallet.userId, userId)));
 }
 
 /** Only wallets without entries can be deleted; others are archived instead. */

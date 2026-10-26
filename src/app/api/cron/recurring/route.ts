@@ -9,7 +9,7 @@ function authorized(header: string | null, secret: string) {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-/** Hourly job: records automatic recurring entries that came due for every user. */
+/** The scheduled job (daily on Vercel, hourly on an own server): records automatic recurring entries that came due for every user. */
 export async function GET(request: Request) {
   const secret = env().CRON_SECRET;
   if (!secret) return Response.json({ error: "CRON_SECRET is not configured." }, { status: 503 });
