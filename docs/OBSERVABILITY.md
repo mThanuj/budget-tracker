@@ -366,8 +366,9 @@ commit while doing this.
 - **Verified on the live site** (2026-10-26): a handled test error reached
   Sentry with no IP address, user, cookies or headers; its stack trace named
   the source file (source maps uploaded); Sentry's default high-priority alert
-  emailed the owner. A1 hasn't been created separately; the default alert
-  covers new issues for now.
+  emailed the owner; a browser test error came with a replay in which every
+  word, number and image was masked. A1 hasn't been created separately; the
+  default alert covers new issues for now.
 - **Verified locally** (2026-10-26): what the server SDK would send for
   an unexpected error, a handled failure and trace spans, and the data
   collection settings it resolved (`tests/unit/monitoring.test.ts`; the browser
@@ -375,8 +376,9 @@ commit while doing this.
   Sentry code in the browser without a DSN, and the bundle sizes above; no source
   maps in the browser files with a DSN; `pnpm check:bundle` clean; the replay
   options, scrubbers and pause rule (unit tests). **Not yet verified:** the cron
-  monitor, the uptime monitors (not set up), a browser error and its replay on
-  the live site, unexpected-error reporting from a real failure. See
+  monitor, the uptime monitors (not set up), the replay pause on addresses with
+  a query string (on the live site), unexpected-error reporting from a real
+  failure. See
   [Checking that it works](#checking-that-it-works).
 
 ## Rules for changing monitoring (people and agents)

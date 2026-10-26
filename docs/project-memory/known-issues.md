@@ -73,11 +73,12 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 - **Monitoring is on; parts are still unverified** (2026-10-26). Verified on
   the live site: a test error reached Sentry scrubbed, source maps uploaded,
-  and Sentry's default alert emailed the owner. Still to do
+  Sentry's default alert emailed the owner, and a browser test error's replay
+  was fully masked. Still to do
   ([docs/OBSERVABILITY.md](../OBSERVABILITY.md#checking-that-it-works)): the
   daily job's cron monitor after its first run, uptime monitors on
-  `/api/health/live` and `/api/health` (none yet), a browser test error with
-  its replay, and alerts A1–A5 if the default alert proves too quiet. Vercel
+  `/api/health/live` and `/api/health` (none yet), the replay pause on an
+  address with a query string, and alerts A1–A5 if the default alert proves too quiet. Vercel
   Hobby keeps runtime logs only briefly.
 - **A backup has never been restored.** The nightly encrypted backups (D-011)
   run, but nobody has tried restoring one, so they're unproven. Do it once
