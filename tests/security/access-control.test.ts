@@ -41,7 +41,7 @@ vi.mock("@/server/billing/razorpay", async (importOriginal) => ({
 }));
 
 const { db } = await import("@/server/db");
-const { createTestUser } = await import("../db/helpers");
+const { createTestUser, freeCategoryColor } = await import("../db/helpers");
 const { seedNewUser } = await import("@/server/db/seed-defaults");
 const { addDays, addMonths, monthOf, todayInTz } = await import("@/lib/dates");
 const { formatMoney } = await import("@/lib/money");
@@ -211,7 +211,8 @@ describe("no action touches another user's records", async () => {
     ok(
       await saveWallet(undefined, form({ name: "Bob's bank", kind: "bank", color: "#3f9b74", openingBalance: "1000" })),
     );
-    ok(await saveCategory(undefined, form({ name: "Bob's pets", kind: "expense", icon: "tag", color: "#3f9b74" })));
+    const petsColor = await freeCategoryColor(db, bobId, "expense");
+    ok(await saveCategory(undefined, form({ name: "Bob's pets", kind: "expense", icon: "tag", color: petsColor })));
     ok(await saveGoal(undefined, form({ name: "Bob's bike", target: "5000", icon: "tag", color: "#3f9b74" })));
     const [bobBank] = await db.select().from(schema.wallet).where(eq(schema.wallet.name, "Bob's bank"));
     const [bobPets] = await db.select().from(schema.category).where(eq(schema.category.name, "Bob's pets"));

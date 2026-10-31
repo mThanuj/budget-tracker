@@ -51,6 +51,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-025 | Plain git hooks; branch names checked in CI                              | accepted                               |
 | D-026 | Per-user action rate limit and Better Auth's limiter, both in Postgres   | accepted                               |
 | D-027 | Nonce-based CSP; every page renders per request                          | accepted                               |
+| D-028 | Category colors look different from each other, enforced by the server   | accepted                               |
 
 ### D-001 Product scope
 
@@ -482,3 +483,39 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
   `src/app/layout.tsx`, `src/app/global-error.tsx`, `playwright.config.ts`.
   **References:** `tests/security/headers.test.ts`, `tests/e2e/security.spec.ts`,
   `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`.
+
+### D-028 Category colors look different from each other, enforced by the server
+
+- **Status:** accepted · **Date:** 2026-10-31
+- **Context:** the owner wanted each new category to get a random color that's
+  unique to the eye, not just a different hex code, on new and existing
+  accounts. Before, "Add category" always started on green, and the 25
+  defaults shared 12 swatches (some pairs nearly identical: violet and indigo
+  ΔE 5.6; slate and pink ΔE 0.4 for protanopia).
+- **Decision:** a category's color must be at least ΔE 10 (OKLab ×100, the
+  dataviz validator's measure) from every other active category of the same
+  kind; once no color is that far from all of them, it must be as distinct as
+  the best still free (less 1). Colors come from a muted band (OKLCH L
+  0.48–0.67, C 0.10–0.20, ≥ 3:1 on both backgrounds). `src/lib/category-colors.ts`
+  computes it for the form (10 random suggestions, Shuffle) and the server
+  (`createCategory`, `updateCategory`, `restoreCategory`) enforces it. Keeping a
+  category's current color on edit is allowed. New accounts' defaults were
+  re-picked to be distinct per kind, near their old hues; existing accounts are
+  brought under the rule once by `pnpm categories:recolor` (colors only,
+  nothing deleted).
+- **Rationale:** ΔE 10 is clearly different side by side; per kind because
+  income and spending never share a list or chart. **Alternatives:** ΔE 15,
+  the chart standard (only ~9 colors per kind fit); ΔE 8 (more room, subtler);
+  unique across both kinds (the 25 defaults alone don't fit); chroma capped at
+  0.16 (calmer, but the 18 spending defaults didn't fit; the owner chose 0.20
+  after a side-by-side preview).
+- **Trade-offs / consequences:** room is small: the 18 spending defaults use
+  almost all of it, so most new spending categories get "the best still free"
+  (about ΔE 7–9 from their nearest), and the form may show only one or two
+  suggestions. Not safe for colour blindness at this distance; identity never
+  relies on color alone (icon and name). Tests that create categories take a
+  color from `freeCategoryColor` (`tests/db/helpers.ts`).
+- **Affected:** `src/lib/category-colors.ts`, `src/lib/default-categories.ts`,
+  `src/server/services/categories.ts`, `src/components/categories/`,
+  `scripts/recolor-categories.ts`. **References:** `tests/unit/category-colors.test.ts`,
+  `tests/db/category-colors.test.ts`.

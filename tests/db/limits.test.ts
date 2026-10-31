@@ -11,7 +11,7 @@ import { countActionCall } from "@/server/services/limits";
 import { applySetup } from "@/server/services/setup";
 import { createTransaction } from "@/server/services/transactions";
 import { archiveWallet, createWallet, listWallets } from "@/server/services/wallets";
-import { createTestDb, createTestUser } from "./helpers";
+import { createTestDb, createTestUser, freeCategoryColor } from "./helpers";
 
 // Small limits so each can be reached quickly; the real ones are in src/config/limits.ts.
 vi.mock("@/config/limits", async () => {
@@ -82,8 +82,9 @@ describe("per-account limits", () => {
 
   it("caps categories, goals and recurring items", async () => {
     const u = await newUser();
-    await createCategory(t.db, u.id, { name: "Pets", kind: "expense", icon: "tag", color: "#4a7fc1" });
-    await refused(createCategory(t.db, u.id, { name: "Plants", kind: "expense", icon: "tag", color: "#4a7fc1" }));
+    const color = await freeCategoryColor(t.db, u.id, "expense");
+    await createCategory(t.db, u.id, { name: "Pets", kind: "expense", icon: "tag", color });
+    await refused(createCategory(t.db, u.id, { name: "Plants", kind: "expense", icon: "tag", color }));
 
     const goal = { target: 1_000_00, targetDate: null, icon: "tag", color: "#4a7fc1" } as const;
     await createGoal(t.db, u.id, { ...goal, name: "Bike" });

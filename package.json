@@ -29,6 +29,7 @@
     "ai:eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-eval.ts",
     "ai:chat-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-chat-eval.ts",
     "ai:insights-eval": "node --import tsx --env-file-if-exists=.env.local scripts/ai-insights-eval.ts",
+    "categories:recolor": "node --import tsx --env-file-if-exists=.env.local scripts/recolor-categories.ts",
     "check:bundle": "node scripts/check-client-bundle.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "check:branch": "node scripts/check-branch-name.mjs",
