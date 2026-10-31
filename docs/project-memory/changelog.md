@@ -6,6 +6,9 @@ when you merge something a future agent should know about.
 
 ## 2026-10-31
 
+- Existing accounts' category colors brought under D-028 by the owner with
+  `pnpm categories:recolor`: development 75 categories in 3 accounts,
+  production 53 in 2; a dry run afterwards reported 0 on both.
 - Category colors look different from each other (D-028): a new category starts
   with a random distinct color (Shuffle for more); the server refuses look-alikes
   per kind (ΔE 10, then the best still free); new defaults re-picked;

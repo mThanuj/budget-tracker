@@ -59,10 +59,6 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 ## Operations
 
-- **To do once, after D-028 deploys: recolor existing accounts' categories.**
-  `pnpm categories:recolor --dry-run`, then `pnpm categories:recolor`, first
-  on the development database, then on production with its URL set in the
-  shell (owner). Only colors change; nothing is deleted.
 - **Monitoring is on; parts are still unverified** (2026-10-26). Verified on
   the live site: a test error reached Sentry scrubbed, source maps uploaded,
   Sentry's default alert emailed the owner, a browser test error's replay was
