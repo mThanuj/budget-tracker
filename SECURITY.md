@@ -8,8 +8,9 @@ within 2 working days.
 
 ## Posture
 
-- **Auth**: Google sign-in only (no password to leak); email/password and
-  change-email are disabled. Sessions are httpOnly and `SameSite=lax`, and secure
+- **Auth**: Google sign-in only (no password to leak); email/password,
+  change-email and update-user are disabled, so the name and avatar are the ones
+  Google gave at sign-up. Sessions are httpOnly and `SameSite=lax`, and secure
   when the site is served over https (Better Auth defaults). The admin area requires a Google-verified
   email in `ADMIN_EMAILS` and otherwise returns 404.
 - **Access control**: every page and server action calls `requireUser()`.
@@ -73,10 +74,8 @@ within 2 working days.
   inline-script injection sink in the app. (`'unsafe-eval'` is added in
   development only, where React Fast Refresh requires it; production is strict.) To go nonce-based later, mint a nonce
   in `src/proxy.ts` and accept dynamic document rendering.
-- **Display name and avatar URL are the user's own to set.** Better Auth's
-  update-user endpoint accepts any name length and any image URL. Only that
-  user sees them (the CSP blocks images from other hosts), so they're not
-  validated.
 - **Denial-of-wallet on the shared free AI tier.** One user can consume a share
-  of the global daily free-chain budget. Bounded by the global cap and the
-  per-minute action limit (above); backup providers would reduce the blast radius.
+  of the global daily free-chain budget. Bounded by the per-user daily caps, the
+  global cap and the per-minute action limit (above). Many accounts together
+  could still use it up; backup provider keys would reduce the blast radius
+  (configuration only, docs/project-memory/roadmap.md).

@@ -18,6 +18,9 @@ export const auth = betterAuth({
   // per 10 s per path, 3 for sign-in), counted in the database so every
   // serverless instance shares them. See implementation-notes.md for the IP header.
   rateLimit: { storage: "database" },
+  // The app never changes a name or avatar (they come from Google), and this
+  // endpoint would let a user set any name length and any image URL.
+  disabledPaths: ["/update-user"],
   socialProviders: {
     google: {
       clientId: env().GOOGLE_CLIENT_ID,

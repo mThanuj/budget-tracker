@@ -6,6 +6,9 @@ when you merge something a future agent should know about.
 
 ## 2026-10-31
 
+- Better Auth's `update-user` endpoint is switched off (`disabledPaths`): the
+  app never used it, and it accepted any name length and image URL. The
+  deferred "display name and avatar unvalidated" item is closed.
 - Rate limiting (D-026, replacing D-018's deferral): every server action but
   four counts against 120 calls per minute per user (`action_rate`), and Better
   Auth's sign-in limits are counted in the database (`rate_limit`); migration

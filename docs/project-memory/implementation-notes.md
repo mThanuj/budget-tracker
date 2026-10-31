@@ -45,8 +45,9 @@ has more. Add new ones under the right heading.
 - It turns its origin and callback-URL checks off when `NODE_ENV=test` or `TEST`
   is set. `tests/security/auth.test.ts` switches to production behaviour before
   loading it; without that, CSRF tests pass for the wrong reason.
-- Its `update-user` endpoint lets users set any display name and image URL
-  (self-only, accepted: SECURITY.md). App fields are `input: false`.
+- Its `update-user` endpoint would let users set any display name and image
+  URL, so it's switched off (`disabledPaths`, which answers 404 before anything
+  else runs). App fields are also `input: false`, in case it's ever turned back on.
 - Its rate limiter is on only in production and counts in the database
   (`rate_limit`, D-026). It finds the caller's address in `x-forwarded-for` and
   uses it only when the header holds exactly one address (1.7.12,

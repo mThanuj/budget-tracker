@@ -21,9 +21,10 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 ## Security (deferred; details in SECURITY.md)
 
-- Shared free AI tier: one user can use a share of the global daily budget.
+- Shared free AI tier: many accounts together could use up the global daily
+  budget (one is held back by its daily caps and the per-minute limit). Next
+  step: backup provider keys, the owner's configuration ([roadmap.md](roadmap.md)).
 - CSP allows inline scripts (decision D-012).
-- Display name and avatar URL are unvalidated (self-only).
 - `.claude/settings.json` rules are prefix matches for Claude Code only: other
   forms of a command, and other agents, aren't covered.
 
