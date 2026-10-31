@@ -10,6 +10,8 @@ when you merge something a future agent should know about.
   alerts, subscription suggestions, setup, all billing actions) and the
   insight report's facts; every action must be on a reviewed list in
   `tests/security/access-control.test.ts`, so a new one fails until reviewed.
+- Live site's security headers checked from outside by the owner (`curl -sI`):
+  all six match the production values in `src/lib/security-headers.ts`.
 
 ## 2026-10-26
 

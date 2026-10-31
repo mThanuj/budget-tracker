@@ -75,8 +75,6 @@ below; keep this list in step when an item is done or a new one outranks it.
 - **A backup has never been restored.** The nightly encrypted backups (D-011)
   run, but nobody has tried restoring one, so they're unproven. Do it once
   with [docs/RESTORE.md](../RESTORE.md) into a throwaway Neon branch.
-- The live site's security headers haven't been checked from outside (agent sandboxes
-  get 403 from vercel.app): `curl -sI https://clearpaisa-seven.vercel.app | grep -i content-security`.
 - Fonts (Onest, Young Serif, Spline Sans Mono via Fontsource) swap in without
   preloading, so the first visit may shift layout. Not measured: check with
   PageSpeed Insights on the live site; if CLS > 0.1, switch to `next/font/local`
