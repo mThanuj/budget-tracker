@@ -10,7 +10,7 @@ import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export async function saveGoal(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const { id, ...fields } = formObject(formData);
     const input = goalSchema(userCurrency(user), userToday(user)).parse(fields);
     if (id) await updateGoal(db, user.id, idSchema.parse(id), input);
@@ -21,7 +21,7 @@ export async function saveGoal(_prev: ActionResult, formData: FormData): Promise
 
 export async function saveContribution(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const { goalId, ...fields } = formObject(formData);
     const input = contributionSchema(userCurrency(user), userToday(user)).parse(fields);
     await addContribution(db, user.id, idSchema.parse(goalId), input);
@@ -34,7 +34,7 @@ const OPS = { archive: archiveGoal, restore: restoreGoal, delete: deleteGoal } s
 
 export async function goalAction(op: GoalOp, id: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     // Own keys only: `in` would also accept inherited names like "toString".
     if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown goal operation: ${String(op)}`);
     await OPS[op](db, user.id, idSchema.parse(id));

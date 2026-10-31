@@ -77,9 +77,11 @@ Details and a feature-by-feature map: `docs/project-memory/architecture.md`.
 - `src/app/`: routes. Pages are Server Components; user-specific parts sit
   under `<Suspense>` and call `requireUser()` from `src/server/session.ts`.
 - `src/server/actions/`: server actions, the app's API. Each one calls
-  `requireUser()` first, parses input with Zod (shared schemas in
-  `src/lib/validation.ts`, small one-offs inline), calls a service, then
-  `refresh()`. Use `runAction()` for form-style results.
+  `requireUser()` first, then checks the per-user rate limit, parses input with
+  Zod (shared schemas in `src/lib/validation.ts`, small one-offs inline), calls
+  a service, then `refresh()`. Use `runAction(user.id, …)` for form-style
+  results (it checks the limit); other actions call `withinActionLimit` and
+  return their usual failure (D-026).
 - `src/server/services/`: database access and domain logic. Functions take
   `(db, userId, …)`, check that ids from the client belong to the user
   (`getOwned*`), and filter reads and writes by `userId`. Expected failures throw

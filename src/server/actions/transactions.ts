@@ -10,7 +10,7 @@ import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export async function saveTransaction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const { id, ...fields } = formObject(formData);
     const input = transactionSchema(userCurrency(user), userToday(user)).parse(fields);
     if (id) await updateTransaction(db, user.id, idSchema.parse(id), input);
@@ -21,7 +21,7 @@ export async function saveTransaction(_prev: ActionResult, formData: FormData): 
 
 export async function removeTransaction(id: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     await deleteTransaction(db, user.id, idSchema.parse(id));
     refresh();
   });

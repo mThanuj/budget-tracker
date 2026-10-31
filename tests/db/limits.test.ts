@@ -7,6 +7,7 @@ import { createCategory } from "@/server/services/categories";
 import { UserError } from "@/server/services/errors";
 import { addContribution, createGoal } from "@/server/services/goals";
 import { createRule, dismissSubscriptionSuggestion } from "@/server/services/recurring";
+import { countActionCall } from "@/server/services/limits";
 import { applySetup } from "@/server/services/setup";
 import { createTransaction } from "@/server/services/transactions";
 import { archiveWallet, createWallet, listWallets } from "@/server/services/wallets";
@@ -162,6 +163,42 @@ describe("per-account limits", () => {
     for (let i = 0; i < 3; i++) await createTransaction(t.db, full.id, entry(full.cash));
     const other = await newUser();
     await expect(createTransaction(t.db, other.id, entry(other.cash))).resolves.toMatchObject({ userId: other.id });
+  });
+});
+
+describe("server action calls per minute (countActionCall)", () => {
+  const at = (time: string) => new Date(`2026-10-25T${time}Z`);
+
+  it("counts each call in the same minute, and starts again in the next", async () => {
+    const u = await newUser();
+    expect(await countActionCall(t.db, u.id, at("10:00:00"))).toBe(1);
+    expect(await countActionCall(t.db, u.id, at("10:00:30"))).toBe(2);
+    expect(await countActionCall(t.db, u.id, at("10:00:59.999"))).toBe(3);
+    expect(await countActionCall(t.db, u.id, at("10:01:00"))).toBe(1);
+    expect(await countActionCall(t.db, u.id, at("10:07:15"))).toBe(1);
+  });
+
+  it("adds a call stamped a little earlier (a server clock behind) to the current minute", async () => {
+    const u = await newUser();
+    await countActionCall(t.db, u.id, at("10:01:05"));
+    expect(await countActionCall(t.db, u.id, at("10:00:58"))).toBe(2);
+    expect(await countActionCall(t.db, u.id, at("10:01:10"))).toBe(3);
+  });
+
+  it("counts calls made at the same moment exactly, one row per user, per user", async () => {
+    const u = await newUser();
+    const other = await newUser();
+    const counts = await Promise.all(Array.from({ length: 10 }, () => countActionCall(t.db, u.id, at("11:00:00"))));
+    expect(counts.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(await countActionCall(t.db, other.id, at("11:00:00"))).toBe(1);
+    expect(await t.db.$count(schema.actionRate, eq(schema.actionRate.userId, u.id))).toBe(1);
+  });
+
+  it("goes with the account", async () => {
+    const u = await newUser();
+    await countActionCall(t.db, u.id, at("12:00:00"));
+    await t.db.delete(schema.user).where(eq(schema.user.id, u.id));
+    expect(await t.db.$count(schema.actionRate, eq(schema.actionRate.userId, u.id))).toBe(0);
   });
 });
 

@@ -11,7 +11,7 @@ import { userCurrency, userToday } from "@/lib/user-prefs";
 
 export async function saveBudget(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const { id, ...fields } = formObject(formData);
     const input = budgetSchema(userCurrency(user)).parse(fields);
     const month = monthOf(userToday(user));
@@ -23,7 +23,7 @@ export async function saveBudget(_prev: ActionResult, formData: FormData): Promi
 
 export async function removeBudget(id: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     await deleteBudget(db, user.id, idSchema.parse(id));
     refresh();
   });

@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import type { SetupRows, SetupStep } from "@/lib/setup-types";
 import { setupSchema } from "@/lib/validation";
-import { runAction } from "@/server/action-utils";
+import { runAction, withinActionLimit } from "@/server/action-utils";
 import { aiAvailableFor } from "@/server/ai";
 import { aiAccess } from "@/server/ai/access";
 import { runWithFallback } from "@/server/ai/fallback";
@@ -23,6 +23,7 @@ export type SetupParseResult =
 /** Reads one free-text answer into editable rows for that step. Nothing is saved. */
 export async function parseSetupAnswer(step: SetupStep, text: string): Promise<SetupParseResult> {
   const user = await requireUser();
+  if (!(await withinActionLimit(user.id))) return { ok: false, reason: "busy" };
   const input = z
     .object({ step: z.enum(["wallets", "incomes", "bills", "goals"]), text: z.string().trim().min(2).max(500) })
     .safeParse({ step, text });
@@ -53,7 +54,7 @@ export type SetupApplyResult =
 export async function applySetupAction(payload: unknown): Promise<SetupApplyResult> {
   const user = await requireUser();
   let counts: Record<string, number> = {};
-  const result = await runAction(async () => {
+  const result = await runAction(user.id, async () => {
     const today = userToday(user);
     const input = setupSchema(userCurrency(user), today).parse(payload);
     counts = await applySetup(db, user.id, input, today);

@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
+import { withinActionLimit } from "@/server/action-utils";
 import { addMonths, monthOf } from "@/lib/dates";
 import { type InsightKind, MIN_ENTRIES_FOR_INSIGHTS } from "@/lib/insights";
 import { aiAvailableFor, record } from "@/server/ai";
@@ -26,6 +27,7 @@ export type WriteInsightResult =
  */
 export async function writeInsight(kind: InsightKind): Promise<WriteInsightResult> {
   const user = await requireUser();
+  if (!(await withinActionLimit(user.id))) return { ok: false, reason: "busy" };
   const parsedKind = z.enum(["month", "so_far"]).safeParse(kind);
   if (!parsedKind.success) return { ok: false, reason: "not_enough" };
   const access = await aiAccess(db, user.id);

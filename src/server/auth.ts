@@ -14,6 +14,10 @@ export const auth = betterAuth({
   baseURL: env().BETTER_AUTH_URL,
   secret: env().BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema }),
+  // Better Auth's per-IP limits (on in production; its defaults: 100 requests
+  // per 10 s per path, 3 for sign-in), counted in the database so every
+  // serverless instance shares them. See implementation-notes.md for the IP header.
+  rateLimit: { storage: "database" },
   socialProviders: {
     google: {
       clientId: env().GOOGLE_CLIENT_ID,

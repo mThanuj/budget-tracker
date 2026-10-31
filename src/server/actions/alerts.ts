@@ -11,7 +11,7 @@ const alertKey = z.string().regex(/^(budget|goal|bill|price):[0-9a-f-]{36}:[\w:-
 
 export async function dismissAlert(key: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     await dismiss(db, user.id, alertKey.parse(key));
     refresh();
   });

@@ -136,6 +136,14 @@ Deploy. On start the app applies database migrations by itself
 (`RUN_MIGRATIONS=1` in the image). If one fails, the new version doesn't start
 and the old one keeps serving; the log shows why.
 
+Then check that sign-in limits see each visitor's address: sign in once and
+look in the application's logs for Better Auth's "Rate limiting could not
+determine a client IP" warning. If it's there, every visitor shares one sign-in
+limit, so one person could block sign-in for everyone: set
+`advanced.ipAddress.trustedProxies` in `src/server/auth.ts` to the proxy's
+addresses (an auth configuration change: owner's approval) and redeploy. See
+implementation-notes.md (Better Auth) and decision D-026.
+
 ## 5. Google sign-in
 
 In Google Cloud Console → APIs & Services:

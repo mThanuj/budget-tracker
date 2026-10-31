@@ -17,7 +17,7 @@ import { userCurrency } from "@/lib/user-prefs";
 
 export async function saveWallet(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const { id, ...fields } = formObject(formData);
     const input = walletSchema(userCurrency(user)).parse(fields);
     if (id) await updateWallet(db, user.id, idSchema.parse(id), input);
@@ -37,7 +37,7 @@ const OPS = {
 
 export async function walletAction(op: WalletOp, id: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     // Own keys only: `in` would also accept inherited names like "toString".
     if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown wallet operation: ${String(op)}`);
     await OPS[op](db, user.id, idSchema.parse(id));

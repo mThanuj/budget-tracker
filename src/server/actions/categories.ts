@@ -15,7 +15,7 @@ import { requireUser } from "@/server/session";
 
 export async function saveCategory(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const { id, ...fields } = formObject(formData);
     if (id) {
       const input = categorySchema.omit({ kind: true }).parse(fields);
@@ -37,7 +37,7 @@ const OPS = {
 
 export async function categoryAction(op: CategoryOp, id: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     // Own keys only: `in` would also accept inherited names like "toString".
     if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown category operation: ${String(op)}`);
     await OPS[op](db, user.id, idSchema.parse(id));

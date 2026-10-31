@@ -41,7 +41,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-015 | Client calls go through `callAction` (no error page on a failed request) | accepted                               |
 | D-016 | Sign-out is a server action, not Better Auth's browser client            | accepted                               |
 | D-017 | A link can't make the app act for the user                               | accepted                               |
-| D-018 | Per-account limits as database counts; request rate limiting deferred    | accepted                               |
+| D-018 | Per-account limits as database counts; request rate limiting deferred    | accepted; deferral superseded by D-026 |
 | D-019 | Tests never use outside services; app-wide security sweeps               | accepted                               |
 | D-020 | Prettier, CI on GitHub Actions, exact dependency pins                    | accepted                               |
 | D-021 | Agent instructions and project memory in the repo; no MCP or hooks       | accepted; MCP part superseded by D-022 |
@@ -49,6 +49,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-023 | CI fails on high or critical dependency advisories                       | accepted                               |
 | D-024 | Observability: structured logs, Sentry, health checks                    | accepted                               |
 | D-025 | Plain git hooks; branch names checked in CI                              | accepted                               |
+| D-026 | Per-user action rate limit and Better Auth's limiter, both in Postgres   | accepted                               |
 
 ### D-001 Product scope
 
@@ -233,7 +234,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 
 ### D-018 Per-account limits; request rate limiting deferred
 
-- **Status:** accepted · **Date:** 2026-10-25
+- **Status:** accepted; the deferral of rate limiting is superseded by D-026 · **Date:** 2026-10-25
 - **Decision:** caps on how much one account can create (`src/config/limits.ts`),
   checked by counting in the same database. Rate limiting of requests waits for
   a shared store (an in-memory limiter is per instance on serverless).
@@ -412,3 +413,39 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 - **Affected:** `.githooks/`, `scripts/check-branch-name.mjs`, `package.json`
   (`prepare`, `check:branch`), `.github/workflows/ci.yml`. **References:**
   `tests/unit/dev-workflow.test.ts`.
+
+### D-026 Per-user action rate limit and Better Auth's limiter, both in Postgres
+
+- **Status:** accepted · **Date:** 2026-10-31
+- **Context:** D-018 deferred request rate limiting until there was a shared
+  store. A signed-in script could call cheap actions without limit, and Better
+  Auth's sign-in limits were per serverless instance (every "Sign in with
+  Google" click writes a `verification` row, signed in or not).
+- **Decision:** the database is the shared store. Every server action except
+  four reviewed ones (`signOut`, `deleteAccount`, `sendTestError`,
+  `getEntryFormData`) counts against a per-user limit per minute
+  (`actionsPerMinute` in `src/config/limits.ts`), with one upsert on
+  `action_rate` (`countActionCall`). `runAction(userId, fn)` checks it; other
+  actions call `withinActionLimit` first. Over the limit an action returns its
+  usual failure ("Too many requests…", the AI's "busy", or `false`/`null` for
+  background checks) instead of throwing, and one warning is logged per user
+  per minute. Better Auth uses `rateLimit.storage: "database"` (its
+  `rate_limit` table) with its default limits.
+- **Rationale:** no new service or dependency; one row per user, exact when
+  calls arrive together. A thrown error would reach `onRequestError`, so a
+  flood of calls would become a flood of Sentry events. **Alternatives:**
+  Upstash Redis (a new service, two dependencies and keys); keep deferring until
+  the own server (the owner chose to build it now); an in-memory limiter (per
+  instance on serverless).
+- **Trade-offs / consequences:** one extra small write per action call, and one
+  or two queries per Better Auth request. Windows are calendar minutes, so a
+  burst across a minute boundary can reach twice the limit. Requests still reach
+  the server: the limit stops the work, not the invocation. A new action must
+  check the limit or be added to `EXEMPT` in `tests/security/rate-limit.test.ts`.
+  Better Auth needs one client address in `x-forwarded-for`
+  (implementation-notes.md).
+- **Affected:** `src/server/action-utils.ts`, `src/server/services/limits.ts`,
+  `src/config/limits.ts`, `src/server/auth.ts`, every file in
+  `src/server/actions/`, `drizzle/0008_rate_limits.sql`. **References:**
+  `tests/security/rate-limit.test.ts`, `tests/security/auth.test.ts`,
+  `tests/db/limits.test.ts`, `tests/integration/actions.test.ts`.

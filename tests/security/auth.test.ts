@@ -5,7 +5,7 @@
 // (NODE_ENV=test), so this file switches to production behaviour before it
 // loads, and puts the environment back afterwards.
 import { createHmac } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as schema from "@/server/db/schema";
 
@@ -38,12 +38,16 @@ afterAll(() => vi.unstubAllEnvs());
 
 const call = (
   path: string,
-  { body, cookie, origin = ORIGIN }: { body?: unknown; cookie?: string; origin?: string } = {},
+  { body, cookie, origin = ORIGIN, ip }: { body?: unknown; cookie?: string; origin?: string; ip?: string } = {},
 ) =>
   auth.handler(
     new Request(`${ORIGIN}/api/auth${path}`, {
       method: body === undefined ? "GET" : "POST",
-      headers: { ...(body !== undefined && { "content-type": "application/json", origin }), ...(cookie && { cookie }) },
+      headers: {
+        ...(body !== undefined && { "content-type": "application/json", origin }),
+        ...(cookie && { cookie }),
+        ...(ip && { "x-forwarded-for": ip }), // what Vercel sets: the client's address alone
+      },
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
   );
@@ -129,9 +133,16 @@ describe("what a signed-in user can change about their account", () => {
 });
 
 describe("rate limiting", () => {
-  it("is on for Better Auth's own endpoints in production", async () => {
-    // Memory storage: per server instance, so it slows bursts but isn't a global
-    // limit on a serverless host (see SECURITY.md).
-    expect((await auth.$context).rateLimit.enabled).toBe(true);
+  it("is on for Better Auth's own endpoints in production, counted in the database", async () => {
+    // In the database, so every serverless instance shares the counts (D-026).
+    expect((await auth.$context).rateLimit).toMatchObject({ enabled: true, storage: "database" });
+  });
+
+  it("allows 3 sign-in attempts per 10 seconds from one address", async () => {
+    const signIn = (ip: string) => call("/sign-in/social", { body: { provider: "google", callbackURL: "/" }, ip });
+    for (let i = 0; i < 3; i++) expect((await signIn("203.0.113.7")).status).toBe(200);
+    expect((await signIn("203.0.113.7")).status).toBe(429);
+    expect((await signIn("198.51.100.2")).status).toBe(200); // another address has its own count
+    expect(await db.$count(schema.rateLimit, like(schema.rateLimit.key, "203.0.113.7|%"))).toBe(1);
   });
 });
