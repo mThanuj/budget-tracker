@@ -123,6 +123,7 @@ async function SettingsContent() {
         <PreferencesForm
           mode="settings"
           currency={currency}
+          currencyLocked={Boolean(user.onboardedAt)}
           timezone={timezone}
           currencies={currencyOptions()}
           timeZones={timeZoneOptions([timezone])}

@@ -5,7 +5,7 @@ import type { BudgetInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { budget, category, transaction } from "../db/schema";
 import { getOwnedCategory } from "./categories";
-import { UserError } from "./errors";
+import { rethrowUnique, UserError } from "./errors";
 
 export type BudgetStatus = Awaited<ReturnType<typeof getBudgetOverview>>["categories"][number];
 
@@ -138,15 +138,12 @@ async function getOwnedBudget(db: Db, userId: string, id: string) {
   return row;
 }
 
-function rethrowDuplicate(err: unknown): never {
-  if (
-    err instanceof Error &&
-    /budget_user_category_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)
-  ) {
-    throw new UserError("There's already a budget for that. Edit it instead.", "categoryId");
-  }
-  throw err;
-}
+/** A second budget with the same category is a message on the form, not a crash. */
+const rethrowDuplicate = rethrowUnique(
+  "budget_user_category_key",
+  "There's already a budget for that. Edit it instead.",
+  "categoryId",
+);
 
 export async function createBudget(db: Db, userId: string, input: BudgetInput, currentMonth: ISOMonth) {
   if (input.categoryId) {

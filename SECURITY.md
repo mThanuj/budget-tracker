@@ -29,7 +29,10 @@ within 2 working days.
 - **Transport & headers**: a strict Content-Security-Policy: a script runs
   only with the response's nonce (fresh for every page, from `src/proxy.ts`),
   as the theme snippet (by hash), or added by one that does; no inline scripts
-  otherwise, and route handlers allow no scripts at all (decision D-027). The
+  otherwise, and route handlers allow no scripts at all (decision D-027). What
+  the proxy never sees (files, and the 404 page for an address with a dot) gets
+  a fixed policy that runs no scripts but the theme snippet; every response has
+  exactly one CSP (D-029). The
   supporting headers (HSTS, nosniff, `X-Frame-Options`, `Referrer-Policy`,
   `Permissions-Policy`) are on every response. See `src/lib/security-headers.ts`.
 - **Secrets**: the core settings are validated on first use (`src/env.ts`);

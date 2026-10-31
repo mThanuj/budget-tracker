@@ -4,15 +4,19 @@ import { DEFAULT_CATEGORIES, PREVIOUS_DEFAULT_COLORS } from "@/lib/default-categ
 import type { CategoryInput } from "@/lib/validation";
 import type { Db } from "../db";
 import { category, transaction } from "../db/schema";
-import { UserError } from "./errors";
+import { rethrowUnique, UserError } from "./errors";
 import { assertRoomFor } from "./limits";
 
 export async function listCategories(db: Db, userId: string, { includeArchived = false } = {}) {
   return db
     .select({
       ...getTableColumns(category),
-      // Qualified on purpose: an unqualified "id" would resolve to t.id.
-      usage: sql<number>`(select count(*) from "transaction" t where t.category_id = "category"."id")`.mapWith(Number),
+      // Qualified on purpose: an unqualified "id" would resolve to t.id. The user
+      // filter lets Postgres use the indexes, which all start with user_id.
+      usage:
+        sql<number>`(select count(*) from "transaction" t where t.user_id = "category"."user_id" and t.category_id = "category"."id")`.mapWith(
+          Number,
+        ),
     })
     .from(category)
     .where(and(eq(category.userId, userId), includeArchived ? undefined : isNull(category.archivedAt)))
@@ -28,15 +32,12 @@ export async function getOwnedCategory(db: Db, userId: string, categoryId: strin
   return row;
 }
 
-function rethrowDuplicate(err: unknown): never {
-  if (
-    err instanceof Error &&
-    /category_user_kind_name_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)
-  ) {
-    throw new UserError("You already have a category with that name.", "name");
-  }
-  throw err;
-}
+/** A second category with the same name is a message on the form, not a crash. */
+const rethrowDuplicate = rethrowUnique(
+  "category_user_kind_name_key",
+  "You already have a category with that name.",
+  "name",
+);
 
 /**
  * Refuses a color that looks like one of the user's other active categories of
@@ -187,7 +188,7 @@ export async function deleteCategory(db: Db, userId: string, categoryId: string)
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)`.mapWith(Number) })
     .from(transaction)
-    .where(eq(transaction.categoryId, categoryId));
+    .where(and(eq(transaction.userId, userId), eq(transaction.categoryId, categoryId)));
   if (count > 0) throw new UserError("This category has entries, so it can only be archived.");
   await db.delete(category).where(and(eq(category.id, categoryId), eq(category.userId, userId)));
 }

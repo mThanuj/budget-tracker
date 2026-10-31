@@ -15,12 +15,15 @@ const noopSubscribe = () => () => {};
 export function PreferencesForm({
   mode,
   currency,
+  currencyLocked = false,
   timezone,
   currencies,
   timeZones,
 }: {
   mode: "welcome" | "settings";
   currency: string;
+  /** Set up accounts can't change currency: their amounts are saved in it (business rules). */
+  currencyLocked?: boolean;
   timezone: string;
   currencies: { common: Option[]; all: Option[] };
   timeZones: Option[];
@@ -46,28 +49,40 @@ export function PreferencesForm({
   return (
     <form {...form} className="grid gap-6">
       <div className="grid gap-2">
-        <Label htmlFor="currency">Currency</Label>
-        <NativeSelect id="currency" name="currency" defaultValue={currency} className="w-full">
-          <NativeSelectOptGroup label="Common">
-            {currencies.common.map((o) => (
-              <NativeSelectOption key={o.value} value={o.value}>
-                {o.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelectOptGroup>
-          <NativeSelectOptGroup label="All currencies">
-            {currencies.all.map((o) => (
-              <NativeSelectOption key={o.value} value={o.value}>
-                {o.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelectOptGroup>
-        </NativeSelect>
-        <p className="text-sm text-muted-foreground">
-          {mode === "welcome"
-            ? "All your amounts are shown in this currency."
-            : "Changing this relabels your existing amounts. It doesn't convert them."}
-        </p>
+        {currencyLocked ? (
+          <>
+            <p className="text-sm font-medium">Currency</p>
+            <input type="hidden" name="currency" value={currency} />
+            <p>{[...currencies.common, ...currencies.all].find((o) => o.value === currency)?.label ?? currency}</p>
+            <p className="text-sm text-muted-foreground">
+              Set when you started, and it can&rsquo;t be changed: your amounts are saved in it. To use another
+              currency, start a new account.
+            </p>
+          </>
+        ) : (
+          <>
+            <Label htmlFor="currency">Currency</Label>
+            <NativeSelect id="currency" name="currency" defaultValue={currency} className="w-full">
+              <NativeSelectOptGroup label="Common">
+                {currencies.common.map((o) => (
+                  <NativeSelectOption key={o.value} value={o.value}>
+                    {o.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelectOptGroup>
+              <NativeSelectOptGroup label="All currencies">
+                {currencies.all.map((o) => (
+                  <NativeSelectOption key={o.value} value={o.value}>
+                    {o.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelectOptGroup>
+            </NativeSelect>
+            <p className="text-sm text-muted-foreground">
+              All your amounts are shown in this currency. You can&rsquo;t change it once you&rsquo;ve started.
+            </p>
+          </>
+        )}
       </div>
 
       <div className="grid gap-2">

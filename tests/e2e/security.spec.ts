@@ -37,6 +37,22 @@ test("every script on a page carries that response's nonce, new for each respons
   expect(unsigned.map(([, , body]) => body.includes('localStorage.getItem("theme")'))).toEqual([true]);
 });
 
+test("every response has exactly one CSP, including the 404 for an address with a dot (D-029)", async ({ request }) => {
+  const csps = async (path: string) => {
+    const res = await request.get(path);
+    return {
+      status: res.status(),
+      csp: res.headersArray().filter((h) => h.name.toLowerCase() === "content-security-policy"),
+    };
+  };
+  const dotted = await csps("/x.php");
+  expect(dotted.status).toBe(404);
+  expect(dotted.csp).toHaveLength(1);
+  expect(dotted.csp[0].value).toContain("frame-ancestors 'none'");
+  expect(dotted.csp[0].value).not.toMatch(/script-src[^;]*'self'/); // no scripts run there
+  for (const path of ["/", "/api/health/live"]) expect((await csps(path)).csp, path).toHaveLength(1);
+});
+
 test("the app shell renders under the CSP with no blocked-resource breakage", async ({ signedIn: { page } }) => {
   const violations = cspViolations(page);
   await page.goto("/dashboard");

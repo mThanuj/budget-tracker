@@ -6,6 +6,12 @@ when you merge something a future agent should know about.
 
 ## 2026-10-31
 
+- Review fixes: currency locked once an account is set up (amounts are saved in
+  its smallest unit); a fixed CSP where the proxy doesn't run, so every response
+  has exactly one (D-029); raw subqueries over entries scoped to the user (they
+  read every user's entries); unexpected database errors no longer shown as
+  "That wallet doesn't exist."; duplicates recognised by Postgres code and
+  constraint (`rethrowUnique`).
 - Existing accounts' category colors brought under D-028 by the owner with
   `pnpm categories:recolor`: development 75 categories in 3 accounts,
   production 53 in 2; a dry run afterwards reported 0 on both.

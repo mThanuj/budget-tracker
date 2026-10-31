@@ -47,6 +47,7 @@ const { listCategories } = await import("@/server/services/categories");
 const { createTransaction } = await import("@/server/services/transactions");
 const razorpay = await import("@/server/billing/razorpay");
 const { getUserPlan } = await import("@/server/billing/plan");
+const { CURRENCY_LOCKED } = await import("@/server/services/settings");
 
 /** A signed-in user with the default categories and a Cash wallet. */
 async function newUser(name: string) {
@@ -400,13 +401,53 @@ describe("settings", async () => {
     expect(await savePreferences(undefined, new FormData())).toMatchObject({ error: expect.any(String) });
   });
 
-  it("saves a currency and time zone from the lists", async () => {
-    expect(await savePreferences(undefined, form({ currency: "USD", timezone: "America/New_York" }))).toEqual({
+  it("saves a time zone, but not a new currency once the account is set up (amounts are saved in it)", async () => {
+    expect(await savePreferences(undefined, form({ currency: "INR", timezone: "America/New_York" }))).toEqual({
       ok: true,
     });
+    expect(await savePreferences(undefined, form({ currency: "USD", timezone: "America/New_York" }))).toEqual({
+      error: CURRENCY_LOCKED,
+    });
     const [row] = await db.select().from(schema.user).where(eq(schema.user.id, alice.user.id));
-    expect(row).toMatchObject({ currency: "USD", timezone: "America/New_York" });
+    expect(row).toMatchObject({ currency: "INR", timezone: "America/New_York" });
     await savePreferences(undefined, form({ currency: "INR", timezone: "Asia/Kolkata" }));
+  });
+
+  it("lets a new account pick its currency on the welcome screen, unless saved amounts would change", async () => {
+    const { completeWelcome } = await import("@/server/actions/settings");
+    const welcome = (currency: string) =>
+      completeWelcome(undefined, form({ currency, timezone: "Asia/Kolkata" })).then(
+        (r) => r,
+        (err: unknown) => (isRedirect(err) ? "redirected" : Promise.reject(err)),
+      );
+    // Nothing saved yet: any currency.
+    const fresh = await createTestUser(db, { name: "Fresh" });
+    signInAs({ user: fresh });
+    expect(await welcome("JPY")).toBe("redirected");
+    const [done] = await db.select().from(schema.user).where(eq(schema.user.id, fresh.id));
+    expect(done.currency).toBe("JPY");
+    expect(done.onboardedAt).not.toBeNull();
+
+    // An entry saved before the welcome screen: only a currency with the same decimals.
+    const early = await createTestUser(db, { name: "Early" });
+    await seedNewUser(db, early.id);
+    const [cash] = await listWallets(db, early.id);
+    await createTransaction(db, early.id, {
+      type: "expense",
+      amount: 240_00,
+      occurredOn: "2026-10-20",
+      description: "Chai",
+      notes: null,
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId: null,
+    });
+    signInAs({ user: early });
+    expect(await welcome("JPY")).toEqual({
+      error:
+        "JPY has no decimal places and INR has 2 decimal places, so the amounts you've saved would change. Choose a currency with 2 decimal places.",
+    });
+    expect(await welcome("USD")).toBe("redirected");
   });
 });
 

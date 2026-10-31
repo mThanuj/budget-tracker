@@ -1,6 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
-import { ROUTE_HANDLER_CSP, securityHeaders } from "./src/lib/security-headers";
+import { headerRules } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker image (Hetzner + Coolify).
@@ -16,12 +16,10 @@ const nextConfig: NextConfig = {
     experimental: { turbopackPluginRuntimeStrategy: "forceWorkerThreads" },
   }),
   // Security headers on every response (HSTS, clickjacking, nosniff). Pages get
-  // their CSP, with a fresh nonce, from src/proxy.ts; route handlers a fixed one.
+  // their CSP, with a fresh nonce, from src/proxy.ts; everything the proxy doesn't
+  // see (route handlers, files, dotted 404s) a fixed one (D-029).
   async headers() {
-    return [
-      { source: "/:path*", headers: securityHeaders({ dev: process.env.NODE_ENV !== "production" }) },
-      { source: "/api/:path*", headers: [{ key: "Content-Security-Policy", value: ROUTE_HANDLER_CSP }] },
-    ];
+    return headerRules({ dev: process.env.NODE_ENV !== "production" });
   },
   turbopack: {
     rules: {

@@ -1,16 +1,19 @@
 import { createHash } from "node:crypto";
+import { unstable_doesMiddlewareMatch, unstable_getResponseFromNextConfig } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import { themeInitScript } from "@/components/theme/theme-script";
 import {
   contentSecurityPolicy,
+  headerRules,
   monitoringOrigin,
   newNonce,
   ROUTE_HANDLER_CSP,
   securityHeaders,
+  STATIC_FILE_CSP,
   THEME_SCRIPT_HASH,
 } from "@/lib/security-headers";
-import { proxy } from "@/proxy";
+import { config as proxyConfig, proxy } from "@/proxy";
 
 const NONCE = "bm9uY2UtZm9yLXRlc3Rz";
 const map = (dev: boolean) => Object.fromEntries(securityHeaders({ dev }).map((h) => [h.key, h.value]));
@@ -89,6 +92,50 @@ describe("the proxy", () => {
     const res = proxy(new NextRequest("http://localhost:3000/privacy", { headers: { "x-vercel-id": "sin1::abc" } }));
     expect(csp(res)).toContain("'strict-dynamic'");
     expect(res.headers.get("x-middleware-request-content-security-policy")).toBe(csp(res));
+  });
+});
+
+describe("exactly one CSP per path (D-029)", () => {
+  // Pages get theirs from the proxy (with a nonce); what the proxy never sees gets
+  // a fixed one from next.config's rules; two would both apply and break pages.
+  const fromProxy = (path: string) => unstable_doesMiddlewareMatch({ config: proxyConfig, url: path });
+  const fromConfig = async (path: string) =>
+    (
+      await unstable_getResponseFromNextConfig({
+        url: `http://localhost:3000${path}`,
+        nextConfig: { headers: async () => headerRules({ dev: false }) },
+      })
+    ).headers.get("content-security-policy");
+
+  it.each([
+    ["/", "proxy"],
+    ["/privacy", "proxy"],
+    ["/dashboard", "proxy"],
+    ["/no-such-page", "proxy"],
+    ["/apifoo", "proxy"], // not under /api: a page address
+    ["/x.php", "static"], // the 404 page for an address with a dot
+    ["/a/b.html", "static"],
+    ["/api.php", "static"],
+    ["/favicon.ico", "static"],
+    ["/manifest.webmanifest", "static"],
+    ["/.well-known/security.txt", "static"],
+    ["/api", "route"],
+    ["/api/health", "route"],
+    ["/api/auth/callback/google", "route"],
+    ["/api/export.csv", "route"],
+    ["/_next/static/chunks/main.js", "none"], // the app's own bundles, served as they are
+    ["/_next/image", "none"],
+  ] as const)("%s → %s", async (path, source) => {
+    const expected = { proxy: null, static: STATIC_FILE_CSP, route: ROUTE_HANDLER_CSP, none: null }[source];
+    expect(fromProxy(path), "the proxy runs").toBe(source === "proxy");
+    expect(await fromConfig(path), "next.config's CSP").toBe(expected);
+  });
+
+  it("lets no script run on what the proxy doesn't see, except the theme snippet", () => {
+    const scripts = /script-src ([^;]*)/.exec(STATIC_FILE_CSP)?.[1];
+    expect(scripts).toBe(THEME_SCRIPT_HASH);
+    expect(STATIC_FILE_CSP).toContain("default-src 'none'");
+    expect(STATIC_FILE_CSP).toContain("frame-ancestors 'none'");
   });
 });
 

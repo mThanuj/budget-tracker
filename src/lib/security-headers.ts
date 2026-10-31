@@ -86,6 +86,30 @@ export function contentSecurityPolicy({
  */
 export const ROUTE_HANDLER_CSP = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'";
 
+/**
+ * The CSP for what the proxy never sees: files, and the 404 page for an address
+ * with a dot (e.g. /x.php). Its scripts can't carry a nonce, so none run except
+ * the theme snippet; the page still shows and its links still work (D-029).
+ */
+export const STATIC_FILE_CSP = `default-src 'none'; script-src ${THEME_SCRIPT_HASH}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`;
+
+/**
+ * The header rules next.config.ts sends. Each path gets its CSP from exactly
+ * one place: src/proxy.ts for the pages it handles, these rules for the rest,
+ * whose paths are the exact complement of the proxy's matcher (keep the two in
+ * step; headers.test.ts checks them together). The other headers go everywhere.
+ */
+export function headerRules({ dev }: { dev: boolean }) {
+  return [
+    { source: "/:path*", headers: securityHeaders({ dev }) },
+    { source: "/api/:path*", headers: [{ key: "Content-Security-Policy", value: ROUTE_HANDLER_CSP }] },
+    {
+      source: "/:path((?!api(?:/|$)|_next/static|_next/image).*\\..*)",
+      headers: [{ key: "Content-Security-Policy", value: STATIC_FILE_CSP }],
+    },
+  ];
+}
+
 /** The headers every response gets (the CSP comes separately: see the top of this file). */
 export function securityHeaders({ dev }: { dev: boolean }): HttpHeader[] {
   const headers: HttpHeader[] = [
