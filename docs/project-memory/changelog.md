@@ -6,6 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-10-31
 
+- Category colors look different from each other (D-028): a new category starts
+  with a random distinct color (Shuffle for more); the server refuses look-alikes
+  per kind (ΔE 10, then the best still free); new defaults re-picked;
+  `pnpm categories:recolor` brings existing accounts under the rule once.
 - Nonce-based CSP (D-027, supersedes D-012): `src/proxy.ts` gives every page a
   fresh nonce, `'unsafe-inline'` is gone from `script-src`, and every page now
   renders per request (no static shells). `PW_PROD=1` runs the browser tests

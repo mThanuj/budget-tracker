@@ -186,6 +186,9 @@ has more. Add new ones under the right heading.
   test file that makes more than 120 action calls as one user within a minute
   gets "Too many requests". Use another user, or mock `countActionCall` as
   `tests/security/rate-limit.test.ts` does.
+- Category colors are checked by the server (D-028): a test that creates a
+  category takes its color from `freeCategoryColor` (`tests/db/helpers.ts`), or
+  it may be refused for looking like a default.
 - A Vitest run of files in more than one folder writes `test-unit.log`, not the
   folders' own logs; an older `test-<suite>.log` can be left from an earlier run.
 

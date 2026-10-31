@@ -82,6 +82,7 @@ call the real AI), `PW_WORKERS` (parallel browsers), `NEXT_WORKER_THREADS=1`
 | `pnpm docs:check`                                                                      | Fails if a doc links to a missing file or heading, or names a missing repo path (in backticks) or script |
 | `pnpm ai:eval` · `ai:chat-eval` · `ai:insights-eval`                                   | Check AI output quality against real providers (after model or prompt changes)                           |
 | `pnpm check:bundle`                                                                    | After a build: no secret values in files sent to browsers                                                |
+| `pnpm categories:recolor`                                                              | One-time (D-028): existing accounts' category colors under the rule; `--dry-run` counts only             |
 
 Every test run also writes its results to `test-<suite>.log` (ignored by git).
 

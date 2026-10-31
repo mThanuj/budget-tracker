@@ -18,10 +18,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui-extra/confirm-dialog";
 import { FormField, fieldAria } from "@/components/ui-extra/form-field";
-import { ColorPicker, IconPicker } from "@/components/ui-extra/pickers";
+import { IconPicker } from "@/components/ui-extra/pickers";
 import { Segmented } from "@/components/ui-extra/segmented";
-import { SWATCHES } from "@/lib/category-icons";
+import { suggestCategoryColors } from "@/lib/category-colors";
 import { categoryAction, saveCategory } from "@/server/actions/categories";
+import { CategoryColorPicker } from "./category-color-picker";
 import { CategoryIcon } from "./category-icon";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 import { useFormAction } from "@/components/ui-extra/use-form-action";
@@ -38,9 +39,30 @@ export type CategoryItem = {
   archived: boolean;
 };
 
-function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kind: Kind; onDone: () => void }) {
+const COLOR_SUGGESTIONS = 10;
+
+function CategoryForm({
+  category,
+  kind,
+  siblings,
+  onDone,
+}: {
+  category?: CategoryItem;
+  kind: Kind;
+  /** Colors of the other active categories of this kind, which a new color must look different from. */
+  siblings: string[];
+  onDone: () => void;
+}) {
   const [icon, setIcon] = useState(category?.icon ?? "tag");
-  const [color, setColor] = useState<string>(category?.color ?? SWATCHES[0]);
+  const [suggestions, setSuggestions] = useState(() => suggestCategoryColors(siblings, COLOR_SUGGESTIONS));
+  const [color, setColor] = useState<string>(category?.color ?? suggestions[0]);
+  const colorOptions =
+    category && !suggestions.includes(category.color) ? [category.color, ...suggestions] : suggestions;
+  const shuffle = () => {
+    const next = suggestCategoryColors(siblings, COLOR_SUGGESTIONS);
+    setSuggestions(next);
+    setColor(next[0]);
+  };
   const { state, pending, form } = useFormAction(async (prev: Parameters<typeof saveCategory>[0], fd: FormData) => {
     // A failed send keeps the form as typed and says so inline.
     const result = await callAction(() => saveCategory(prev, fd), { notify: false });
@@ -82,7 +104,12 @@ function CategoryForm({ category, kind, onDone }: { category?: CategoryItem; kin
           {errors.icon}
         </p>
       )}
-      <ColorPicker value={color} onChange={setColor} />
+      <CategoryColorPicker value={color} options={colorOptions} onChange={setColor} onShuffle={shuffle} />
+      {errors.color && (
+        <p role="alert" className="-mt-3 text-sm text-destructive">
+          {errors.color}
+        </p>
+      )}
 
       {state && !state.ok && state.error && (
         <p role="alert" className="text-sm text-destructive">
@@ -104,11 +131,13 @@ function CategoryDialog({
   onOpenChange,
   category,
   kind,
+  siblings,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   category?: CategoryItem;
   kind: Kind;
+  siblings: string[];
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -119,7 +148,9 @@ function CategoryDialog({
           </DialogTitle>
           <DialogDescription className="sr-only">Choose a name, icon and color.</DialogDescription>
         </DialogHeader>
-        {open && <CategoryForm category={category} kind={kind} onDone={() => onOpenChange(false)} />}
+        {open && (
+          <CategoryForm category={category} kind={kind} siblings={siblings} onDone={() => onOpenChange(false)} />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -136,7 +167,7 @@ async function run(op: Parameters<typeof categoryAction>[0], id: string, success
   return false;
 }
 
-function CategoryRow({ category }: { category: CategoryItem }) {
+function CategoryRow({ category, siblings }: { category: CategoryItem; siblings: string[] }) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -183,7 +214,13 @@ function CategoryRow({ category }: { category: CategoryItem }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <CategoryDialog open={editing} onOpenChange={setEditing} category={category} kind={category.kind} />
+      <CategoryDialog
+        open={editing}
+        onOpenChange={setEditing}
+        category={category}
+        kind={category.kind}
+        siblings={siblings}
+      />
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
@@ -204,6 +241,8 @@ export function CategoriesManager({ categories }: { categories: CategoryItem[] }
   const ofKind = categories.filter((c) => c.kind === kind);
   const active = ofKind.filter((c) => !c.archived);
   const archived = ofKind.filter((c) => c.archived);
+  // The colors a category's color must look different from: the other active ones of its kind.
+  const siblingColors = (except?: string) => active.filter((c) => c.id !== except).map((c) => c.color);
 
   return (
     <div className="grid gap-6">
@@ -225,7 +264,7 @@ export function CategoriesManager({ categories }: { categories: CategoryItem[] }
 
       <ul className="divide-y divide-dashed divide-border overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
         {active.map((c) => (
-          <CategoryRow key={c.id} category={c} />
+          <CategoryRow key={c.id} category={c} siblings={siblingColors(c.id)} />
         ))}
         {active.length === 0 && (
           <li className="px-5 py-10 text-center text-muted-foreground">
@@ -241,13 +280,13 @@ export function CategoriesManager({ categories }: { categories: CategoryItem[] }
           </summary>
           <ul className="mt-4 divide-y divide-dashed divide-border overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
             {archived.map((c) => (
-              <CategoryRow key={c.id} category={c} />
+              <CategoryRow key={c.id} category={c} siblings={siblingColors(c.id)} />
             ))}
           </ul>
         </details>
       )}
 
-      <CategoryDialog open={adding} onOpenChange={setAdding} kind={kind} />
+      <CategoryDialog open={adding} onOpenChange={setAdding} kind={kind} siblings={siblingColors()} />
     </div>
   );
 }

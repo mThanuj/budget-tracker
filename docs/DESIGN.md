@@ -27,6 +27,11 @@ before inventing new ones.
 | `--warning`                              | Almost used up, card amounts owed                         |
 | `--chart-1` / `--chart-2`                | Income / spending (validated for colour blindness)        |
 
+**Category colors** (D-028) are generated, not picked from a fixed list: muted,
+never gray, 3:1 on both backgrounds, and different enough from the others of
+the same kind to tell apart side by side (`src/lib/category-colors.ts`). They
+always come with the category's icon and name.
+
 **Radius by role:** `rounded-2xl` cards and page sections, `rounded-xl` tiles
 inside a card, `rounded-lg` controls (buttons, inputs), `rounded-full` pills,
 avatars and icon badges.

@@ -101,6 +101,12 @@ Verified against the code on 2026-10-26 (independent audit).
   (archived count too); per 24 hours: 1,000 entries (recurring ones excluded),
   300 goal savings, 300 dismissed alerts (dismissed subscription suggestions
   count too). `src/config/limits.ts`; the config wins if it differs from here.
+- Category colors look different from each other: at least ΔE 10 (OKLab ×100)
+  from every other active category of the same kind, or, once no color is that
+  far from all of them, as distinct as the best still free. Only colors from the
+  allowed band. Keeping a category's current color on edit is allowed; a
+  restored one whose color now clashes gets the nearest allowed. Enforced by
+  `src/server/services/categories.ts` with `src/lib/category-colors.ts`; D-028.
 - Server actions: 120 calls per minute per user, all actions together, except
   signing out, deleting the account, the admin test error and loading the entry
   form. Over it nothing runs, and the person sees "Too many requests. Wait a

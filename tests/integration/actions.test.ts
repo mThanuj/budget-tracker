@@ -215,6 +215,23 @@ describe("alerts (dismissAlert)", async () => {
   });
 });
 
+describe("categories (saveCategory)", async () => {
+  const { saveCategory } = await import("@/server/actions/categories");
+
+  it("refuses a color that looks like another category's, as a message on the color field (D-028)", async () => {
+    // A hand-made request, not the form: the server decides, whatever hex is sent.
+    const result = await saveCategory(
+      undefined,
+      form({ name: "Garden", kind: "expense", icon: "tag", color: "#3a9f79" }), // looks like Groceries
+    );
+    expect(result).toEqual({
+      ok: false,
+      fieldErrors: { color: "That color looks too much like Groceries. Pick another." },
+    });
+    expect((await listCategories(db, alice.user.id)).some((c) => c.name === "Garden")).toBe(false);
+  });
+});
+
 describe("budgets, goals and recurring items", async () => {
   const { saveBudget } = await import("@/server/actions/budgets");
   const { goalAction, saveGoal } = await import("@/server/actions/goals");
