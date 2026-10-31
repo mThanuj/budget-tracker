@@ -87,5 +87,5 @@ describe("every server action is rate limited, or reviewed as exempt", () => {
     }
     expect(found).toEqual(expect.arrayContaining(Object.keys(EXEMPT))); // no stale entries
     expect(await rows()).toEqual(before);
-  });
+  }, 30_000); // loads and calls every action; over 5 s when the whole suite runs in parallel
 });
