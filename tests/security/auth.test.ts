@@ -99,24 +99,32 @@ describe("cross-site requests (CSRF) and redirects", () => {
 });
 
 describe("what a signed-in user can change about their account", () => {
-  it("can't set the app's own fields (mass assignment)", async () => {
+  it("nothing through Better Auth: update-user is switched off (name, avatar, the app's own fields)", async () => {
+    const [before] = await db.select().from(schema.user).where(eq(schema.user.id, userId));
     for (const field of [
+      { name: "x".repeat(10_000) },
+      { image: "https://evil.example/pixel.gif" },
       { currency: "USD" },
       { timezone: "UTC" },
       { aiEnabled: false },
       { onboardedAt: "2020-01-01" },
       { defaultWalletId: crypto.randomUUID() },
     ]) {
-      expect((await call("/update-user", { body: field, cookie })).status, JSON.stringify(field)).toBe(400);
+      expect((await call("/update-user", { body: field, cookie })).status, JSON.stringify(field)).toBe(404);
+    }
+    // Variants of the path don't get past it either.
+    for (const path of ["/update-user/", "/update-user?x=1", "/Update-User"]) {
+      expect((await call(path, { body: { name: "Variant" }, cookie })).status, path).toBe(404);
     }
     const [row] = await db.select().from(schema.user).where(eq(schema.user.id, userId));
+    expect(row).toEqual(before);
     expect(row).toMatchObject({ currency: "INR", aiEnabled: true, onboardedAt: null, defaultWalletId: null });
   });
 
   it("can't change the email (the admin check relies on it)", async () => {
     expect(
       (await call("/update-user", { body: { email: "owner@example.com", emailVerified: true }, cookie })).status,
-    ).toBe(400);
+    ).toBe(404);
     expect((await call("/change-email", { body: { newEmail: "owner@example.com" }, cookie })).status).toBe(400);
     const [row] = await db.select().from(schema.user).where(eq(schema.user.id, userId));
     expect(row.email).toBe(`${userId}@example.com`);
@@ -128,7 +136,7 @@ describe("what a signed-in user can change about their account", () => {
       (await call("/sign-up/email", { body: { email: "a@example.com", password: "password1234", name: "A" } })).status,
     ).toBe(400);
     expect((await call("/delete-user", { body: {}, cookie })).status).toBe(404);
-    expect((await call("/update-user", { body: { name: "Signed out" } })).status).toBe(401);
+    expect((await call("/update-user", { body: { name: "Signed out" } })).status).toBe(404);
   });
 });
 

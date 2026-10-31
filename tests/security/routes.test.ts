@@ -40,7 +40,7 @@ const REVIEWED: Record<string, { rule: string; methods: Record<string, (h: Handl
         expect(
           (
             await h(
-              req("/api/auth/update-user", {
+              req("/api/auth/revoke-sessions", {
                 method: "POST",
                 headers: { "content-type": "application/json", origin: "http://localhost:3000" },
                 body: "{}",

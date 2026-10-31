@@ -103,8 +103,9 @@ used.
     and is called anonymously to prove it. A new route fails until it's added.
   - `auth`: Better Auth as configured, through its HTTP handler with production
     checks on: cross-site requests and outside callback URLs are refused,
-    forged cookies don't work, the app's own user fields and the email can't
-    be set by the client, password sign-up is off.
+    forged cookies don't work, the client can't change the user at all
+    (update-user is off) or the email, password sign-up is off, and sign-in is
+    limited per address.
   - `static`: rules on the source: server actions live only where the sweep
     looks, client code never imports server code or secrets, every signed-in
     page checks the session, redirects go only to fixed paths, raw HTML and
