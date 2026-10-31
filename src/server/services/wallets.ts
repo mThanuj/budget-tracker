@@ -3,7 +3,7 @@ import type { WalletInput } from "@/lib/validation";
 import { DEFAULT_WALLET_COLOR } from "@/lib/wallets";
 import type { Db } from "../db";
 import { recurringRule, transaction, user, wallet } from "../db/schema";
-import { UserError } from "./errors";
+import { rethrowUnique, UserError } from "./errors";
 import { assertRoomFor } from "./limits";
 
 // Drizzle leaves single-table columns unqualified, which a correlated subquery
@@ -29,7 +29,8 @@ export async function listWallets(db: Db, userId: string, { includeArchived = fa
       ), 0)`.mapWith(Number),
       entryCount: sql<number>`(
         select count(*) from "transaction" t
-        where t.wallet_id = ${W_ID} or t.to_wallet_id = ${W_ID}
+        where t.user_id = ${W_USER}
+          and (t.wallet_id = ${W_ID} or t.to_wallet_id = ${W_ID})
       )`.mapWith(Number),
     })
     .from(wallet)
@@ -47,15 +48,8 @@ export async function getOwnedWallet(db: Db, userId: string, walletId: string) {
   return row;
 }
 
-function rethrowDuplicate(err: unknown): never {
-  if (
-    err instanceof Error &&
-    /wallet_user_name_key/.test(`${err.message} ${(err as { cause?: Error }).cause?.message ?? ""}`)
-  ) {
-    throw new UserError("You already have a wallet with that name.", "name");
-  }
-  throw err;
-}
+/** A second wallet with the same name is a message on the form, not a crash. */
+const rethrowDuplicate = rethrowUnique("wallet_user_name_key", "You already have a wallet with that name.", "name");
 
 export async function createWallet(db: Db, userId: string, input: WalletInput) {
   await assertRoomFor(db, userId, "wallets");
@@ -126,14 +120,19 @@ export async function deleteWallet(db: Db, userId: string, walletId: string) {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)`.mapWith(Number) })
     .from(transaction)
-    .where(sql`${transaction.walletId} = ${walletId} or ${transaction.toWalletId} = ${walletId}`);
+    .where(
+      and(
+        eq(transaction.userId, userId),
+        sql`(${transaction.walletId} = ${walletId} or ${transaction.toWalletId} = ${walletId})`,
+      ),
+    );
   if (count > 0) {
     throw new UserError("This wallet has entries, so it can only be archived.");
   }
   const [{ rules }] = await db
     .select({ rules: sql<number>`count(*)`.mapWith(Number) })
     .from(recurringRule)
-    .where(usesWallet(walletId));
+    .where(and(eq(recurringRule.userId, userId), usesWallet(walletId)));
   if (rules > 0) {
     throw new UserError("A recurring item uses this wallet. Change or delete that item first.");
   }

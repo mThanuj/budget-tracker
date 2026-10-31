@@ -12,6 +12,11 @@ Verified against the code on 2026-10-26 (independent audit).
 - Each user has one tracking currency and one time zone (`user.currency`,
   `user.timezone`); only real currency codes and time zones are accepted.
   "Today" is the user's today. `src/lib/user-prefs.ts`, `src/server/actions/settings.ts`.
+- The currency is chosen on the welcome screen and can't be changed once the
+  account is set up (`onboardedAt`), because amounts are saved in its smallest
+  unit: switching INR to JPY would show ₹240.00 as ¥24,000. Before that, a
+  currency with a different number of decimals is refused if amounts are
+  already saved. The time zone can always change. `src/server/services/settings.ts`.
 - Entry dates must be within the last 10 years and at most a year ahead.
   `transactionSchema` in `src/lib/validation.ts`.
 

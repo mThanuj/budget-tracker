@@ -90,6 +90,22 @@ describe("pages", () => {
   });
 });
 
+describe("raw SQL over entries", () => {
+  it("is always narrowed to one user (or one recurring item), so it uses an index instead of reading everyone's", () => {
+    // Every index on "transaction" starts with user_id (or is the recurring item's
+    // occurrence key); a subquery without either reads every user's entries.
+    const unscoped: string[] = [];
+    for (const f of files.filter((f) => f.startsWith("src/server/"))) {
+      // The rest of that sql`…` template (up to its closing backtick), read
+      // without consuming it, so two subqueries in a row are each checked.
+      for (const m of code(f).matchAll(/from "transaction" t\b(?=([^`]*))/g)) {
+        if (!/\bt\.(user_id|recurring_rule_id)\b/.test(m[1])) unscoped.push(`${f}: ${m[1].slice(0, 80)}`);
+      }
+    }
+    expect(unscoped).toEqual([]);
+  });
+});
+
 describe("redirects and navigation", () => {
   it("only ever go to a fixed path on this site (no open redirects)", () => {
     const bad: string[] = [];

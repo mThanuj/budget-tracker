@@ -118,8 +118,10 @@ export async function assertEntryReferences(
     throw new UserError("That wallet is archived. Restore it first.", "walletId");
   }
   if (input.toWalletId) {
-    const to = await getOwnedWallet(db, userId, input.toWalletId).catch(() => {
-      throw new UserError("That wallet doesn't exist.", "toWalletId");
+    const to = await getOwnedWallet(db, userId, input.toWalletId).catch((err: unknown) => {
+      // The same refusal, on the field the person can fix; a real failure stays one.
+      if (err instanceof UserError) throw new UserError(err.message, "toWalletId");
+      throw err;
     });
     if (to.archivedAt && to.id !== existing?.toWalletId) {
       throw new UserError("That wallet is archived. Restore it first.", "toWalletId");

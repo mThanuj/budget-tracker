@@ -11,6 +11,12 @@ has more. Add new ones under the right heading.
   an API. `next dev` keeps a block saying so at the top of `AGENTS.md`.
 - The proxy is `src/proxy.ts` (Next 16's name for middleware). It checks only
   that a session cookie exists, and sets each page's CSP with a fresh nonce.
+- Every response gets its CSP from one place (D-029): `src/proxy.ts` for pages
+  it handles, `headerRules()` (`src/lib/security-headers.ts`) for the rest. The
+  proxy's `matcher` must stay a literal (Next reads it at build time) and the
+  exact complement of `headerRules`' fixed-CSP paths; `headers.test.ts` checks
+  both with `next/experimental/testing/server`. A path with a dot never reaches
+  the proxy, so it can't be a signed-in page and gets no nonce.
 - CSP nonces (D-027): Next takes the nonce from the **request's**
   `content-security-policy` header (not `x-nonce`, which is only for app code),
   and adds it to its own scripts, not to a plain `<script>` you render: the
@@ -71,6 +77,15 @@ has more. Add new ones under the right heading.
   tests build one this way.
 
 ## Database
+
+- Drizzle wraps a driver's error in `DrizzleQueryError` with the original in
+  `.cause`; pg's and PGlite's errors both carry Postgres's `code` and
+  `constraint`. Recognise duplicates with `isUniqueViolation` / `rethrowUnique`
+  (`src/server/services/errors.ts`), not by matching message text, and never
+  turn an unexpected error into a UserError (it would hide outages).
+- Raw subqueries over `transaction` must filter by `t.user_id` (or
+  `t.recurring_rule_id`): every index starts with one of them, and without it
+  Postgres reads every user's entries. `static.test.ts` checks this.
 
 - The app uses the pooled Neon URL; migrations need the direct one
   (`DATABASE_URL_UNPOOLED`, see `drizzle.config.ts`). Client-side timeouts on the

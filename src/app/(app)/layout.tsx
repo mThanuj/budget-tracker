@@ -5,8 +5,9 @@ import { UserMenu, UserMenuSkeleton } from "@/components/app/user-menu";
 import { AddEntryButton } from "@/components/transactions/add-entry-button";
 import { EntryDialogProvider } from "@/components/transactions/entry-dialog";
 
-// The shell is static and renders instantly; anything that reads the
-// session streams in behind its own Suspense boundary.
+// The shell reads no user data, so it renders without waiting; anything that
+// reads the session streams in behind its own Suspense boundary (every page
+// renders per request for its CSP nonce, D-027).
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <EntryDialogProvider>

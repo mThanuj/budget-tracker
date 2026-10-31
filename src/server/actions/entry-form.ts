@@ -10,8 +10,8 @@ import { userCurrency, userToday } from "@/lib/user-prefs";
 export type EntryFormData = Awaited<ReturnType<typeof getEntryFormData>>;
 
 /**
- * Loaded when the entry dialog opens, so the app shell stays static and the
- * pickers always show the latest wallets and categories.
+ * Loaded when the entry dialog opens, so the shell on every page doesn't query
+ * wallets and categories, and the pickers always show the latest.
  */
 export async function getEntryFormData() {
   const user = await requireUser();

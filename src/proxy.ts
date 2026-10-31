@@ -35,6 +35,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip API routes, Next.js internals and static files.
-  matcher: ["/((?!api|_next/static|_next/image|.*\\..*).*)"],
+  // Skip API routes, Next.js internals and static files. Must stay a literal (Next
+  // reads it at build time) and the exact complement of headerRules' fixed-CSP
+  // paths (src/lib/security-headers.ts), so every path has one CSP (D-029).
+  matcher: ["/((?!api(?:/|$)|_next/static|_next/image|.*\\..*).*)"],
 };

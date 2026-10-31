@@ -52,6 +52,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-026 | Per-user action rate limit and Better Auth's limiter, both in Postgres   | accepted                               |
 | D-027 | Nonce-based CSP; every page renders per request                          | accepted                               |
 | D-028 | Category colors look different from each other, enforced by the server   | accepted                               |
+| D-029 | One CSP per response; a fixed one where the proxy doesn't run            | accepted                               |
 
 ### D-001 Product scope
 
@@ -519,3 +520,27 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
   `src/server/services/categories.ts`, `src/components/categories/`,
   `scripts/recolor-categories.ts`. **References:** `tests/unit/category-colors.test.ts`,
   `tests/db/category-colors.test.ts`.
+
+### D-029 One CSP per response; a fixed one where the proxy doesn't run
+
+- **Status:** accepted · **Date:** 2026-10-31
+- **Context:** after D-027 only pages the proxy handles and `/api/*` had a CSP.
+  The proxy skips any path with a dot (files), so the 404 page for e.g.
+  `/x.php` went out with none.
+- **Decision:** `headerRules()` (`src/lib/security-headers.ts`, used by
+  `next.config.ts`) sends `STATIC_FILE_CSP` on exactly the paths the proxy's
+  matcher skips (except Next's own `_next/static` and `_next/image`, as before):
+  no scripts but the theme snippet's hash, `default-src 'none'`,
+  `frame-ancestors 'none'`. The matcher's `api` exclusion became `api(?:/|$)`,
+  so `/apifoo` is a page.
+- **Rationale:** the smallest change that leaves no response without a CSP and
+  none with two (two would both apply and break pages); doesn't rely on which of
+  config and proxy headers wins on Vercel. **Alternatives:** narrowing the
+  matcher to known files (every new public file would need adding, or signed-out
+  visitors get redirected).
+- **Trade-offs / consequences:** Next's scripts don't run on a dotted 404 (no
+  nonce there); the page still shows and its links work. The matcher and the
+  rule's source must stay complements; `tests/security/headers.test.ts` checks
+  a table of paths.
+- **Affected:** `src/lib/security-headers.ts`, `next.config.ts`, `src/proxy.ts`.
+  **References:** `tests/security/headers.test.ts`, `tests/e2e/security.spec.ts`.
