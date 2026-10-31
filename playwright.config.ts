@@ -10,6 +10,11 @@ function workersFromEnv(value: string | undefined): number | string | undefined 
 
 // Runs against the dev server on :3000 (reused if already running). The tests
 // sign in with Better Auth's testUtils, so they need .env.local (database + secret).
+// PW_PROD=1 builds and runs the production server instead: only there do pages
+// render as they do live (every page per request with a CSP nonce, D-027). It
+// never reuses a running server, so it can't test the dev server by mistake.
+const prod = process.env.PW_PROD === "1";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
@@ -37,9 +42,9 @@ export default defineConfig({
     { name: "tablet", use: { ...devices["iPad Mini"] }, testMatch: /tour\.spec\.ts/ },
   ],
   webServer: {
-    command: "pnpm dev",
+    command: prod ? "pnpm build && pnpm start" : "pnpm dev",
     url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 120_000,
+    reuseExistingServer: !prod,
+    timeout: prod ? 300_000 : 120_000,
   },
 });

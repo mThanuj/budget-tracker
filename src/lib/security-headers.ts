@@ -1,5 +1,6 @@
-// Security response headers, applied to every route by next.config.ts. Kept as
-// a pure, testable function.
+// Security response headers. Pages get their CSP, with a fresh nonce, from
+// src/proxy.ts; next.config.ts sends the rest on every response, and the fixed
+// route-handler CSP. Kept as pure, testable functions.
 
 export type HttpHeader = { key: string; value: string };
 
@@ -11,6 +12,16 @@ const RAZORPAY_CONNECT = "https://api.razorpay.com https://lumberjack.razorpay.c
 const RAZORPAY_FRAME = "https://checkout.razorpay.com https://api.razorpay.com";
 // Google account profile photos (the avatar's src).
 const GOOGLE_IMG = "https://*.googleusercontent.com";
+
+// The theme snippet in the root layout (src/components/theme/theme-script.ts),
+// allowed by its hash so the layout needn't read the nonce. headers.test.ts
+// fails if the snippet changes without this.
+export const THEME_SCRIPT_HASH = "'sha256-dvYwNlmmBaLaFbM63+qbkg6MLCuMngYXZFGWkqZbecI='";
+
+/** A fresh nonce for one page response (base64, as Next expects it in the CSP). */
+export function newNonce(): string {
+  return btoa(crypto.randomUUID());
+}
 
 /**
  * Where the browser sends error reports: the origin of the Sentry DSN, e.g.
@@ -27,33 +38,30 @@ export function monitoringOrigin(dsn = process.env.NEXT_PUBLIC_SENTRY_DSN): stri
 }
 
 /**
- * The Content-Security-Policy.
+ * The Content-Security-Policy for a page (decision D-027).
  *
- * Next's App Router emits per-page inline bootstrap scripts whose content isn't
- * known ahead of time, so a hash or nonce would force every page to render
- * dynamically and defeat cacheComponents/PPR. We keep static rendering and
- * instead (a) restrict where scripts may be LOADED from to 'self' + Razorpay,
- * and (b) lock down base-uri, object-src, frame-ancestors and form-action —
- * which is what actually blocks script-injection escalation, clickjacking,
- * <base> hijacking and form-based exfiltration. The app has no inline-script
- * injection sink: AI output renders as React text nodes, and the only inline
- * script is the static theme snippet.
- *
- * To move to a nonce-based strict CSP later, generate a nonce in proxy.ts,
- * pass it through, and accept that document responses become dynamic.
+ * A script runs only if it carries this response's nonce (Next puts it on its
+ * own scripts, reading it from the request's CSP header), is the theme snippet
+ * (by hash), or was added by a script that already runs ('strict-dynamic', how
+ * Razorpay's Checkout and the app's own chunks load). Browsers that know
+ * 'strict-dynamic' ignore 'self' and the Razorpay host; older ones use them.
+ * Every page renders per request so it can get a nonce (src/app/layout.tsx).
+ * Styles stay 'unsafe-inline': toasts inject <style> and components use style={}.
  */
 export function contentSecurityPolicy({
   dev,
+  nonce,
   monitoring = monitoringOrigin(),
 }: {
   dev: boolean;
+  nonce: string;
   monitoring?: string;
 }): string {
   const directives: Record<string, string> = {
     "default-src": "'self'",
     // 'unsafe-eval' is needed ONLY in development: React Fast Refresh and the
     // Turbopack dev runtime use eval() for debugging. Production stays strict.
-    "script-src": `'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""} ${RAZORPAY_SCRIPT}`,
+    "script-src": `'self' 'nonce-${nonce}' 'strict-dynamic' ${THEME_SCRIPT_HASH}${dev ? " 'unsafe-eval'" : ""} ${RAZORPAY_SCRIPT}`,
     "style-src": "'self' 'unsafe-inline'",
     "img-src": `'self' data: ${GOOGLE_IMG}`,
     "font-src": "'self'",
@@ -71,9 +79,16 @@ export function contentSecurityPolicy({
   return parts.join("; ");
 }
 
+/**
+ * The CSP for route handlers (src/app/api), which serve data and redirects,
+ * never app pages: no scripts at all. Inline styles stay for Better Auth's
+ * sign-in error page.
+ */
+export const ROUTE_HANDLER_CSP = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'";
+
+/** The headers every response gets (the CSP comes separately: see the top of this file). */
 export function securityHeaders({ dev }: { dev: boolean }): HttpHeader[] {
   const headers: HttpHeader[] = [
-    { key: "Content-Security-Policy", value: contentSecurityPolicy({ dev }) },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" }, // legacy backup for frame-ancestors
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

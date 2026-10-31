@@ -6,6 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-10-31
 
+- Nonce-based CSP (D-027, supersedes D-012): `src/proxy.ts` gives every page a
+  fresh nonce, `'unsafe-inline'` is gone from `script-src`, and every page now
+  renders per request (no static shells). `PW_PROD=1` runs the browser tests
+  against a production build.
 - Better Auth's `update-user` endpoint is switched off (`disabledPaths`): the
   app never used it, and it accepted any name length and image URL. The
   deferred "display name and avatar unvalidated" item is closed.

@@ -26,9 +26,12 @@ within 2 working days.
 - **Payments**: Razorpay checkout and webhook signatures are verified; webhooks
   are deduplicated and reconciled against Razorpay's API rather than trusting
   the payload. See decision D-008 in docs/project-memory/design-decisions.md.
-- **Transport & headers**: a Content-Security-Policy and the supporting headers
-  (HSTS, nosniff, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`)
-  are set on every response — see `src/lib/security-headers.ts`.
+- **Transport & headers**: a strict Content-Security-Policy: a script runs
+  only with the response's nonce (fresh for every page, from `src/proxy.ts`),
+  as the theme snippet (by hash), or added by one that does; no inline scripts
+  otherwise, and route handlers allow no scripts at all (decision D-027). The
+  supporting headers (HSTS, nosniff, `X-Frame-Options`, `Referrer-Policy`,
+  `Permissions-Policy`) are on every response. See `src/lib/security-headers.ts`.
 - **Secrets**: the core settings are validated on first use (`src/env.ts`);
   optional ones (AI, payments, admin) switch their feature off when missing.
   Only `NEXT_PUBLIC_APP_NAME` and the public Sentry DSN reach the client. Logs
@@ -66,14 +69,6 @@ within 2 working days.
 
 ## Known trade-offs and deferred hardening
 
-- **CSP `script-src` allows inline.** Next's App Router emits per-page inline
-  bootstrap scripts whose content isn't known in advance, so a hash or nonce
-  would force every page to render dynamically and defeat cacheComponents/PPR.
-  We keep static rendering and instead restrict where scripts load from and lock
-  down `base-uri`/`object-src`/`frame-ancestors`/`form-action`. There is no
-  inline-script injection sink in the app. (`'unsafe-eval'` is added in
-  development only, where React Fast Refresh requires it; production is strict.) To go nonce-based later, mint a nonce
-  in `src/proxy.ts` and accept dynamic document rendering.
 - **Denial-of-wallet on the shared free AI tier.** One user can consume a share
   of the global daily free-chain budget. Bounded by the per-user daily caps, the
   global cap and the per-minute action limit (above). Many accounts together

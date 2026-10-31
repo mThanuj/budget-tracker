@@ -186,7 +186,7 @@ the live site. Write the date in [known-issues.md](project-memory/known-issues.m
 6. The next morning: Sentry → Crons → `recurring-entries` shows an OK check-in.
    The monitor is created by the first run; open it and set its alert (A3).
 7. Browser: open the site with the developer tools open. No CSP errors in the
-   console; on about one page load in ten, a request to Sentry's ingest host
+   console (scripts need the page's nonce, D-027); on about one page load in ten, a request to Sentry's ingest host
    answers 200.
 8. Replay: on `/admin`, wait a few seconds, then press **Send a test browser
    error**. The issue "Test browser error from the admin page (safe to ignore)"

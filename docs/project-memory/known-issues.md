@@ -24,7 +24,6 @@ below; keep this list in step when an item is done or a new one outranks it.
 - Shared free AI tier: many accounts together could use up the global daily
   budget (one is held back by its daily caps and the per-minute limit). Next
   step: backup provider keys, the owner's configuration ([roadmap.md](roadmap.md)).
-- CSP allows inline scripts (decision D-012).
 - `.claude/settings.json` rules are prefix matches for Claude Code only: other
   forms of a command, and other agents, aren't covered.
 
@@ -73,6 +72,9 @@ below; keep this list in step when an item is done or a new one outranks it.
 - **A backup has never been restored.** The nightly encrypted backups (D-011)
   run, but nobody has tried restoring one, so they're unproven. Do it once
   with [docs/RESTORE.md](../RESTORE.md) into a throwaway Neon branch.
+- **Every page now renders per request (D-027); the cost isn't measured yet.**
+  Compare PageSpeed Insights (first paint, LCP) on the preview against the live
+  site before merging, and check Vercel's usage page a week after.
 - Fonts (Onest, Young Serif, Spline Sans Mono via Fontsource) swap in without
   preloading, so the first visit may shift layout. Not measured: check with
   PageSpeed Insights on the live site; if CLS > 0.1, switch to `next/font/local`

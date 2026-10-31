@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import "@fontsource-variable/onest/wght.css";
 import "@fontsource/young-serif/400.css";
 import "@fontsource-variable/spline-sans-mono/wght.css";
@@ -19,7 +20,12 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// Every page renders per request, so Next can put that request's CSP nonce on
+// its scripts (D-027). That means no static shells, so their check is off.
+export const instant = false;
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  await connection();
   return (
     <html lang="en" suppressHydrationWarning className="h-full antialiased">
       <head>

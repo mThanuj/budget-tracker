@@ -25,7 +25,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | ID    | Decision                                                                 | Status                                 |
 | ----- | ------------------------------------------------------------------------ | -------------------------------------- |
 | D-001 | Product scope: beginners, wallets, AI assistant, Free + Pro              | accepted                               |
-| D-002 | Next.js 16 App Router with Cache Components                              | accepted                               |
+| D-002 | Next.js 16 App Router with Cache Components                              | accepted; static shells ended by D-027 |
 | D-003 | Better Auth with Google sign-in only                                     | accepted                               |
 | D-004 | Neon Postgres with Drizzle; committed migrations applied on deploy       | accepted                               |
 | D-005 | Server actions are the API; services own data access                     | accepted                               |
@@ -35,7 +35,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-009 | Hosting on Hetzner + Coolify from the start                              | superseded by D-010                    |
 | D-010 | Launch free on Vercel Hobby with payments switched off                   | accepted                               |
 | D-011 | Nightly encrypted backups by GitHub Actions, kept 7 days                 | accepted                               |
-| D-012 | CSP allows inline scripts to keep static rendering                       | accepted                               |
+| D-012 | CSP allows inline scripts to keep static rendering                       | superseded by D-027                    |
 | D-013 | No client form or data-fetching library                                  | accepted                               |
 | D-014 | Forms submit through `useFormAction`, not `<form action>`                | accepted                               |
 | D-015 | Client calls go through `callAction` (no error page on a failed request) | accepted                               |
@@ -50,6 +50,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-024 | Observability: structured logs, Sentry, health checks                    | accepted                               |
 | D-025 | Plain git hooks; branch names checked in CI                              | accepted                               |
 | D-026 | Per-user action rate limit and Better Auth's limiter, both in Postgres   | accepted                               |
+| D-027 | Nonce-based CSP; every page renders per request                          | accepted                               |
 
 ### D-001 Product scope
 
@@ -66,7 +67,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 
 ### D-002 Next.js 16 App Router with Cache Components
 
-- **Status:** accepted · **Date:** 2026-10-23
+- **Status:** accepted; the static shells it aimed for were given up by D-027 (2026-10-31) · **Date:** 2026-10-23
 - **Decision:** App Router, `cacheComponents` and `partialPrefetching` on
   (`next.config.ts`), `src/proxy.ts` for the optimistic cookie check.
 - **Rationale:** a static shell for every page from the CDN, with per-user
@@ -175,7 +176,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 
 ### D-012 CSP allows inline scripts
 
-- **Status:** accepted · **Date:** 2026-10-25
+- **Status:** superseded by D-027 · **Date:** 2026-10-25
 - **Decision:** `script-src 'self' 'unsafe-inline'` (plus Razorpay), with
   `base-uri`, `object-src`, `frame-ancestors` and `form-action` locked down.
 - **Alternatives:** a nonce-based CSP, rejected: Next's bootstrap scripts are
@@ -449,3 +450,35 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   `src/server/actions/`, `drizzle/0008_rate_limits.sql`. **References:**
   `tests/security/rate-limit.test.ts`, `tests/security/auth.test.ts`,
   `tests/db/limits.test.ts`, `tests/integration/actions.test.ts`.
+
+### D-027 Nonce-based CSP; every page renders per request
+
+- **Status:** accepted · **Date:** 2026-10-31
+- **Context:** D-012 allowed inline scripts to keep D-002's static shells. The
+  owner chose a strict CSP instead, knowing the cost. Next's docs: with nonces
+  "all pages must be dynamically rendered", and Partial Prerendering (what
+  Cache Components does) is incompatible with them; its experimental SRI keeps
+  pages static but doesn't cover Next's inline scripts.
+- **Decision:** `src/proxy.ts` makes a fresh nonce for every page request and
+  puts the policy on the request (Next reads the nonce from there and adds it to
+  its own scripts) and the response. `script-src` is `'self' 'nonce-…'
+'strict-dynamic'`, the theme snippet's hash, and Razorpay's host;
+  `'unsafe-inline'` is gone from scripts (it stays for styles: toasts inject
+  `<style>`, components use `style={}`). The root layout calls `connection()`
+  and sets `instant = false`, so every page renders per request with an empty
+  prerender. Route handlers get a fixed no-scripts CSP from `next.config.ts`.
+- **Rationale:** an injected inline script can't run, whatever the app renders.
+  **Alternatives:** keep D-012 (recommended by the agent; the owner chose this);
+  experimental SRI (doesn't cover Next's inline scripts); nonces only on some
+  routes (two policies to keep straight).
+- **Trade-offs / consequences:** no static shell from the CDN: every page view
+  is a function call (slower first paint, more Vercel usage; to be measured,
+  known-issues.md), and build-time shell validation is off. Pages must keep
+  working without a static shell. The global error page is still prebuilt
+  without a nonce, so its "Try again" is a plain link. Browser tests on
+  `pnpm dev` don't show production rendering: run `PW_PROD=1 pnpm test:e2e
+security.spec.ts` after changing the CSP, the proxy or the root layout.
+- **Affected:** `src/proxy.ts`, `src/lib/security-headers.ts`, `next.config.ts`,
+  `src/app/layout.tsx`, `src/app/global-error.tsx`, `playwright.config.ts`.
+  **References:** `tests/security/headers.test.ts`, `tests/e2e/security.spec.ts`,
+  `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`.
