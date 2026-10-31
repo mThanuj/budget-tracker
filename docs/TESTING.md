@@ -59,6 +59,10 @@ used.
   is `"true"` in `.env.local`, and the reverse.
 - `PW_WORKERS=4 pnpm test:e2e` changes the number of parallel browsers (default:
   75% of CPU cores).
+- `PW_PROD=1 pnpm test:e2e` builds and runs the production server instead of
+  `pnpm dev` (port 3000 must be free). Pages render differently there (D-027),
+  so run at least `PW_PROD=1 pnpm test:e2e security.spec.ts` after changing the
+  CSP, the proxy or the root layout.
 - The visual tour saves screenshots of every page to `tests/e2e/.tour/` for design review.
 
 ## What each layer is for
@@ -112,9 +116,11 @@ used.
     raw SQL only in reviewed places, no eval.
   - `output`: AI text (chat answers, insights) renders as text, never as HTML,
     links or scripts.
-  - `headers`: the CSP and other security headers.
-    The browser side (headers on real responses, the app working under the CSP)
-    is `tests/e2e/security.spec.ts`; secrets in the built bundle are checked by
+  - `headers`: the CSP and other security headers, and the proxy giving each
+    page request its own nonce (D-027).
+    The browser side (headers on real responses, every script carrying the
+    response's nonce, the app working under the CSP) is
+    `tests/e2e/security.spec.ts`; secrets in the built bundle are checked by
     `pnpm check:bundle` after a build.
 - **E2E:** the main journeys in a real browser, on desktop and mobile: sign-in
   redirect, onboarding, entries, wallets and transfers, budgets and alerts,

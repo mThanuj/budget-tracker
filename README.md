@@ -104,8 +104,9 @@ docs/           project-memory/ (architecture, decisions, rules), DESIGN, TESTIN
 A page or server action calls `requireUser()`, then services that take
 `(db, userId, …)` and scope every query to that user. Server actions are the
 app's API; there are only five route handlers (auth, health, export, the daily
-job, the payment webhook). Pages render a static shell and stream the
-user-specific parts behind `<Suspense>`.
+job, the payment webhook). Every page renders per request, so its scripts can
+carry a CSP nonce (decision D-027), and streams the user-specific parts behind
+`<Suspense>`.
 
 Conventions: money is integer minor units (`src/lib/money.ts`); calendar dates
 are `YYYY-MM-DD` strings in the user's time zone (`src/lib/dates.ts`); AI only

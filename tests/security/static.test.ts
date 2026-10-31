@@ -113,6 +113,14 @@ describe("HTML and code injection", () => {
     expect(source("src/app/layout.tsx")).toMatch(/dangerouslySetInnerHTML=\{\{ __html: themeInitScript \}\}/);
   });
 
+  it("renders every page per request, so its scripts carry the CSP nonce (D-027)", () => {
+    // A prerendered page has no nonce, and the strict CSP would block its scripts.
+    // Browser tests on `pnpm dev` can't see that (dev never prerenders), so it's checked here.
+    const layout = source("src/app/layout.tsx");
+    expect(layout).toMatch(/^export const instant = false;$/m);
+    expect(layout).toMatch(/export default async function RootLayout\([^)]*\) \{\n {2}await connection\(\);/);
+  });
+
   it("never evaluates strings as code", () => {
     expect(files.filter((f) => /\beval\(|new Function\(/.test(code(f)))).toEqual([]);
   });

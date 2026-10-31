@@ -63,8 +63,10 @@ may import server code (e.g. `src/components/app/user-menu.tsx`).
 
 1. `src/proxy.ts` sends visitors without a session cookie to `/` (public pages
    are listed there). It only checks the cookie exists.
-2. The page renders a static shell, prerendered at build time. Anything
-   user-specific is an async component under `<Suspense>` that streams in.
+2. It also puts a fresh CSP nonce on the request and the response (D-027).
+   The page renders per request (the root layout calls `connection()`), so
+   Next can add that nonce to its scripts; anything user-specific is an async
+   component under `<Suspense>` that streams in.
 3. That component calls `requireUser()`, which verifies the session through
    Better Auth (once per request, React `cache`) and redirects to
    `/?signed-out=1` if there's none, then calls services with `(db, userId, …)`.

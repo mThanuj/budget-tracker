@@ -9,8 +9,18 @@ has more. Add new ones under the right heading.
 - APIs differ from older versions and from most training data. Check the
   docs for the installed version in `node_modules/next/dist/docs/` before using
   an API. `next dev` keeps a block saying so at the top of `AGENTS.md`.
-- The proxy is `src/proxy.ts` (Next 16's name for middleware). It only checks
-  that a session cookie exists.
+- The proxy is `src/proxy.ts` (Next 16's name for middleware). It checks only
+  that a session cookie exists, and sets each page's CSP with a fresh nonce.
+- CSP nonces (D-027): Next takes the nonce from the **request's**
+  `content-security-policy` header (not `x-nonce`, which is only for app code),
+  and adds it to its own scripts, not to a plain `<script>` you render: the
+  theme snippet is allowed by its hash (`THEME_SCRIPT_HASH`, checked by
+  `headers.test.ts`). A prerendered page has no nonce, so the root layout
+  calls `connection()`; with `instant = false` the build accepts the empty
+  prerenders (`ƒ` for every route, 0-byte `.next/server/app/*.html`). The
+  global error page can't do that (a Client Component with its own `<html>`),
+  so `_global-error.html` is still prebuilt without a nonce. `pnpm dev` never
+  prerenders: check CSP changes with `PW_PROD=1 pnpm test:e2e security.spec.ts`.
 - With Cache Components, a `GET` route handler is prerendered at build time
   unless it touches request data or I/O. `/api/health` calls `connection()`
   first so it always runs per request and the build doesn't query the database.
