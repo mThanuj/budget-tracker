@@ -15,8 +15,7 @@ below; keep this list in step when an item is done or a new one outranks it.
 - **High, needs the owner:** a first backup restore; the daily job's cron
   monitor (both under [Operations](#operations)).
 - **Next:** browser tests in CI and the actions without direct tests (under
-  [Not covered by automated tests](#not-covered-by-automated-tests)); the
-  manual cross-user list (under [Security](#security-deferred-details-in-securitymd)).
+  [Not covered by automated tests](#not-covered-by-automated-tests)).
 - **Later:** moving the three actions' queries into services
   ([Code quality](#code-quality)); request rate limiting
   ([Security](#security-deferred-details-in-securitymd)).
@@ -28,11 +27,6 @@ below; keep this list in step when an item is done or a new one outranks it.
 - Shared free AI tier: one user can use a share of the global daily budget.
 - CSP allows inline scripts (decision D-012).
 - Display name and avatar URL are unvalidated (self-only).
-- Cross-user checks in `tests/security/access-control.test.ts` are a listed set
-  of actions (wallets, categories, goals, recurring items, budgets, entries);
-  billing, setup, alerts, subscription suggestions and insights aren't in the
-  list, and a new action that takes an id isn't caught automatically
-  (confirmed 2026-10-26).
 - `.claude/settings.json` rules are prefix matches for Claude Code only: other
   forms of a command, and other agents, aren't covered.
 
@@ -81,8 +75,6 @@ below; keep this list in step when an item is done or a new one outranks it.
 - **A backup has never been restored.** The nightly encrypted backups (D-011)
   run, but nobody has tried restoring one, so they're unproven. Do it once
   with [docs/RESTORE.md](../RESTORE.md) into a throwaway Neon branch.
-- The live site's security headers haven't been checked from outside (agent sandboxes
-  get 403 from vercel.app): `curl -sI https://clearpaisa-seven.vercel.app | grep -i content-security`.
 - Fonts (Onest, Young Serif, Spline Sans Mono via Fontsource) swap in without
   preloading, so the first visit may shift layout. Not measured: check with
   PageSpeed Insights on the live site; if CLS > 0.1, switch to `next/font/local`

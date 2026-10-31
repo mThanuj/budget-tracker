@@ -47,9 +47,10 @@ within 2 working days.
 - **Regression tests**: `pnpm test:security` checks some rules across the whole
   app automatically: every action needs a session, every route is on a reviewed
   list, every signed-in page checks the session, client files import no server
-  code. Cross-user checks are a listed set of actions (wallets, categories,
-  goals, recurring items, budgets, entries); a new action that takes an id
-  needs its own entry there. See docs/TESTING.md.
+  code, and every action is on a reviewed list saying why it can't reach
+  another user's records (a new one fails until it's added). Every action that
+  takes ids or keys from the client is tried with another user's. See
+  docs/TESTING.md.
 - **Supply chain**: pinned registry, install scripts restricted
   (`pnpm-workspace.yaml` allowBuilds), a release-age delay on new versions (pnpm 11's
   default `minimumReleaseAge`), Dependabot for known CVEs, and CI failing on

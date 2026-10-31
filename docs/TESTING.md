@@ -83,14 +83,17 @@ used.
   shown, a switch goes back if saving fails.
 - **Security:** the security rules, checked across the whole app rather than
   feature by feature. The sweeps catch a new action without a session check, an
-  unreviewed route, a signed-in page that doesn't check the session, and client
-  code importing server code; cross-user checks are per listed action. Each
-  file names the threat it covers:
+  unreviewed route, a signed-in page that doesn't check the session, client
+  code importing server code, and an action nobody has reviewed for other
+  users' records. Each file names the threat it covers:
   - `access-control`: every server action refuses without a session (found
-    automatically); a listed set of actions (wallets, categories, goals,
-    recurring items, budgets, entries) is tried with another user's ids, and each
-    refusal must be the ownership check, not a form error; slipped-in ownership
-    fields are ignored. A new action that takes an id needs its own entry here.
+    automatically) and is on a reviewed list saying why it can't reach another
+    user's records, so a new action fails until it's added. Every action that
+    takes ids or keys (wallets, categories, goals, recurring items, budgets,
+    entries, alerts, subscription suggestions, setup, billing) is tried with
+    another user's, and each refusal must be the ownership check, not a form
+    error; insight reports are built only from the user's own records;
+    slipped-in ownership fields are ignored.
   - `settings`: every setting in `.env.example` is removed before tests run (or
     is harmless), and every one `src/env.ts` validates is documented.
   - `routes`: every route handler is on a reviewed list with who may call it,
