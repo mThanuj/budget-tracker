@@ -85,7 +85,7 @@ used.
   feature by feature. The sweeps catch a new action without a session check, an
   unreviewed route, a signed-in page that doesn't check the session, client
   code importing server code, and an action nobody has reviewed for other
-  users' records. Each file names the threat it covers:
+  users' records or for the rate limit. Each file names the threat it covers:
   - `access-control`: every server action refuses without a session (found
     automatically) and is on a reviewed list saying why it can't reach another
     user's records, so a new action fails until it's added. Every action that
@@ -94,6 +94,9 @@ used.
     another user's, and each refusal must be the ownership check, not a form
     error; insight reports are built only from the user's own records;
     slipped-in ownership fields are ignored.
+  - `rate-limit`: every server action counts against the per-user limit per
+    minute or is on a reviewed exempt list; over the limit, it stops before
+    doing anything and returns its usual failure instead of throwing (D-026).
   - `settings`: every setting in `.env.example` is removed before tests run (or
     is harmless), and every one `src/env.ts` validates is documented.
   - `routes`: every route handler is on a reviewed list with who may call it,

@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { priceLabel } from "@/config/plans";
+import { TOO_FAST, withinActionLimit } from "@/server/action-utils";
 import { getUserPlan } from "@/server/billing/plan";
 import {
   cancelSubscriptionAtCycleEnd,
@@ -34,6 +35,7 @@ export type CheckoutStart =
 /** Creates (or reuses) a Razorpay subscription for Checkout to open. */
 export async function startCheckout(interval: "monthly" | "yearly"): Promise<CheckoutStart> {
   const user = await requireUser();
+  if (!(await withinActionLimit(user.id))) return { ok: false, error: TOO_FAST };
   const cfg = razorpayConfig();
   if (!cfg) return { ok: false, error: NOT_SET_UP };
   const chosen = z.enum(["monthly", "yearly"]).safeParse(interval);
@@ -100,6 +102,7 @@ export type CheckoutConfirm = { ok: true; active: boolean } | { ok: false; error
 /** Called by Checkout's success handler. The webhook confirms the same thing in production. */
 export async function confirmCheckout(response: unknown): Promise<CheckoutConfirm> {
   const user = await requireUser();
+  if (!(await withinActionLimit(user.id))) return { ok: false, error: TOO_FAST };
   const cfg = razorpayConfig();
   if (!cfg) return { ok: false, error: NOT_SET_UP };
   const input = checkoutResponse.safeParse(response);
@@ -149,6 +152,7 @@ export async function confirmCheckout(response: unknown): Promise<CheckoutConfir
 /** Re-checks payments still being confirmed. Returns true once Pro is on. */
 export async function checkPaymentStatus(): Promise<boolean> {
   const user = await requireUser();
+  if (!(await withinActionLimit(user.id))) return false;
   const cfg = razorpayConfig();
   if (!cfg) return false;
   try {
@@ -167,6 +171,7 @@ export async function checkPaymentStatus(): Promise<boolean> {
 /** Cancels at the end of the paid period; Pro stays until then. */
 export async function cancelPro(): Promise<{ ok: true } | { ok: false; error: string }> {
   const user = await requireUser();
+  if (!(await withinActionLimit(user.id))) return { ok: false, error: TOO_FAST };
   const cfg = razorpayConfig();
   if (!cfg) return { ok: false, error: NOT_SET_UP };
   const plan = await getUserPlan(db, user.id);

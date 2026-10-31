@@ -47,7 +47,15 @@ has more. Add new ones under the right heading.
   loading it; without that, CSRF tests pass for the wrong reason.
 - Its `update-user` endpoint lets users set any display name and image URL
   (self-only, accepted: SECURITY.md). App fields are `input: false`.
-- Its built-in rate limiter uses memory, so on Vercel it's per instance.
+- Its rate limiter is on only in production and counts in the database
+  (`rate_limit`, D-026). It finds the caller's address in `x-forwarded-for` and
+  uses it only when the header holds exactly one address (1.7.12,
+  `@better-auth/core` `utils/ip`); otherwise every caller shares one count per
+  path, and it logs "could not determine a client IP" once. Vercel sets the
+  header to the client's address (Vercel's docs; not checked from here). Behind
+  another proxy, check the logs for that warning and set
+  `advanced.ipAddress.trustedProxies` (docs/DEPLOY.md Part 2). Vitest's auth
+  tests print the warning because their requests carry no address.
 - A session cookie is `<token>.<base64 HMAC-SHA256 of the token>`, URL-encoded;
   tests build one this way.
 
@@ -163,6 +171,12 @@ has more. Add new ones under the right heading.
   pipe can kill Playwright).
 - Browser tests need `.env.local` and write to its database (a development one).
   They sign in with Better Auth's test helpers, so no Google account is used.
+- Server actions count against the per-minute limit (D-026) in Vitest too: a
+  test file that makes more than 120 action calls as one user within a minute
+  gets "Too many requests". Use another user, or mock `countActionCall` as
+  `tests/security/rate-limit.test.ts` does.
+- A Vitest run of files in more than one folder writes `test-unit.log`, not the
+  folders' own logs; an older `test-<suite>.log` can be left from an earlier run.
 
 ## Git hooks
 

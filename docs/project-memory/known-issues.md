@@ -17,13 +17,10 @@ below; keep this list in step when an item is done or a new one outranks it.
 - **Next:** browser tests in CI and the actions without direct tests (under
   [Not covered by automated tests](#not-covered-by-automated-tests)).
 - **Later:** moving the three actions' queries into services
-  ([Code quality](#code-quality)); request rate limiting
-  ([Security](#security-deferred-details-in-securitymd)).
+  ([Code quality](#code-quality)).
 
 ## Security (deferred; details in SECURITY.md)
 
-- No request rate limiting for app actions (needs a shared store; Better Auth's
-  own limiter is in-memory per instance).
 - Shared free AI tier: one user can use a share of the global daily budget.
 - CSP allows inline scripts (decision D-012).
 - Display name and avatar URL are unvalidated (self-only).

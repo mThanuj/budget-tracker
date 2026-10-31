@@ -150,6 +150,42 @@ describe("entries (saveTransaction / removeTransaction)", async () => {
   });
 });
 
+describe("the per-minute action limit (D-026)", async () => {
+  const { saveTransaction } = await import("@/server/actions/transactions");
+  const { LIMITS } = await import("@/config/limits");
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("refuses with a plain message once the user is over it, saves nothing, and logs one warning", async () => {
+    const carol = await newUser("Carol");
+    signInAs(carol);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-25T10:00:30Z"));
+    // Carol has already made all but one of this minute's calls.
+    await db.insert(schema.actionRate).values({
+      userId: carol.user.id,
+      windowStart: new Date("2026-10-25T10:00:00Z"),
+      count: LIMITS.actionsPerMinute - 1,
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const save = () =>
+      saveTransaction(
+        undefined,
+        form({ type: "expense", amount: "5", occurredOn: "2026-10-25", description: "Fast", walletId: carol.cashId }),
+      );
+
+    expect(await save()).toEqual({ ok: true });
+    expect(await save()).toEqual({ ok: false, error: "Too many requests. Wait a minute and try again." });
+    expect(await save()).toEqual({ ok: false, error: "Too many requests. Wait a minute and try again." });
+    expect(await db.$count(schema.transaction, eq(schema.transaction.userId, carol.user.id))).toBe(1);
+    expect(warn.mock.calls.filter(([line]) => String(line).includes("ratelimit.actions_blocked"))).toHaveLength(1);
+
+    vi.setSystemTime(new Date("2026-10-25T10:01:00Z")); // a new minute
+    expect(await save()).toEqual({ ok: true });
+  });
+});
+
 describe("wallets (walletAction)", async () => {
   const { walletAction } = await import("@/server/actions/wallets");
 

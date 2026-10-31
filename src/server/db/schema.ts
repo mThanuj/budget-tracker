@@ -96,6 +96,15 @@ export const verification = pgTable(
   (t) => [index().on(t.identifier)],
 );
 
+// Better Auth's request counters ("<ip>|<path>"), shared by every server
+// instance (rateLimit.storage "database" in src/server/auth.ts).
+export const rateLimit = pgTable("rate_limit", {
+  id: text().primaryKey(),
+  key: text().notNull().unique(),
+  count: integer().notNull(),
+  lastRequest: bigint({ mode: "number" }).notNull(), // milliseconds since 1970
+});
+
 // ---------------------------------------------------------------------------
 // App tables
 // ---------------------------------------------------------------------------
@@ -346,6 +355,16 @@ export const aiUsage = pgTable(
   },
   (t) => [primaryKey({ columns: [t.scope, t.day, t.feature] })],
 );
+
+// Server action calls in the current minute, one row per user
+// (countActionCall in src/server/services/limits.ts).
+export const actionRate = pgTable("action_rate", {
+  userId: text()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  windowStart: timestamp({ withTimezone: true }).notNull(),
+  count: integer().notNull(),
+});
 
 // One row per Razorpay subscription (a user may have several over time).
 export const subscription = pgTable(

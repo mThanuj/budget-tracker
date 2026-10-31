@@ -2,6 +2,7 @@
 
 import type { ModelMessage } from "ai";
 import { z } from "zod";
+import { withinActionLimit } from "@/server/action-utils";
 import { aiAvailableFor } from "@/server/ai";
 import { answerWithModel, chatInstructions, moneyTools } from "@/server/ai/chat";
 import { aiAccess } from "@/server/ai/access";
@@ -29,6 +30,9 @@ export type ChatReply =
 export async function askMoney(messages: { role: "user" | "assistant"; content: string }[]): Promise<ChatReply> {
   const user = await requireUser();
   const access = await aiAccess(db, user.id);
+  if (!(await withinActionLimit(user.id))) {
+    return { ok: false, reason: "busy", left: await chatQuestionsLeft(db, user.id, access.limits) };
+  }
   const parsed = history.safeParse(messages);
   if (!parsed.success)
     return { ok: false, reason: "invalid", left: await chatQuestionsLeft(db, user.id, access.limits) };

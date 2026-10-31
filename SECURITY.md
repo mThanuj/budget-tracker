@@ -44,11 +44,18 @@ within 2 working days.
   and live in `src/config/limits.ts`; the check is a count in the same
   database, so it needs no shared store. Two simultaneous requests can
   overshoot a limit by a little, which doesn't matter for its purpose.
+- **Rate limits**: every server action (except signing out, deleting the
+  account, the admin test error and loading the entry form) counts against a
+  per-user limit per minute (`src/config/limits.ts`), counted in the database so
+  every server instance shares it; over it, nothing runs. Better Auth limits its
+  own endpoints per address (sign-in: 3 per 10 seconds), also counted in the
+  database. See decision D-026.
 - **Regression tests**: `pnpm test:security` checks some rules across the whole
   app automatically: every action needs a session, every route is on a reviewed
   list, every signed-in page checks the session, client files import no server
-  code, and every action is on a reviewed list saying why it can't reach
-  another user's records (a new one fails until it's added). Every action that
+  code, every action is on a reviewed list saying why it can't reach
+  another user's records, and every action counts against the rate limit or is
+  on a reviewed exempt list (a new one fails until it's added). Every action that
   takes ids or keys from the client is tried with another user's. See
   docs/TESTING.md.
 - **Supply chain**: pinned registry, install scripts restricted
@@ -66,16 +73,10 @@ within 2 working days.
   inline-script injection sink in the app. (`'unsafe-eval'` is added in
   development only, where React Fast Refresh requires it; production is strict.) To go nonce-based later, mint a nonce
   in `src/proxy.ts` and accept dynamic document rendering.
-- **Per-user rate limiting of app actions is not yet in place.** Better Auth
-  rate-limits its own endpoints, and AI use is capped per user and globally per
-  day, but cheap authed actions aren't rate-limited. Doing it properly on a
-  serverless host needs a shared store (e.g. Upstash Redis); an in-memory
-  limiter would be per-instance and unreliable. Add when abuse appears or when
-  moving to the always-on server.
 - **Display name and avatar URL are the user's own to set.** Better Auth's
   update-user endpoint accepts any name length and any image URL. Only that
   user sees them (the CSP blocks images from other hosts), so they're not
   validated.
 - **Denial-of-wallet on the shared free AI tier.** One user can consume a share
-  of the global daily free-chain budget. Bounded by the global cap; add a
-  per-user burst limit (above) and backup providers to reduce the blast radius.
+  of the global daily free-chain budget. Bounded by the global cap and the
+  per-minute action limit (above); backup providers would reduce the blast radius.

@@ -1,7 +1,16 @@
 import { and, eq, gte, ne, sql } from "drizzle-orm";
 import { LIMITS } from "@/config/limits";
 import type { Db } from "../db";
-import { alertDismissal, category, goal, goalContribution, recurringRule, transaction, wallet } from "../db/schema";
+import {
+  actionRate,
+  alertDismissal,
+  category,
+  goal,
+  goalContribution,
+  recurringRule,
+  transaction,
+  wallet,
+} from "../db/schema";
 import { UserError } from "./errors";
 
 // Checked before each insert. Two requests at the same moment can both pass
@@ -56,4 +65,27 @@ export async function assertDailyRoomFor(db: Db, userId: string, kind: keyof typ
       `That's ${n(LIMITS[kind])} ${DAILY[kind].what} in the last 24 hours, the most allowed in a day. Try again tomorrow.`,
     );
   }
+}
+
+/**
+ * Counts one server action call in the user's current minute and returns how
+ * many they've made in it, this one included (calls over the limit count too).
+ * One upsert, so simultaneous calls can't slip past the limit.
+ */
+export async function countActionCall(db: Db, userId: string, now = new Date()): Promise<number> {
+  const windowStart = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
+  const [row] = await db
+    .insert(actionRate)
+    .values({ userId, windowStart, count: 1 })
+    .onConflictDoUpdate({
+      target: actionRate.userId,
+      set: {
+        // A new minute starts again from 1; a call stamped with an earlier one
+        // (a server whose clock is a little behind) adds to the current minute.
+        count: sql`case when excluded.window_start > ${actionRate.windowStart} then 1 else ${actionRate.count} + 1 end`,
+        windowStart: sql`greatest(${actionRate.windowStart}, excluded.window_start)`,
+      },
+    })
+    .returning({ count: actionRate.count });
+  return row.count;
 }

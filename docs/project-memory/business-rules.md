@@ -101,6 +101,12 @@ Verified against the code on 2026-10-26 (independent audit).
   (archived count too); per 24 hours: 1,000 entries (recurring ones excluded),
   300 goal savings, 300 dismissed alerts (dismissed subscription suggestions
   count too). `src/config/limits.ts`; the config wins if it differs from here.
+- Server actions: 120 calls per minute per user, all actions together, except
+  signing out, deleting the account, the admin test error and loading the entry
+  form. Over it nothing runs, and the person sees "Too many requests. Wait a
+  minute and try again." (or the AI's "busy" message). Sign-in: 3 attempts per
+  10 seconds per address (Better Auth's default). `src/config/limits.ts`,
+  `src/server/action-utils.ts`, D-026.
 - Deleting the account first cancels, immediately, every subscription that
   isn't finished (including unpaid or paused ones) at Razorpay; if a cancel
   fails, nothing is deleted (except for a never-paid "created" one). Then all the

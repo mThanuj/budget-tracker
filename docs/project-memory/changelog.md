@@ -6,6 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-10-31
 
+- Rate limiting (D-026, replacing D-018's deferral): every server action but
+  four counts against 120 calls per minute per user (`action_rate`), and Better
+  Auth's sign-in limits are counted in the database (`rate_limit`); migration
+  `0008_rate_limits`. `runAction` now takes the user id.
 - Cross-user tests now cover every action that takes ids or keys (added:
   alerts, subscription suggestions, setup, all billing actions) and the
   insight report's facts; every action must be on a reviewed list in

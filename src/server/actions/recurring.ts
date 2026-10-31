@@ -23,7 +23,7 @@ const merchantKey = z.string().regex(/^[a-z ]{2,60}$/);
 
 export async function saveRule(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const { id, ...fields } = formObject(formData);
     const today = userToday(user);
     const input = recurringSchema(userCurrency(user), today).parse(fields);
@@ -37,7 +37,7 @@ type RuleOp = "pause" | "resume" | "delete" | "skip";
 
 export async function ruleAction(op: RuleOp, id: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const ruleId = idSchema.parse(id);
     const today = userToday(user);
     if (op === "pause") await pauseRule(db, user.id, ruleId);
@@ -51,7 +51,7 @@ export async function ruleAction(op: RuleOp, id: string): Promise<ActionResult> 
 
 export async function confirmDue(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const today = userToday(user);
     const fields = z
       .object({
@@ -76,7 +76,7 @@ export async function confirmDue(_prev: ActionResult, formData: FormData): Promi
 
 export async function subscriptionSuggestionAction(op: "track" | "dismiss", key: string): Promise<ActionResult> {
   const user = await requireUser();
-  return runAction(async () => {
+  return runAction(user.id, async () => {
     const k = merchantKey.parse(key);
     if (op === "track") await trackSubscription(db, user.id, k, userToday(user));
     else if (op === "dismiss") await dismissSubscriptionSuggestion(db, user.id, k);

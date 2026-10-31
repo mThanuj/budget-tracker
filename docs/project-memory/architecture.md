@@ -68,9 +68,10 @@ may import server code (e.g. `src/components/app/user-menu.tsx`).
 3. That component calls `requireUser()`, which verifies the session through
    Better Auth (once per request, React `cache`) and redirects to
    `/?signed-out=1` if there's none, then calls services with `(db, userId, …)`.
-4. A change is a server action: `requireUser()` → parse with Zod (shared
-   schemas in `src/lib/validation.ts`) → service → `refresh()` (from
-   `next/cache`) → result.
+4. A change is a server action: `requireUser()` → the per-user rate limit
+   (`runAction`, or `withinActionLimit` in actions with their own result; D-026)
+   → parse with Zod (shared schemas in `src/lib/validation.ts`) → service →
+   `refresh()` (from `next/cache`) → result.
 5. The client calls it through `callAction()` or a form via `useFormAction()`;
    the result (or "didn't go through") is shown in place.
 
@@ -148,9 +149,10 @@ erDiagram
 ```
 
 Also: `merchant_rule` (learned description → category), `alert_dismissal`,
-`ai_usage` (daily counters per user, provider and globally), `payment_event`
-(webhook ids, for idempotency), and Better Auth's `session`, `account`,
-`verification`. Schema: `src/server/db/schema.ts`; migrations: `drizzle/`.
+`ai_usage` (daily counters per user, provider and globally), `action_rate`
+(server action calls this minute, one row per user), `payment_event` (webhook
+ids, for idempotency), and Better Auth's `session`, `account`, `verification`,
+`rate_limit` (its per-address request counts). Schema: `src/server/db/schema.ts`; migrations: `drizzle/`.
 
 ## External services
 
