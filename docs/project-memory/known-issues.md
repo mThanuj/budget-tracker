@@ -14,8 +14,8 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 - **High, needs the owner:** a first backup restore; the daily job's cron
   monitor (both under [Operations](#operations)).
-- **Next:** measure the cost of rendering every page per request (under
-  [Operations](#operations)).
+- **Next:** compare Vercel's usage since every page renders per request
+  (PageSpeed is done; under [Operations](#operations)).
 
 ## Security (deferred; details in SECURITY.md)
 
@@ -77,12 +77,19 @@ below; keep this list in step when an item is done or a new one outranks it.
   into a throwaway database on GitHub's runner, but nobody has followed
   [docs/RESTORE.md](../RESTORE.md) end to end. Do it once into a throwaway Neon
   branch: it tests the owner's own steps and tools.
-- **Every page now renders per request (D-027); the cost isn't measured yet.**
-  Previews are behind Vercel's login, so measure the live site: PageSpeed
-  Insights on `/` and `/privacy` (median of 3, mobile and desktop), Sentry
-  Insights filtered to production, and Vercel's usage for 1–7 November against
-  25–31 October. Record the numbers here and in D-027, against the targets in
-  OBSERVABILITY.md. A baseline is due before the D-036 font change deploys.
+- **Every page renders per request (D-027): Vercel usage not compared yet.**
+  PageSpeed on the live site (2026-11-01, one run each) is well within the
+  targets (LCP < 2.5 s, CLS < 0.1). Before → after D-036's fonts: `/` mobile
+  score 96 → 99, LCP 2.05 s → 0.93 s, CLS 0.019 → 0.019 (the animated demo, not
+  fonts), 4 font files (122 KB) → 3 (100 KB); `/` desktop 100 → 99 (LCP 0.2 →
+  0.3 s, a cold start right after the deploy); `/privacy` mobile 99 → 100 (LCP
+  0.9 s, CLS 0.005 → 0), desktop 100 → 100. `/privacy` now also loads the
+  monospace font (+37 KB, all three are preloaded everywhere). Still to do:
+  Vercel → Usage, function invocations and duration for 1–7 November against
+  25–31 October; Sentry's field Web Vitals once there are enough samples.
+- **Staging (D-037) needs the owner's one-time setup** ([DEPLOY.md](../DEPLOY.md#7-staging-try-a-change-before-merging)):
+  the Neon `staging` branch, the separate Google project, Vercel's branch-only
+  settings; then a first push to `staging` and a sign-in there.
 
 ## Code quality
 

@@ -6,6 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-11-01
 
+- Staging (D-037): the `staging` branch gets its own settings, database
+  (a Neon branch of development) and Google sign-in; its builds migrate that
+  database (`migrationTarget` in `scripts/vercel-build.mjs`) and the branch-name
+  check allows it. PageSpeed before and after D-036 recorded (known-issues.md).
 - Fonts through `next/font/local` (latin files only, preloaded, size-matched
   fallbacks; 3 font files instead of 13), link-preview image and Open Graph
   tags, `robots.txt` and a sitemap, the site's address from `BETTER_AUTH_URL`
