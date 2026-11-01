@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { BillingInterval } from "@/config/plans";
 import type { Db } from "../db";
@@ -132,3 +132,66 @@ export async function subscriptionsToSync(db: Db, userId: string, now = new Date
  */
 export const isConfirming = (s: { status: string; updatedAt: Date }, now = Date.now()) =>
   s.status === "authenticated" && s.updatedAt.getTime() > now - 60 * 60_000;
+
+// ---------------------------------------------------------------------------
+// The user's own subscription rows, for the billing and account actions. Every
+// query is scoped to the user; Razorpay's ids are only ever looked up within it.
+// ---------------------------------------------------------------------------
+
+/** The newest checkout this user started for `planKey` and never paid, to reuse instead of creating another. */
+export async function findReusableCheckout(db: Db, userId: string, planKey: BillingInterval) {
+  const [row] = await db
+    .select()
+    .from(subscription)
+    .where(and(eq(subscription.userId, userId), eq(subscription.planKey, planKey), eq(subscription.status, "created")))
+    .orderBy(desc(subscription.createdAt))
+    .limit(1);
+  return row;
+}
+
+/** Stores a checkout just created at Razorpay. */
+export async function recordCheckout(
+  db: Db,
+  userId: string,
+  input: { razorpaySubscriptionId: string; planKey: BillingInterval; status: string },
+) {
+  await db.insert(subscription).values({ userId, ...input });
+}
+
+/** The user's subscription with this Razorpay id, or undefined (also for someone else's). */
+export async function getOwnSubscription(db: Db, userId: string, razorpaySubscriptionId: string) {
+  const [row] = await db
+    .select()
+    .from(subscription)
+    .where(and(eq(subscription.userId, userId), eq(subscription.razorpaySubscriptionId, razorpaySubscriptionId)));
+  return row;
+}
+
+/** A verified payment means at least "authenticated": moves a still-"created" checkout forward, never back. */
+export async function markAuthenticated(db: Db, userId: string, id: string) {
+  await db
+    .update(subscription)
+    .set({ status: "authenticated" })
+    .where(and(eq(subscription.id, id), eq(subscription.userId, userId), eq(subscription.status, "created")));
+}
+
+/** Notes that the user cancelled the renewal (Pro stays until the paid period ends). */
+export async function markCancelAtCycleEnd(db: Db, userId: string, razorpaySubscriptionId: string) {
+  await db
+    .update(subscription)
+    .set({ cancelAtCycleEnd: true })
+    .where(and(eq(subscription.userId, userId), eq(subscription.razorpaySubscriptionId, razorpaySubscriptionId)));
+}
+
+/** Subscriptions that would still charge or could still be paid: cancelled at Razorpay before an account is deleted. */
+export async function liveSubscriptions(db: Db, userId: string) {
+  return db
+    .select()
+    .from(subscription)
+    .where(
+      and(
+        eq(subscription.userId, userId),
+        inArray(subscription.status, ["created", "authenticated", "active", "pending", "paused"]),
+      ),
+    );
+}

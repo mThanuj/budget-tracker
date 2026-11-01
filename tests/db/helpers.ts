@@ -1,15 +1,15 @@
 import { PGlite } from "@electric-sql/pglite";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, type Logger } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { suggestCategoryColors } from "@/lib/category-colors";
 import type { Db } from "@/server/db";
 import * as schema from "@/server/db/schema";
 
-/** A fresh in-memory Postgres with all migrations applied. */
-export async function createTestDb() {
+/** A fresh in-memory Postgres with all migrations applied. `logger` sees every query (e.g. to count them). */
+export async function createTestDb({ logger }: { logger?: Logger } = {}) {
   const client = new PGlite();
-  const db = drizzle({ client, schema, casing: "snake_case" });
+  const db = drizzle({ client, schema, casing: "snake_case", logger });
   await migrate(db, { migrationsFolder: "./drizzle" });
   return { db, close: () => client.close() };
 }

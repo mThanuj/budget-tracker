@@ -1,12 +1,11 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { cancelSubscriptionNow, razorpayKeys } from "@/server/billing/razorpay";
+import { liveSubscriptions } from "@/server/billing/subscriptions";
 import { db } from "@/server/db";
-import { subscription } from "@/server/db/schema";
 import { deleteAccountData } from "@/server/services/account";
 import { requireUser } from "@/server/session";
 import { log } from "@/server/log";
@@ -36,15 +35,7 @@ export async function deleteAccount(confirmation: string): Promise<{ ok: false; 
     return { ok: false, error: "Type DELETE to confirm." };
   }
 
-  const live = await db
-    .select()
-    .from(subscription)
-    .where(
-      and(
-        eq(subscription.userId, user.id),
-        inArray(subscription.status, ["created", "authenticated", "active", "pending", "paused"]),
-      ),
-    );
+  const live = await liveSubscriptions(db, user.id);
   if (live.length > 0) {
     const cfg = razorpayKeys();
     if (!cfg)

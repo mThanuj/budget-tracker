@@ -12,6 +12,15 @@ const W_ID = sql.raw(`"wallet"."id"`);
 const W_USER = sql.raw(`"wallet"."user_id"`);
 
 /** Wallets with live balances: opening balance plus every entry in or out. */
+/** Wallets for a picker: no balances or counts (listWallets works those out per wallet). */
+export async function listWalletOptions(db: Db, userId: string, { includeArchived = false } = {}) {
+  return db
+    .select({ id: wallet.id, name: wallet.name, kind: wallet.kind, archivedAt: wallet.archivedAt })
+    .from(wallet)
+    .where(and(eq(wallet.userId, userId), includeArchived ? undefined : isNull(wallet.archivedAt)))
+    .orderBy(asc(wallet.createdAt));
+}
+
 export async function listWallets(db: Db, userId: string, { includeArchived = false } = {}) {
   return db
     .select({
@@ -36,6 +45,11 @@ export async function listWallets(db: Db, userId: string, { includeArchived = fa
     .from(wallet)
     .where(and(eq(wallet.userId, userId), includeArchived ? undefined : isNull(wallet.archivedAt)))
     .orderBy(asc(wallet.createdAt));
+}
+
+/** How many wallets the user has in use (not archived); cheaper than listWallets when that's all a page needs. */
+export async function countActiveWallets(db: Db, userId: string) {
+  return db.$count(wallet, and(eq(wallet.userId, userId), isNull(wallet.archivedAt)));
 }
 
 /** Throws unless the wallet exists and belongs to the user. */

@@ -1,8 +1,8 @@
 "use server";
 
 import { aiAvailableFor } from "@/server/ai";
-import { listCategories } from "@/server/services/categories";
-import { listWallets } from "@/server/services/wallets";
+import { listCategoryOptions } from "@/server/services/categories";
+import { listWalletOptions } from "@/server/services/wallets";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";
@@ -16,8 +16,8 @@ export type EntryFormData = Awaited<ReturnType<typeof getEntryFormData>>;
 export async function getEntryFormData() {
   const user = await requireUser();
   const [wallets, categories] = await Promise.all([
-    listWallets(db, user.id, { includeArchived: true }),
-    listCategories(db, user.id, { includeArchived: true }),
+    listWalletOptions(db, user.id, { includeArchived: true }),
+    listCategoryOptions(db, user.id, { includeArchived: true }),
   ]);
   return {
     currency: userCurrency(user),

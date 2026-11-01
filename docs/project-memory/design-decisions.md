@@ -55,6 +55,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-029 | One CSP per response; a fixed one where the proxy doesn't run            | accepted                               |
 | D-030 | Undo after deleting an entry, from a short-lived trash table             | accepted                               |
 | D-031 | Installable app: manifest and generated icons, no service worker         | accepted                               |
+| D-032 | Browser tests in CI against a production build, no secrets               | accepted                               |
 
 ### D-001 Product scope
 
@@ -591,3 +592,23 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
 - **Affected:** `src/app/manifest.ts`, `src/app/icon.tsx`, `src/app/apple-icon.tsx`,
   `src/proxy.ts`, `src/app/layout.tsx`. **References:** `tests/e2e/pwa.spec.ts`,
   `tests/unit/manifest.test.ts`, `tests/security/headers.test.ts`.
+
+### D-032 Browser tests in CI against a production build, no secrets
+
+- **Status:** accepted · **Date:** 2026-11-01
+- **Context:** browser tests ran only on the owner's machine, and CI barely
+  covered the UI (pages 0%). D-027's per-request rendering showed that dev mode
+  can hide production-only breakage.
+- **Decision:** an `e2e` job in `.github/workflows/ci.yml`, beside `checks`:
+  a `postgres:18` service container, `pnpm db:migrate`, a `BETTER_AUTH_SECRET`
+  generated and masked per run, placeholder Google keys, `PW_PROD=1`, desktop
+  Chrome and the iPhone (WebKit) project; the log and traces are kept on failure.
+- **Rationale:** the tests sign in with Better Auth's test helpers, so nothing
+  real is needed; a container is fast and works for every pull request.
+  **Alternatives:** a Neon branch per run (an API key secret, slower, not for
+  outside pull requests); running on `pnpm dev` (misses production rendering).
+- **Trade-offs / consequences:** a few more minutes per run; billing and AI
+  tests skip (no keys). Whether `e2e` is a required check is the owner's
+  setting. `tests/e2e/support/fixtures.ts` loads `.env.local` only if present.
+- **Affected:** `.github/workflows/ci.yml`, `tests/e2e/support/fixtures.ts`.
+  **References:** `docs/TESTING.md`.

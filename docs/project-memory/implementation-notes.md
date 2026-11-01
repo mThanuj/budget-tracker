@@ -201,6 +201,11 @@ has more. Add new ones under the right heading.
   `tests/e2e/support/`). Read those to check results; don't pipe test commands
   through `tee` or `head` (the tools then lose their live output, and a closed
   pipe can kill Playwright).
+- `createTestDb({ logger })` sees every query, so a test can count them
+  (`tests/db/dashboard.test.ts` keeps the home page's data within 11).
+- In CI the browser tests have no `.env.local` (the fixture loads it only if it
+  exists): the job sets a throwaway Postgres URL, a per-run secret and
+  placeholder Google keys (`src/env.ts` only needs them non-empty).
 - Browser tests need `.env.local` and write to its database (a development one).
   They sign in with Better Auth's test helpers, so no Google account is used.
 - Server actions count against the per-minute limit (D-026) in Vitest too: a

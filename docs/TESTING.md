@@ -21,7 +21,8 @@ git), while the terminal output stays live.
 | `pnpm test:e2e:live`    | Only the e2e tests that call the real AI provider (`@live-ai`)    | the same, plus an AI key     | `test-e2e.log`         |
 
 Before every push, the pre-push git hook runs `pnpm check` (README, "Working on
-it"). A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "export"`
+it"). CI runs the Vitest suites in its `checks` job and the browser tests in its
+`e2e` job (a production build, a throwaway Postgres, no secrets; D-032). A single file or test: `pnpm vitest run tests/integration/routes.test.ts -t "export"`
 (writes its folder's log, here `test-integration.log`),
 `pnpm test:e2e smoke.spec.ts --project desktop-chrome`.
 

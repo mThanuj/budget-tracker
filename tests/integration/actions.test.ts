@@ -40,7 +40,7 @@ vi.mock("@/server/billing/razorpay", async (importOriginal) => ({
 }));
 
 const { db } = await import("@/server/db");
-const { createTestUser } = await import("../db/helpers");
+const { createTestUser, freeCategoryColor } = await import("../db/helpers");
 const { seedNewUser } = await import("@/server/db/seed-defaults");
 const { listWallets } = await import("@/server/services/wallets");
 const { listCategories } = await import("@/server/services/categories");
@@ -48,6 +48,8 @@ const { createTransaction } = await import("@/server/services/transactions");
 const razorpay = await import("@/server/billing/razorpay");
 const { getUserPlan } = await import("@/server/billing/plan");
 const { CURRENCY_LOCKED } = await import("@/server/services/settings");
+const { userToday } = await import("@/lib/user-prefs");
+const { addDays } = await import("@/lib/dates");
 
 /** A signed-in user with the default categories and a Cash wallet. */
 async function newUser(name: string) {
@@ -386,6 +388,123 @@ describe("insights and setup", async () => {
   it("refuses a setup plan that isn't the expected shape", async () => {
     expect(await applySetupAction({ wallets: "lots" })).toMatchObject({ ok: false, fieldErrors: expect.any(Object) });
     expect(await applySetupAction(null)).toMatchObject({ ok: false });
+  });
+});
+
+describe("actions that had no direct test (C4)", async () => {
+  const { parseEntryText, suggestCategoryFor } = await import("@/server/actions/ai");
+  const { parseSetupAnswer } = await import("@/server/actions/setup");
+  const { categoryAction, saveCategory } = await import("@/server/actions/categories");
+  const { confirmDue, saveRule } = await import("@/server/actions/recurring");
+  const { removeBudget, saveBudget } = await import("@/server/actions/budgets");
+  const { goalAction, saveContribution, saveGoal } = await import("@/server/actions/goals");
+  const { saveTransaction } = await import("@/server/actions/transactions");
+  // A new user for each test: the file makes many calls, and actions are limited per user per minute.
+  const fresh = async (name: string) => {
+    const u = await newUser(name);
+    signInAs(u);
+    return { ...u, today: userToday(u.user) };
+  };
+  const spend = (u: { cashId: string; today: string }, over: Record<string, string> = {}) =>
+    form({ type: "expense", amount: "300", occurredOn: u.today, description: "Lunch", walletId: u.cashId, ...over });
+
+  it("AI entry help: too short, or off without an AI provider (never calls out)", async () => {
+    await fresh("Ai");
+    expect(await parseEntryText("hi")).toEqual({ ok: false, reason: "too_short" });
+    expect(await parseEntryText("chai 20 from cash")).toEqual({ ok: false, reason: "disabled" });
+    expect(await parseSetupAnswer("wallets", "x")).toEqual({ ok: false, reason: "too_short" });
+    expect(await Reflect.apply(parseSetupAnswer, null, ["everything", "my bank has 500"])).toEqual({
+      ok: false,
+      reason: "too_short",
+    });
+    expect(await parseSetupAnswer("wallets", "my bank has 500")).toEqual({ ok: false, reason: "disabled" });
+  });
+
+  it("category suggestions: what you chose before for that merchant, without AI; nothing otherwise", async () => {
+    const u = await fresh("Learner");
+    const dining = (await listCategories(db, u.user.id)).find((c) => c.name === "Dining Out")!;
+    expect(await saveTransaction(undefined, spend(u, { description: "Swiggy", categoryId: dining.id }))).toEqual({
+      ok: true,
+    });
+    expect(await suggestCategoryFor("Swiggy", "expense")).toEqual({ categoryId: dining.id, source: "learned" });
+    expect(await suggestCategoryFor("Zomato", "expense")).toBeNull(); // nothing learned, and no AI here
+    expect(await Reflect.apply(suggestCategoryFor, null, ["Swiggy", "transfer"])).toBeNull();
+  });
+
+  it("categories: archive, restore, delete only while unused; unknown operations refused", async () => {
+    const u = await fresh("Sorter");
+    const color = await freeCategoryColor(db, u.user.id, "expense");
+    expect(await saveCategory(undefined, form({ name: "Pets", kind: "expense", icon: "paw-print", color }))).toEqual({
+      ok: true,
+    });
+    const pets = (await listCategories(db, u.user.id)).find((c) => c.name === "Pets")!;
+    expect(await categoryAction("archive", pets.id)).toEqual({ ok: true });
+    expect((await listCategories(db, u.user.id)).some((c) => c.id === pets.id)).toBe(false);
+    expect(await categoryAction("restore", pets.id)).toEqual({ ok: true });
+    expect(await saveTransaction(undefined, spend(u, { categoryId: pets.id }))).toEqual({ ok: true });
+    expect(await categoryAction("delete", pets.id)).toEqual({
+      ok: false,
+      error: "This category has entries, so it can only be archived.",
+    });
+    await expect(Reflect.apply(categoryAction, null, ["toString", pets.id])).rejects.toThrow(/Unknown category/);
+  });
+
+  it("an ask-first bill: recorded once with the real amount, never on a future date", async () => {
+    const u = await fresh("Payer");
+    const rule = {
+      type: "expense",
+      amount: "900",
+      description: "Electricity",
+      walletId: u.cashId,
+      repeat: "monthly-1",
+      anchorDate: u.today,
+      mode: "confirm",
+    };
+    expect(await saveRule(undefined, form(rule))).toEqual({ ok: true });
+    const [saved] = await db.select().from(schema.recurringRule).where(eq(schema.recurringRule.userId, u.user.id));
+    expect(saved.nextDueOn).toBe(u.today);
+    const confirm = (occurredOn: string) =>
+      confirmDue(undefined, form({ ruleId: saved.id, amount: "950", occurredOn }));
+    expect(await confirm(addDays(u.today, 1))).toMatchObject({
+      ok: false,
+      fieldErrors: { occurredOn: expect.any(String) },
+    });
+    expect(await confirm(u.today)).toEqual({ ok: true });
+    const [entry] = await db.select().from(schema.transaction).where(eq(schema.transaction.userId, u.user.id));
+    expect(entry).toMatchObject({ amountMinor: 950_00, recurringRuleId: saved.id, source: "recurring" });
+    expect(await confirm(u.today)).toEqual({ ok: false, error: "Nothing is waiting for this item right now." });
+
+    // Changing the schedule starts it again from the new date.
+    const later = addDays(u.today, 10);
+    expect(await saveRule(undefined, form({ ...rule, id: saved.id, anchorDate: later }))).toEqual({ ok: true });
+    const [moved] = await db.select().from(schema.recurringRule).where(eq(schema.recurringRule.id, saved.id));
+    expect(moved.nextDueOn).toBe(later);
+  });
+
+  it("budgets: remove your own; a malformed id is a form error", async () => {
+    const u = await fresh("Budgeter");
+    expect(await saveBudget(undefined, form({ categoryId: u.groceriesId, amount: "2000" }))).toEqual({ ok: true });
+    const [b] = await db.select().from(schema.budget).where(eq(schema.budget.userId, u.user.id));
+    expect(await removeBudget(b.id)).toEqual({ ok: true });
+    expect(await db.$count(schema.budget, eq(schema.budget.userId, u.user.id))).toBe(0);
+    expect(await removeBudget("not-a-uuid")).toMatchObject({ ok: false, fieldErrors: expect.any(Object) });
+  });
+
+  it("goal savings: added, never more taken out than saved, and not into an archived goal", async () => {
+    const u = await fresh("Saver");
+    expect(await saveGoal(undefined, form({ name: "Bike", target: "5000", icon: "tag", color: "#3f9b74" }))).toEqual({
+      ok: true,
+    });
+    const [goal] = await db.select().from(schema.goal).where(eq(schema.goal.userId, u.user.id));
+    const move = (direction: string, amount: string) =>
+      saveContribution(undefined, form({ goalId: goal.id, direction, amount, occurredOn: u.today }));
+    expect(await move("add", "500")).toEqual({ ok: true });
+    expect(await move("withdraw", "600")).toEqual({
+      ok: false,
+      fieldErrors: { amount: "You can't take out more than is saved for this goal." },
+    });
+    expect(await goalAction("archive", goal.id)).toEqual({ ok: true });
+    expect(await move("add", "100")).toEqual({ ok: false, error: "Restore this goal before adding to it." });
   });
 });
 

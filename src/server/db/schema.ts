@@ -188,6 +188,12 @@ export const transaction = pgTable(
     index("transaction_user_category_date_idx").on(t.userId, t.categoryId, t.occurredOn),
     // The daily limit on new entries counts by when they were added (src/config/limits.ts).
     index("transaction_user_created_idx").on(t.userId, t.createdAt),
+    // For what Postgres does on its own when a category or wallet goes (set null,
+    // the "no action" check) and for whole-account deletes: those look entries up
+    // by category or wallet alone, which the user_id-first indexes can't serve.
+    index("transaction_category_idx").on(t.categoryId),
+    index("transaction_wallet_idx").on(t.walletId),
+    index("transaction_to_wallet_idx").on(t.toWalletId),
     // Makes recording each scheduled occurrence idempotent.
     uniqueIndex("transaction_rule_occurrence_key").on(t.recurringRuleId, t.recurrenceOn),
     check("transaction_amount_positive", sql`${t.amountMinor} > 0`),
@@ -277,6 +283,8 @@ export const goalContribution = pgTable(
   },
   (t) => [
     index("goal_contribution_goal_idx").on(t.goalId, t.occurredOn),
+    // The daily limit counts a user's savings by when they were added (src/server/services/limits.ts).
+    index("goal_contribution_user_created_idx").on(t.userId, t.createdAt),
     check("goal_contribution_nonzero", sql`${t.amountMinor} <> 0`),
   ],
 );

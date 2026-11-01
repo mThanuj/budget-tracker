@@ -16,20 +16,15 @@ import { AddEntryButton } from "@/components/transactions/add-entry-button";
 import { TransactionRowButton } from "@/components/transactions/transaction-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { billsLeftThisMonth, daysLeftInMonth } from "@/lib/budgets";
+import { daysLeftInMonth } from "@/lib/budgets";
 import { capitalize, relativeDay } from "@/lib/date-format";
-import { addDays, addMonths, monthOf, monthRange, sameDaysLastMonth, todayInTz } from "@/lib/dates";
+import { todayInTz } from "@/lib/dates";
 import { goalProgress } from "@/lib/goals";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
 import { aiAvailableFor } from "@/server/ai";
-import { type Alert, buildAlerts, buildRecurringAlerts, withoutDismissed } from "@/server/services/alerts";
-import { getBudgetOverview } from "@/server/services/budgets";
-import { listGoals } from "@/server/services/goals";
-import { listAwaitingConfirmation, listRules, listUpcoming } from "@/server/services/recurring";
-import { monthlyTotals, spendingByCategory } from "@/server/services/reports";
-import { listTransactions, summarizeTransactions } from "@/server/services/transactions";
-import { listWallets } from "@/server/services/wallets";
+import type { Alert } from "@/server/services/alerts";
+import { loadDashboard } from "@/server/services/dashboard";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 import { userCurrency, userTimeZone } from "@/lib/user-prefs";
@@ -100,35 +95,22 @@ async function DashboardContent() {
   const currency = userCurrency(user);
   const timeZone = userTimeZone(user);
   const today = todayInTz(timeZone);
-  const month = monthOf(today);
-  const { start, end } = monthRange(month);
-  // Compare with the same stretch of last month, not all of it.
-  const lastMonthSameDays = sameDaysLastMonth(today);
-
-  // Bills to the end of the month for "safe to spend"; the "Coming up" card shows two weeks.
-  const ahead = Math.max(14, daysLeftInMonth(month, today) ?? 0);
-  const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar, rules, billsAhead, waiting] =
-    await Promise.all([
-      getBudgetOverview(db, user.id, month),
-      listGoals(db, user.id),
-      listWallets(db, user.id),
-      spendingByCategory(db, user.id, start, end),
-      monthlyTotals(db, user.id, addMonths(month, -5), month),
-      listTransactions(db, user.id, {}, 5),
-      summarizeTransactions(db, user.id, { from: start, to: end }),
-      summarizeTransactions(db, user.id, { from: lastMonthSameDays.start, to: lastMonthSameDays.end }),
-      listRules(db, user.id),
-      listUpcoming(db, user.id, today, ahead),
-      listAwaitingConfirmation(db, user.id, today),
-    ]);
-  const upcoming = billsAhead.filter((u) => u.date <= addDays(today, 14));
-  const billsLeft = billsLeftThisMonth(month, billsAhead, waiting);
-  const alerts = (
-    await withoutDismissed(db, user.id, [
-      ...buildAlerts({ overview, goals, month, today, currency }),
-      ...buildRecurringAlerts({ upcoming, rules, today, currency }),
-    ])
-  ).sort((a, b) => ALERT_ORDER[a.tone] - ALERT_ORDER[b.tone]);
+  const {
+    month,
+    overview,
+    goals,
+    wallets,
+    byCategory,
+    totals,
+    recent,
+    thisMonth,
+    lastMonthSoFar,
+    upcoming,
+    waiting,
+    billsLeft,
+    alerts: unsorted,
+  } = await loadDashboard(db, user.id, { today, currency });
+  const alerts = unsorted.sort((a, b) => ALERT_ORDER[a.tone] - ALERT_ORDER[b.tone]);
 
   const firstName = user.name.split(" ")[0];
   const totalBalance = wallets.reduce((s, w) => s + w.balanceMinor, 0);

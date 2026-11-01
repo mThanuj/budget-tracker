@@ -14,10 +14,8 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 - **High, needs the owner:** a first backup restore; the daily job's cron
   monitor (both under [Operations](#operations)).
-- **Next:** browser tests in CI and the actions without direct tests (under
-  [Not covered by automated tests](#not-covered-by-automated-tests)).
-- **Later:** moving the three actions' queries into services
-  ([Code quality](#code-quality)).
+- **Next:** measure the cost of rendering every page per request (under
+  [Operations](#operations)).
 
 ## Security (deferred; details in SECURITY.md)
 
@@ -46,14 +44,11 @@ below; keep this list in step when an item is done or a new one outranks it.
   helpers); the real Razorpay checkout popup; `checkPaymentStatus` and a
   successful `cancelPro`; AI answer quality (only `pnpm test:e2e:live` and the
   `ai:*` scripts); the admin stats page; restoring a backup.
-- Browser tests aren't in CI: they need a database and an auth secret on the
-  runner. Run `pnpm test:e2e` locally for UI changes. Without them CI barely
-  covers the UI: Vitest line coverage on 2026-10-26 was 0% for pages and 14%
-  for components (services 92%, `lib` 94%, actions 67%, API routes 100%).
-- Actions with no direct test outside the browser tests: `parseEntryText`,
-  `suggestCategoryFor`, `parseSetupAnswer`, `completeWelcome`; only refused
-  cross-user calls or a mock for `saveCategory`, `categoryAction`, `confirmDue`,
-  `checkPaymentStatus` (confirmed 2026-10-26).
+- Pages have no unit tests (Vitest line coverage on 2026-10-26: 0% for pages,
+  14% for components); they're covered by the browser tests, which run in CI
+  since D-032 (`e2e` job), not counting billing and AI, which skip there.
+- The AI actions' success paths have no direct test without a provider (only
+  `pnpm test:e2e:live`); their refusals and the learned-category path do.
 - `pnpm check:bundle` compares the build with the secret values in `.env.local`
   and the environment; CI has none, so it isn't run there.
 
@@ -81,12 +76,6 @@ below; keep this list in step when an item is done or a new one outranks it.
   (mind the unicode-range subsets: ₹ may be outside the latin one).
 
 ## Code quality
-
-- Layering: the account, settings and billing actions query the user and
-  subscription tables directly instead of through services (user-scoped, so not
-  a security issue; confirmed 2026-10-26). Move new queries into services.
-- `goal_contribution` has no index starting with `user_id`, though the daily
-  limit counts it by user (fine at current sizes).
 
 - `noUncheckedIndexedAccess` is off; the code often destructures query results
   (`const [row] = …`). Turning it on would flag many spots: adopt deliberately.

@@ -3,8 +3,8 @@
 # integration, component, security) and a production build. Needs no secrets:
 # tests use an in-memory Postgres and strip app settings, and `next build` runs
 # without environment variables.
-# End-to-end tests aren't run here (they need a database and auth secret);
-# run `pnpm test:e2e` locally, see docs/TESTING.md.
+# The e2e job runs the browser tests against a production build with its own
+# throwaway Postgres (D-032); it needs no secrets either.
 name: CI
 
 on:
@@ -64,5 +64,63 @@ jobs:
         with:
           name: test-logs-${{ github.run_number }}
           path: test-*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Browser tests (Playwright) against a production build: only there do pages
+  # render as they do live (D-027). A throwaway Postgres in a container, a secret
+  # made for this run only, and placeholder Google keys: the tests sign in with
+  # Better Auth's test helpers. Tests that need payments or an AI key skip
+  # themselves. No repository secrets.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: clearpaisa
+          POSTGRES_PASSWORD: clearpaisa # a throwaway container, not a secret
+          POSTGRES_DB: clearpaisa_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U clearpaisa -d clearpaisa_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      PW_PROD: "1"
+      DATABASE_URL: postgresql://clearpaisa:clearpaisa@localhost:5432/clearpaisa_e2e
+      BETTER_AUTH_URL: http://localhost:3000
+      GOOGLE_CLIENT_ID: ci-placeholder
+      GOOGLE_CLIENT_SECRET: ci-placeholder
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install (lockfile must match package.json)
+        run: pnpm install --frozen-lockfile
+      - name: A sign-in secret for this run only
+        run: |
+          secret="$(openssl rand -base64 32)"
+          echo "::add-mask::$secret"
+          echo "BETTER_AUTH_SECRET=$secret" >> "$GITHUB_ENV"
+      - name: Database schema
+        run: pnpm db:migrate
+      - name: Browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
+      # Desktop and phone; the tablet project only takes tour screenshots.
+      - name: Browser tests
+        run: pnpm test:e2e --project desktop-chrome --project mobile-safari
+      - name: Keep the log and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-${{ github.run_number }}
+          path: |
+            test-e2e.log
+            test-results/
           if-no-files-found: ignore
           retention-days: 7

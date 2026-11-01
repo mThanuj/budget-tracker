@@ -34,6 +34,15 @@ describe("server actions", () => {
   });
 });
 
+describe("server actions and the database", () => {
+  it("go through services: no action queries tables itself, so every query lives where its user scoping is reviewed", () => {
+    const direct = files.filter(
+      (f) => f.startsWith("src/server/actions/") && imports(f).some((i) => i === "@/server/db/schema"),
+    );
+    expect(direct).toEqual([]);
+  });
+});
+
 describe("client code", () => {
   const clientFiles = files.filter((f) => directive(f) === "use client");
 

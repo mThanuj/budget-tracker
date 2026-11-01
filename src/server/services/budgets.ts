@@ -24,7 +24,9 @@ export async function getBudgetOverview(db: Db, userId: string, month: ISOMonth)
       and t.occurred_on >= ${from} and t.occurred_on < ${to}
   )`.mapWith(Number);
 
-  const rows = await db
+  // Both queries run together (they don't depend on each other); Drizzle queries
+  // run only when awaited.
+  const rowsQuery = db
     .select({
       id: budget.id,
       categoryId: budget.categoryId,
@@ -47,24 +49,7 @@ export async function getBudgetOverview(db: Db, userId: string, month: ISOMonth)
     .where(eq(budget.userId, userId))
     .orderBy(asc(category.position));
 
-  const withProgress = rows.map((r) => {
-    const carryInMinor =
-      r.rollover && r.rolloverFrom
-        ? carryIn({
-            limitMinor: r.amountMinor,
-            rolloverFrom: r.rolloverFrom.slice(0, 7),
-            month,
-            spentSinceMinor: r.spentSinceRolloverMinor,
-          })
-        : 0;
-    return {
-      ...r,
-      carryInMinor,
-      ...budgetProgress({ limitMinor: r.amountMinor, carryInMinor, spentMinor: r.spentMinor }),
-    };
-  });
-
-  const [totals] = await db
+  const totalsQuery = db
     .select({
       totalSpentMinor: sql<number>`coalesce(sum(${transaction.amountMinor}), 0)`.mapWith(Number),
       unbudgetedMinor:
@@ -81,6 +66,24 @@ export async function getBudgetOverview(db: Db, userId: string, month: ISOMonth)
         lt(transaction.occurredOn, end),
       ),
     );
+
+  const [rows, [totals]] = await Promise.all([rowsQuery, totalsQuery]);
+  const withProgress = rows.map((r) => {
+    const carryInMinor =
+      r.rollover && r.rolloverFrom
+        ? carryIn({
+            limitMinor: r.amountMinor,
+            rolloverFrom: r.rolloverFrom.slice(0, 7),
+            month,
+            spentSinceMinor: r.spentSinceRolloverMinor,
+          })
+        : 0;
+    return {
+      ...r,
+      carryInMinor,
+      ...budgetProgress({ limitMinor: r.amountMinor, carryInMinor, spentMinor: r.spentMinor }),
+    };
+  });
 
   return {
     overall: withProgress.find((b) => b.categoryId === null) ?? null,

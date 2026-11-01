@@ -56,3 +56,8 @@ export async function updatePreferences(
     .set({ ...input, ...(onboarding && { onboardedAt: sql`coalesce(${user.onboardedAt}, now())` }) })
     .where(eq(user.id, userId));
 }
+
+/** Turns the AI features on or off for the user. */
+export async function updateAiEnabled(db: Db, userId: string, enabled: boolean) {
+  await db.update(user).set({ aiEnabled: enabled }).where(eq(user.id, userId));
+}

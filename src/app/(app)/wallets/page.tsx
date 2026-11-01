@@ -6,7 +6,7 @@ import { AddWalletButton, MoveMoneyButton, WalletCard } from "@/components/walle
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
 import { totalSetAside } from "@/server/services/goals";
-import { listWallets } from "@/server/services/wallets";
+import { countActiveWallets, listWallets } from "@/server/services/wallets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 import { userCurrency } from "@/lib/user-prefs";
@@ -35,10 +35,10 @@ export default function WalletsPage() {
 async function WalletActions() {
   const user = await requireUser();
   // Moving money needs two wallets to move between.
-  const active = await listWallets(db, user.id);
+  const active = await countActiveWallets(db, user.id);
   return (
     <div className="flex flex-wrap gap-2">
-      {active.length >= 2 && <MoveMoneyButton />}
+      {active >= 2 && <MoveMoneyButton />}
       <AddWalletButton currency={userCurrency(user)} />
     </div>
   );

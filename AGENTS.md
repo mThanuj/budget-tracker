@@ -85,9 +85,9 @@ Details and a feature-by-feature map: `docs/project-memory/architecture.md`.
 - `src/server/services/`: database access and domain logic. Functions take
   `(db, userId, …)`, check that ids from the client belong to the user
   (`getOwned*`), and filter reads and writes by `userId`. Expected failures throw
-  `UserError`. Put new queries here: the account, settings and billing actions
-  still query the user and subscription tables directly (known debt), and
-  `src/server/billing/` and `src/server/ai/quota.ts` keep their own tables.
+  `UserError`. Put new queries here, never in an action (`static.test.ts`
+  checks that no action imports the schema); `src/server/billing/` and
+  `src/server/ai/quota.ts` keep their own tables.
 - `src/app/api/**/route.ts`: only for callers outside the app (auth, health,
   export, cron, webhook). Check access with `getSession()` and answer 401, or a
   secret or signature; not `requireUser()`, which redirects. A new route must be

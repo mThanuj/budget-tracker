@@ -1,6 +1,5 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -9,10 +8,9 @@ import { isValidCurrency } from "@/lib/money";
 import { normalizeTimeZone } from "@/lib/preferences-options";
 import { TOO_FAST, withinActionLimit } from "@/server/action-utils";
 import { db } from "@/server/db";
-import { user as userTable } from "@/server/db/schema";
 import { seedNewUser } from "@/server/db/seed-defaults";
 import { UserError } from "@/server/services/errors";
-import { updatePreferences } from "@/server/services/settings";
+import { updateAiEnabled, updatePreferences } from "@/server/services/settings";
 import { requireUser } from "@/server/session";
 
 export type PreferencesState = { ok: true } | { error: string } | undefined;
@@ -71,10 +69,7 @@ export async function completeWelcome(_prev: PreferencesState, formData: FormDat
 export async function setAiEnabled(enabled: boolean): Promise<PreferencesState> {
   const user = await requireUser();
   if (!(await withinActionLimit(user.id))) return { error: TOO_FAST };
-  await db
-    .update(userTable)
-    .set({ aiEnabled: enabled === true })
-    .where(eq(userTable.id, user.id));
+  await updateAiEnabled(db, user.id, enabled === true);
   refresh();
   return { ok: true };
 }
