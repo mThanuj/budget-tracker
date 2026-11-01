@@ -47,14 +47,20 @@ export function monitoringOrigin(dsn = process.env.NEXT_PUBLIC_SENTRY_DSN): stri
  * 'strict-dynamic' ignore 'self' and the Razorpay host; older ones use them.
  * Every page renders per request so it can get a nonce (src/app/layout.tsx).
  * Styles stay 'unsafe-inline': toasts inject <style> and components use style={}.
+ * `secure`: the page itself came over https. Only then are its requests
+ * upgraded to https: on an http page (a production build run locally or in
+ * CI) the upgrade would send every script to an https server that isn't
+ * there; Chrome exempts localhost, WebKit on Linux doesn't.
  */
 export function contentSecurityPolicy({
   dev,
   nonce,
+  secure = true,
   monitoring = monitoringOrigin(),
 }: {
   dev: boolean;
   nonce: string;
+  secure?: boolean;
   monitoring?: string;
 }): string {
   const directives: Record<string, string> = {
@@ -75,7 +81,7 @@ export function contentSecurityPolicy({
     "frame-ancestors": "'none'",
   };
   const parts = Object.entries(directives).map(([k, v]) => `${k} ${v}`);
-  if (!dev) parts.push("upgrade-insecure-requests");
+  if (!dev && secure) parts.push("upgrade-insecure-requests");
   return parts.join("; ");
 }
 

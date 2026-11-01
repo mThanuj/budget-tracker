@@ -26,7 +26,12 @@ export function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
   // A fresh nonce for every page (D-027): Next reads it from the request's CSP
   // and puts it on its own scripts; the browser gets the same policy.
-  const csp = contentSecurityPolicy({ dev: process.env.NODE_ENV !== "production", nonce: newNonce() });
+  const csp = contentSecurityPolicy({
+    dev: process.env.NODE_ENV !== "production",
+    nonce: newNonce(),
+    // https on Vercel and behind a TLS proxy (Next reads x-forwarded-proto); http only for local and CI runs.
+    secure: request.nextUrl.protocol === "https:",
+  });
   headers.set("content-security-policy", csp);
   // Vercel gives every request an x-vercel-id; elsewhere, add an id so a
   // request's log lines and error reports can be tied together.

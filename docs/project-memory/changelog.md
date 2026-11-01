@@ -10,7 +10,8 @@ when you merge something a future agent should know about.
   read once, `loadDashboard`), light picker lists for the entry dialog and
   filters, foreign-key indexes (migration `0010`), browser tests in CI against a
   production build (D-032), no action queries tables itself (services +
-  static guard), direct tests for 9 actions that had none.
+  static guard), direct tests for 9 actions that had none. The CSP asks for
+  https upgrades only on pages served over https (Linux WebKit broke on http).
 
 ## 2026-10-31
 

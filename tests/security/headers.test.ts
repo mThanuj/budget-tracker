@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { unstable_doesMiddlewareMatch, unstable_getResponseFromNextConfig } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { themeInitScript } from "@/components/theme/theme-script";
 import {
   contentSecurityPolicy,
@@ -76,6 +76,9 @@ describe("the page CSP (D-027)", () => {
 });
 
 describe("the proxy", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
   const csp = (res: Response) => res.headers.get("content-security-policy") ?? "";
   const withoutNonce = (policy: string) => policy.replace(/'nonce-[^']+'/, "'nonce-…'");
 
@@ -99,6 +102,19 @@ describe("the proxy", () => {
         "http://localhost:3000/",
       );
     }
+  });
+
+  it("asks browsers to upgrade requests to https only on pages that came over https", () => {
+    // On an http page (a production build run locally or in CI), WebKit would otherwise
+    // send every script to https://localhost, where nothing answers (CI run 48).
+    vi.stubEnv("NODE_ENV", "production"); // the proxy leaves the upgrade out in development
+    const over = (origin: string) => csp(proxy(new NextRequest(`${origin}/privacy`)));
+    expect(over("http://localhost:3000")).not.toContain("upgrade-insecure-requests");
+    expect(over("https://clearpaisa.example")).toContain("upgrade-insecure-requests"); // the live site
+    expect(contentSecurityPolicy({ dev: false, nonce: NONCE, secure: true })).toContain("upgrade-insecure-requests");
+    expect(contentSecurityPolicy({ dev: false, nonce: NONCE, secure: false })).not.toContain(
+      "upgrade-insecure-requests",
+    );
   });
 
   it("does it on Vercel too", () => {

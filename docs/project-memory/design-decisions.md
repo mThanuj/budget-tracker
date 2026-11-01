@@ -610,5 +610,8 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
 - **Trade-offs / consequences:** a few more minutes per run; billing and AI
   tests skip (no keys). Whether `e2e` is a required check is the owner's
   setting. `tests/e2e/support/fixtures.ts` loads `.env.local` only if present.
+  Its first run found that the CSP's `upgrade-insecure-requests` broke a
+  plain-http production build in Linux WebKit; it's now sent only on https
+  pages (implementation-notes.md).
 - **Affected:** `.github/workflows/ci.yml`, `tests/e2e/support/fixtures.ts`.
   **References:** `docs/TESTING.md`.
