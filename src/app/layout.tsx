@@ -1,19 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
-import "@fontsource-variable/onest/wght.css";
-import "@fontsource/young-serif/400.css";
-import "@fontsource-variable/spline-sans-mono/wght.css";
 import "./globals.css";
 import { themeInitScript } from "@/components/theme/theme-script";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME } from "@/config/app";
+import { siteUrl } from "@/config/site";
+import { onest, splineSansMono, youngSerif } from "./fonts";
 
-export const metadata: Metadata = {
-  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
-  description: "Track your spending, set budgets and ask questions about your money in plain words.",
-  // Added to an iPhone's home screen, it opens like an app (the manifest does this elsewhere, D-031).
-  appleWebApp: { title: APP_NAME, capable: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  await connection(); // the site's address is a setting: read it per request, not at build time
+  return {
+    // Full addresses for link previews (D-036).
+    metadataBase: siteUrl(),
+    title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
+    description: "Track your spending, set budgets and ask questions about your money in plain words.",
+    // Added to an iPhone's home screen, it opens like an app (the manifest does this elsewhere, D-031).
+    appleWebApp: { title: APP_NAME, capable: true },
+    // Link previews take the title and description above, and the image from opengraph-image.tsx.
+    openGraph: { siteName: APP_NAME, type: "website", locale: "en_IN" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -29,7 +35,11 @@ export const instant = false;
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   await connection();
   return (
-    <html lang="en" suppressHydrationWarning className="h-full antialiased">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${onest.variable} ${youngSerif.variable} ${splineSansMono.variable} h-full antialiased`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

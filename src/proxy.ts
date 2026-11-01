@@ -4,10 +4,12 @@ import { contentSecurityPolicy, newNonce } from "@/lib/security-headers";
 
 // Pages anyone can see. Everything else requires a session cookie.
 const PUBLIC_PATHS = new Set(["/", "/privacy", "/terms", "/refund", "/contact"]);
-// The generated app icons (src/app/icon.tsx, apple-icon.tsx): fetched without
-// cookies when installing the app, and no user data in them (D-031). Not pages,
-// so kept apart from PUBLIC_PATHS, which tests/security/static.test.ts checks.
-const PUBLIC_ASSET = /^\/(?:icon\/\d+|apple-icon)$/;
+// The generated app icons (src/app/icon.tsx, apple-icon.tsx), fetched without
+// cookies when installing the app (D-031), and the link-preview image
+// (opengraph-image.tsx), fetched by sites showing a shared link (D-036). No
+// user data in them. Not pages, so kept apart from PUBLIC_PATHS, which
+// tests/security/static.test.ts checks.
+const PUBLIC_ASSET = /^\/(?:icon\/\d+|apple-icon|opengraph-image)$/;
 
 // Optimistic check only (cookie present?). Real authorization happens in
 // requireUser() on the server, close to the data.

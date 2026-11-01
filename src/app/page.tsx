@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Brand } from "@/components/app/brand";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { PlanComparison } from "@/components/billing/plan-comparison";
@@ -22,6 +23,9 @@ const FEATURES = [
     body: "“How much did I spend on food in October?” Answers come from your own entries, not guesses.",
   },
 ];
+
+// One address for the landing page, whatever notice is in the query string.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default function LandingPage() {
   const billing = billingEnabled();
