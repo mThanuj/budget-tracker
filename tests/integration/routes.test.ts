@@ -172,7 +172,7 @@ describe("GET /api/cron/recurring", async () => {
     cron.secret = "s".repeat(32);
     const res = await call(`Bearer ${"s".repeat(32)}`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ users: 0, recorded: 0 });
+    expect(await res.json()).toEqual({ users: 0, recorded: 0, pruned: 0 });
   });
 });
 

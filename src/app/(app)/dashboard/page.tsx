@@ -16,9 +16,9 @@ import { AddEntryButton } from "@/components/transactions/add-entry-button";
 import { TransactionRowButton } from "@/components/transactions/transaction-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { daysLeftInMonth } from "@/lib/budgets";
+import { billsLeftThisMonth, daysLeftInMonth } from "@/lib/budgets";
 import { capitalize, relativeDay } from "@/lib/date-format";
-import { addMonths, monthOf, monthRange, sameDaysLastMonth, todayInTz } from "@/lib/dates";
+import { addDays, addMonths, monthOf, monthRange, sameDaysLastMonth, todayInTz } from "@/lib/dates";
 import { goalProgress } from "@/lib/goals";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
@@ -105,7 +105,9 @@ async function DashboardContent() {
   // Compare with the same stretch of last month, not all of it.
   const lastMonthSameDays = sameDaysLastMonth(today);
 
-  const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar, rules, upcoming, waiting] =
+  // Bills to the end of the month for "safe to spend"; the "Coming up" card shows two weeks.
+  const ahead = Math.max(14, daysLeftInMonth(month, today) ?? 0);
+  const [overview, goals, wallets, byCategory, totals, recent, thisMonth, lastMonthSoFar, rules, billsAhead, waiting] =
     await Promise.all([
       getBudgetOverview(db, user.id, month),
       listGoals(db, user.id),
@@ -116,9 +118,11 @@ async function DashboardContent() {
       summarizeTransactions(db, user.id, { from: start, to: end }),
       summarizeTransactions(db, user.id, { from: lastMonthSameDays.start, to: lastMonthSameDays.end }),
       listRules(db, user.id),
-      listUpcoming(db, user.id, today, 14),
+      listUpcoming(db, user.id, today, ahead),
       listAwaitingConfirmation(db, user.id, today),
     ]);
+  const upcoming = billsAhead.filter((u) => u.date <= addDays(today, 14));
+  const billsLeft = billsLeftThisMonth(month, billsAhead, waiting);
   const alerts = (
     await withoutDismissed(db, user.id, [
       ...buildAlerts({ overview, goals, month, today, currency }),
@@ -200,6 +204,13 @@ async function DashboardContent() {
                 </>
               )}
             </p>
+            {billsLeft > 0 && overall.remainingMinor > 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {billsLeft < overall.remainingMinor
+                  ? `${formatMoney(billsLeft, currency)} of it is for bills still due this month, so ${formatMoney(overall.remainingMinor - billsLeft, currency)} is safe to spend.`
+                  : `Bills still due this month (${formatMoney(billsLeft, currency)}) need all of it${billsLeft > overall.remainingMinor ? ` and ${formatMoney(billsLeft - overall.remainingMinor, currency)} more` : ""}.`}
+              </p>
+            )}
             <Meter
               className="mt-4"
               ratio={overall.ratio}

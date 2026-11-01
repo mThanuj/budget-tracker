@@ -116,6 +116,7 @@ const REVIEWED: Record<string, string> = {
   "setup.ts › applySetupAction": "category ids: below",
   "transactions.ts › saveTransaction": "entry, wallet and category ids: below",
   "transactions.ts › removeTransaction": "an entry id: below",
+  "transactions.ts › undoRemoveTransaction": "an entry id (a deleted one): below",
   "wallets.ts › saveWallet": "a wallet id: below",
   "wallets.ts › walletAction": "a wallet id: below",
 };
@@ -158,7 +159,7 @@ describe("no action touches another user's records", async () => {
   const { goalAction, saveContribution, saveGoal } = await import("@/server/actions/goals");
   const { confirmDue, ruleAction, saveRule, subscriptionSuggestionAction } = await import("@/server/actions/recurring");
   const { removeBudget, saveBudget } = await import("@/server/actions/budgets");
-  const { removeTransaction, saveTransaction } = await import("@/server/actions/transactions");
+  const { removeTransaction, saveTransaction, undoRemoveTransaction } = await import("@/server/actions/transactions");
   const { dismissAlert } = await import("@/server/actions/alerts");
   const { applySetupAction } = await import("@/server/actions/setup");
   const { cancelPro, checkPaymentStatus, confirmCheckout, startCheckout } = await import("@/server/actions/billing");
@@ -168,7 +169,15 @@ describe("no action touches another user's records", async () => {
   let alice: typeof schema.user.$inferSelect;
   let aliceCash: string;
   let aliceGroceries: string;
-  const bob = { walletId: "", categoryId: "", goalId: "", ruleId: "", budgetId: "", transactionId: "" };
+  const bob = {
+    walletId: "",
+    categoryId: "",
+    goalId: "",
+    ruleId: "",
+    budgetId: "",
+    transactionId: "",
+    deletedEntryId: "",
+  };
   let bobId: string;
   const bobsAlert = () => `budget:${bob.budgetId}:${monthOf(today)}:over`;
   /** A setup plan with nothing in it apart from what a test adds. */
@@ -198,6 +207,7 @@ describe("no action touches another user's records", async () => {
     transactions: await db.select().from(schema.transaction).where(eq(schema.transaction.userId, bobId)),
     dismissals: await db.select().from(schema.alertDismissal).where(eq(schema.alertDismissal.userId, bobId)),
     subscriptions: await db.select().from(schema.subscription).where(eq(schema.subscription.userId, bobId)),
+    deletedEntries: await db.select().from(schema.deletedEntry).where(eq(schema.deletedEntry.userId, bobId)),
     user: await db.select().from(schema.user).where(eq(schema.user.id, bobId)),
   });
 
@@ -279,6 +289,25 @@ describe("no action touches another user's records", async () => {
       );
     }
     ok(await dismissAlert(bobsAlert()));
+    // An entry Bob deleted a moment ago, which he could still bring back (D-030).
+    ok(
+      await saveTransaction(
+        undefined,
+        form({
+          type: "expense",
+          amount: "35",
+          occurredOn: today,
+          description: "Bob's mistake",
+          walletId: bobBank.id,
+        }),
+      ),
+    );
+    const [mistake] = await db
+      .select()
+      .from(schema.transaction)
+      .where(eq(schema.transaction.description, "Bob's mistake"));
+    ok(await removeTransaction(mistake.id));
+    bob.deletedEntryId = mistake.id;
     // Checkouts go through Razorpay, so Bob's are stored directly: one started,
     // one paid and being confirmed, one active.
     await db.insert(schema.subscription).values([
@@ -388,6 +417,7 @@ describe("no action touches another user's records", async () => {
           ),
       ],
       ["delete Bob's entry", () => removeTransaction(bob.transactionId)],
+      ["bring back the entry Bob deleted", () => undoRemoveTransaction(bob.deletedEntryId)],
       [
         "spend from Bob's wallet",
         () =>

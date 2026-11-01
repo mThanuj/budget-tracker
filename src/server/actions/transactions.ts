@@ -4,7 +4,12 @@ import { refresh } from "next/cache";
 import { transactionSchema } from "@/lib/validation";
 import { type ActionResult, formObject, idSchema, runAction } from "@/server/action-utils";
 import { db } from "@/server/db";
-import { createTransaction, deleteTransaction, updateTransaction } from "@/server/services/transactions";
+import {
+  createTransaction,
+  deleteTransaction,
+  restoreTransaction,
+  updateTransaction,
+} from "@/server/services/transactions";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";
 
@@ -23,6 +28,15 @@ export async function removeTransaction(id: string): Promise<ActionResult> {
   const user = await requireUser();
   return runAction(user.id, async () => {
     await deleteTransaction(db, user.id, idSchema.parse(id));
+    refresh();
+  });
+}
+
+/** Brings back an entry deleted in the last few minutes (the toast's "Undo", D-030). */
+export async function undoRemoveTransaction(id: string): Promise<ActionResult> {
+  const user = await requireUser();
+  return runAction(user.id, async () => {
+    await restoreTransaction(db, user.id, idSchema.parse(id));
     refresh();
   });
 }

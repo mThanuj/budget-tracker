@@ -2,7 +2,7 @@ import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 import { APICallError, generateText, isStepCount, type ModelMessage, tool } from "ai";
 import { z } from "zod";
-import { daysLeftInMonth } from "@/lib/budgets";
+import { billsLeftThisMonth, daysLeftInMonth } from "@/lib/budgets";
 import { formatMonth, relativeDay } from "@/lib/date-format";
 import { addDays, addMonths, type ISODate, monthOf, monthRange } from "@/lib/dates";
 import { goalProgress } from "@/lib/goals";
@@ -11,7 +11,7 @@ import type { Db } from "../db";
 import { getBudgetOverview } from "../services/budgets";
 import { listCategories } from "../services/categories";
 import { listGoals } from "../services/goals";
-import { listUpcoming } from "../services/recurring";
+import { listAwaitingConfirmation, listUpcoming } from "../services/recurring";
 import { monthlyTotals, spendingByCategory } from "../services/reports";
 import { listTransactions, summarizeTransactions } from "../services/transactions";
 import { listWallets } from "../services/wallets";
@@ -230,15 +230,15 @@ export function moneyTools(db: Db, u: ChatUser) {
       execute: async ({ amount }) => {
         const cost = parseMoney(amount.toFixed(2), u.currency) ?? 0;
         const month = monthOf(u.today);
-        const [o, wallets, goals, upcoming] = await Promise.all([
+        const [o, wallets, goals, upcoming, waiting] = await Promise.all([
           getBudgetOverview(db, u.id, month),
           listWallets(db, u.id),
           listGoals(db, u.id),
           listUpcoming(db, u.id, u.today, 40),
+          listAwaitingConfirmation(db, u.id, u.today),
         ]);
-        const billsLeft = upcoming
-          .filter((x) => x.rule.type === "expense" && monthOf(x.date) === month)
-          .reduce((s, x) => s + x.rule.amountMinor, 0);
+        // The same figure as the dashboard's "safe to spend" (src/lib/budgets.ts).
+        const billsLeft = billsLeftThisMonth(month, upcoming, waiting);
         const free =
           wallets.reduce((s, w) => s + w.balanceMinor, 0) - goals.reduce((s, g) => s + Math.max(g.savedMinor, 0), 0);
         const leftInLimit = o.overall ? o.overall.remainingMinor - billsLeft : null;

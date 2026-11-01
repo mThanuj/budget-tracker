@@ -7,8 +7,10 @@ import { AddEntryButton } from "@/components/transactions/add-entry-button";
 import { type FilterValues, TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionRowButton } from "@/components/transactions/transaction-row";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDay, formatMonth, isISOMonth } from "@/lib/date-format";
-import { monthOf, monthRange } from "@/lib/dates";
+import Link from "next/link";
+import { formatDateRange, formatDay, formatMonth } from "@/lib/date-format";
+import { addDays, monthOf, monthRange } from "@/lib/dates";
+import { entrySearchHref, parseEntrySearch, SEARCH_MAX, SEARCH_PAGE } from "@/lib/entry-search";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
 import { listCategories } from "@/server/services/categories";
@@ -38,7 +40,6 @@ export default function TransactionsPage({ searchParams }: PageProps<"/transacti
 }
 
 const paramsSchema = z.object({
-  month: z.string().optional(),
   wallet: z.uuid().optional().catch(undefined),
   category: z
     .union([z.uuid(), z.literal("none")])
@@ -68,36 +69,79 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
   const currency = userCurrency(user);
   const today = userToday(user);
   const raw = await searchParams;
-  const params = paramsSchema.parse(
-    Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])),
+  const first = (k: string) => {
+    const v = raw[k];
+    return Array.isArray(v) ? v[0] : v;
+  };
+  const params = paramsSchema.parse(Object.fromEntries(Object.keys(raw).map((k) => [k, first(k)])));
+  const search = parseEntrySearch(
+    {
+      month: first("month"),
+      period: first("period"),
+      from: first("from"),
+      to: first("to"),
+      min: first("min"),
+      max: first("max"),
+      limit: first("limit"),
+    },
+    { currency, today },
   );
-  const month = isISOMonth(params.month) ? params.month : monthOf(today);
-  const { start, end } = monthRange(month);
+  const { period } = search;
+  const range =
+    period.mode === "month"
+      ? monthRange(period.month)
+      : { start: period.from, end: period.to ? addDays(period.to, 1) : undefined };
   const filters: Filters = {
-    from: start,
-    to: end,
+    from: range.start,
+    to: range.end,
     walletId: params.wallet,
     categoryId: params.category,
     type: params.type,
     q: params.q,
+    minMinor: search.minMinor,
+    maxMinor: search.maxMinor,
   };
+  // One month shows up to 500; across months, the latest `limit` ("Show 200 more").
+  const limit = period.mode === "month" ? 500 : search.limit;
 
   const [rows, summary, wallets, categories] = await Promise.all([
-    listTransactions(db, user.id, filters),
+    listTransactions(db, user.id, filters, limit),
     summarizeTransactions(db, user.id, filters),
     listWallets(db, user.id, { includeArchived: true }),
     listCategories(db, user.id, { includeArchived: true }),
   ]);
 
-  const values: FilterValues = { wallet: params.wallet, category: params.category, type: params.type, q: params.q };
-  const filtered = Boolean(values.wallet || values.category || values.type || values.q);
-  const keep = new URLSearchParams(Object.entries(values).filter((e): e is [string, string] => Boolean(e[1])));
-  const monthHref = (m: string) => `/transactions?${new URLSearchParams({ month: m, ...Object.fromEntries(keep) })}`;
+  const values: FilterValues = {
+    wallet: params.wallet,
+    category: params.category,
+    type: params.type,
+    q: params.q,
+    min: search.minMinor !== undefined ? first("min")?.trim() : undefined,
+    max: search.maxMinor !== undefined ? first("max")?.trim() : undefined,
+    ...(period.mode === "month"
+      ? { month: period.month }
+      : period.from || period.to
+        ? { from: period.from, to: period.to }
+        : { period: "all" }),
+  };
+  const filtered = Boolean(values.wallet || values.category || values.type || values.q || values.min || values.max);
+  const monthHref = (m: string) =>
+    entrySearchHref({ ...values, period: undefined, from: undefined, to: undefined, month: m });
   const left = summary.incomeMinor - summary.expenseMinor;
+  const more = period.mode === "range" && summary.count > rows.length && rows.length < SEARCH_MAX;
 
   return (
     <div className="grid gap-6">
-      <MonthSwitcher month={month} currentMonth={monthOf(today)} href={monthHref} />
+      {period.mode === "month" ? (
+        <MonthSwitcher month={period.month} currentMonth={monthOf(today)} href={monthHref} />
+      ) : (
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="font-heading text-xl">{formatDateRange(period.from, period.to)}</h2>
+          <Link href={monthHref(monthOf(today))} className="text-sm text-primary underline-offset-4 hover:underline">
+            Back to months
+          </Link>
+        </div>
+      )}
 
       <dl className="grid grid-cols-3 divide-x divide-border rounded-2xl bg-card ring-1 ring-foreground/10">
         {[
@@ -117,8 +161,8 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
       </dl>
 
       <TransactionFilters
-        month={month}
         values={values}
+        thisMonth={monthOf(today)}
         wallets={wallets.map((w) => ({ id: w.id, name: w.name }))}
         expenseCategories={categories.filter((c) => c.kind === "expense").map((c) => ({ id: c.id, name: c.name }))}
         incomeCategories={categories.filter((c) => c.kind === "income").map((c) => ({ id: c.id, name: c.name }))}
@@ -128,12 +172,14 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
         <EmptyState
           headingLevel={3}
           title={
-            filtered ? "No entries match these filters" : `Nothing recorded in ${formatMonth(month).split(" ")[0]}`
+            filtered || period.mode === "range"
+              ? "No entries match these filters"
+              : `Nothing recorded in ${formatMonth(period.month).split(" ")[0]}`
           }
-          action={!filtered && <AddEntryButton />}
+          action={!filtered && period.mode === "month" && <AddEntryButton />}
         >
-          {filtered
-            ? "Try a different wallet, category or search word."
+          {filtered || period.mode === "range"
+            ? "Try a different wallet, category, search word, amount or dates."
             : "Add what you spend and receive, and it will show up here day by day."}
         </EmptyState>
       ) : (
@@ -161,10 +207,27 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
               </ul>
             </section>
           ))}
-          {rows.length >= 500 && (
+          {period.mode === "month" && rows.length >= 500 && (
             <p className="text-center text-sm text-muted-foreground">
               Showing the latest 500 entries. Use filters to narrow it down.
             </p>
+          )}
+          {period.mode === "range" && summary.count > rows.length && (
+            <div className="grid justify-items-center gap-2 text-center text-sm text-muted-foreground">
+              <p>
+                {summary.count.toLocaleString("en-IN")} entries match; showing the latest{" "}
+                {rows.length.toLocaleString("en-IN")}.{!more && " Narrow the dates or filters to see older ones."}
+              </p>
+              {more && (
+                <Link
+                  href={entrySearchHref({ ...values, limit: String(rows.length + SEARCH_PAGE) })}
+                  scroll={false}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Show {SEARCH_PAGE} more
+                </Link>
+              )}
+            </div>
           )}
         </div>
       )}

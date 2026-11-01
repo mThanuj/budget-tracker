@@ -289,7 +289,7 @@ marked handled; pass `{ report: false }` when it's reported elsewhere.
 | `config.ai_setting_invalid`, `config.cron_secret_too_short`                                              | error | yes                | a setting is malformed; that provider, or the daily job, is off until fixed   |
 | `ratelimit.actions_blocked`                                                                              | warn  | no                 | a user went over the per-minute action limit; once a minute (D-026)           |
 | `cron.unauthorized`                                                                                      | warn  | no                 | the job's URL was called without the right secret                             |
-| `cron.recurring_done`                                                                                    | info  | no                 | the daily job finished (`users`, `recorded`, `ms`)                            |
+| `cron.recurring_done`                                                                                    | info  | no                 | the daily job finished (`users`, `recorded`, `pruned`, `ms`)                  |
 | `db.migrations_done`                                                                                     | info  | no                 | own server only: migrations applied at start (`ms`)                           |
 | `monitoring.test_error`                                                                                  | error | yes                | the test error from `/admin`                                                  |
 

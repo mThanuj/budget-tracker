@@ -88,7 +88,7 @@ afterEach(() => {
 // The "every action needs a session" sweep lives in tests/security/access-control.test.ts.
 
 describe("entries (saveTransaction / removeTransaction)", async () => {
-  const { removeTransaction, saveTransaction } = await import("@/server/actions/transactions");
+  const { removeTransaction, saveTransaction, undoRemoveTransaction } = await import("@/server/actions/transactions");
   const entry = (over: Record<string, string> = {}) =>
     form({
       type: "expense",
@@ -148,6 +148,16 @@ describe("entries (saveTransaction / removeTransaction)", async () => {
 
   it("rejects a malformed id as a validation failure", async () => {
     expect(await removeTransaction("not-a-uuid")).toMatchObject({ ok: false, fieldErrors: expect.any(Object) });
+  });
+
+  it("brings back a deleted entry once with Undo (D-030)", async () => {
+    expect(await saveTransaction(undefined, entry({ description: "Oops" }))).toEqual({ ok: true });
+    const [row] = await db.select().from(schema.transaction).where(eq(schema.transaction.description, "Oops"));
+    expect(await removeTransaction(row.id)).toEqual({ ok: true });
+    expect(await undoRemoveTransaction(row.id)).toEqual({ ok: true });
+    expect(await db.$count(schema.transaction, eq(schema.transaction.id, row.id))).toBe(1);
+    expect(await undoRemoveTransaction(row.id)).toEqual({ ok: false, error: "That entry doesn't exist." });
+    expect(await undoRemoveTransaction("not-a-uuid")).toMatchObject({ ok: false, fieldErrors: expect.any(Object) });
   });
 });
 

@@ -125,4 +125,5 @@ used.
 - **E2E:** the main journeys in a real browser, on desktop and mobile: sign-in
   redirect, onboarding, entries, wallets and transfers, budgets and alerts,
   goals, recurring items, export, account deletion, security headers and CSP,
-  keyboard and reduced-motion access, and a save that fails on the network.
+  keyboard and reduced-motion access, a save that fails on the network,
+  searching across months, undo after deleting, and installing the app.

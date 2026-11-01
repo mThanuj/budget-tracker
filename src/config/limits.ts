@@ -15,4 +15,6 @@ export const LIMITS = {
   goalContributionsPerDay: 300,
   alertDismissalsPerDay: 300,
   actionsPerMinute: 120,
+  // How long a deleted entry can be brought back with "Undo" (D-030).
+  undoDeleteMinutes: 10,
 } as const;

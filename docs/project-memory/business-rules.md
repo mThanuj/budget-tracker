@@ -22,6 +22,12 @@ Verified against the code on 2026-10-26 (independent audit).
 
 ## Wallets and entries
 
+- A deleted entry can be brought back with "Undo" for 10 minutes
+  (`undoDeleteMinutes` in `src/config/limits.ts`), exactly as it was (same id
+  and date added, so it doesn't count again against the daily limit), by its
+  owner only. Not if its wallet was deleted since; a category or recurring item
+  deleted since is let go. Copies older than that are removed on the next
+  delete and by the daily job. `src/server/services/transactions.ts`, D-030.
 - Wallet balance = opening balance + income − spending − transfers out +
   transfers in. A credit card's balance is negative when money is owed; its
   opening amount is entered as "what you owe" and stored negated.
@@ -43,6 +49,10 @@ Verified against the code on 2026-10-26 (independent audit).
 
 ## Budgets, goals and alerts
 
+- "Safe to spend" (dashboard, under the headline): what's left in the monthly
+  limit minus spending bills still due this month: scheduled ones after today,
+  plus "ask first" ones due this month and not recorded yet. The chat's
+  affordability check uses the same figure. `billsLeftThisMonth` in `src/lib/budgets.ts`.
 - One budget per category plus one overall monthly limit (category null).
   Rollover applies only to category budgets. Unique key
   `budget_user_category_key`, check `budget_rollover_shape`. Changing a

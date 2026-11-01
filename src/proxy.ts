@@ -4,6 +4,10 @@ import { contentSecurityPolicy, newNonce } from "@/lib/security-headers";
 
 // Pages anyone can see. Everything else requires a session cookie.
 const PUBLIC_PATHS = new Set(["/", "/privacy", "/terms", "/refund", "/contact"]);
+// The generated app icons (src/app/icon.tsx, apple-icon.tsx): fetched without
+// cookies when installing the app, and no user data in them (D-031). Not pages,
+// so kept apart from PUBLIC_PATHS, which tests/security/static.test.ts checks.
+const PUBLIC_ASSET = /^\/(?:icon\/\d+|apple-icon)$/;
 
 // Optimistic check only (cookie present?). Real authorization happens in
 // requireUser() on the server, close to the data.
@@ -16,7 +20,7 @@ export function proxy(request: NextRequest) {
   if (pathname === "/" && hasSession && !request.nextUrl.searchParams.has("signed-out")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
-  if (!PUBLIC_PATHS.has(pathname) && !hasSession) {
+  if (!PUBLIC_PATHS.has(pathname) && !PUBLIC_ASSET.test(pathname) && !hasSession) {
     return NextResponse.redirect(new URL("/", request.url));
   }
   const headers = new Headers(request.headers);

@@ -6,6 +6,11 @@ when you merge something a future agent should know about.
 
 ## 2026-10-31
 
+- Entries: search across months, by date range and amount (address-based,
+  `src/lib/entry-search.ts`, "Show 200 more"); Undo for 10 minutes after
+  deleting an entry (D-030, `deleted_entry`, migration `0009`). Dashboard:
+  "safe to spend" after bills still due (`billsLeftThisMonth`, also used by
+  the chat). Installable app: manifest and generated icons (D-031).
 - Review fixes: currency locked once an account is set up (amounts are saved in
   its smallest unit); a fixed CSP where the proxy doesn't run, so every response
   has exactly one (D-029); raw subqueries over entries scoped to the user (they

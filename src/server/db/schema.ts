@@ -200,6 +200,21 @@ export const transaction = pgTable(
   ],
 );
 
+// A deleted entry, kept for a few minutes so "Undo" can bring it back (D-030);
+// expired ones are removed by the daily job. Not an entry: nothing reads it as one.
+export const deletedEntry = pgTable(
+  "deleted_entry",
+  {
+    id: uuid().primaryKey(), // the entry's own id, reused when it comes back
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    row: jsonb().notNull(), // the whole transaction row
+    deletedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("deleted_entry_user_deleted_idx").on(t.userId, t.deletedAt)],
+);
+
 // A budget with no category is the overall monthly spending limit (one per user).
 export const budget = pgTable(
   "budget",

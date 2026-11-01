@@ -17,6 +17,12 @@ has more. Add new ones under the right heading.
   exact complement of `headerRules`' fixed-CSP paths; `headers.test.ts` checks
   both with `next/experimental/testing/server`. A path with a dot never reaches
   the proxy, so it can't be a signed-in page and gets no nonce.
+- Generated app icons (`src/app/icon.tsx` with `generateImageMetadata`,
+  `apple-icon.tsx`) are served at `/icon/192`, `/icon/512`, `/apple-icon`: no
+  dot, so the proxy runs on them, and they're fetched without cookies when
+  installing; `PUBLIC_ASSET` in `src/proxy.ts` lets them through (D-031). The
+  manifest is `/manifest.webmanifest` (a dot: the fixed CSP, no proxy).
+  `ImageResponse` lays out with flexbox only.
 - CSP nonces (D-027): Next takes the nonce from the **request's**
   `content-security-policy` header (not `x-nonce`, which is only for app code),
   and adds it to its own scripts, not to a plain `<script>` you render: the
