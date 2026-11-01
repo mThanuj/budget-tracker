@@ -17,7 +17,12 @@ test("a shared link gets a preview card: title, description and image", async ({
   expect(meta(html, "og:title")).toBe("ClearPaisa");
   expect(meta(html, "og:description")).toMatch(/^Track your spending/);
   expect(meta(html, "twitter:card")).toBe("summary_large_image");
-  expect(html).toMatch(/<link rel="canonical" href="[^"]*\/"/);
+  // The landing page's one address, however a notice changes its query string (Next drops the final "/").
+  const href = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
+  expect(href, "canonical link").toBeDefined();
+  const canonical = new URL(href ?? "", site);
+  expect(canonical.pathname + canonical.search).toBe("/");
+  if (prod) expect(canonical.origin).toBe(site);
 
   const image = new URL(meta(html, "og:image") ?? "", site);
   if (prod) expect(image.origin).toBe(site); // full address from BETTER_AUTH_URL (dev always says localhost)
