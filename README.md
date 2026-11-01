@@ -136,7 +136,9 @@ how to run a single test.
 - Branch names are `<type>/<short-description>`, lowercase with hyphens:
   `feat/csv-import`, `fix/budget-rollover`. Types: `feat`, `fix`, `docs`,
   `chore`, `refactor`, `test`, `perf`, `ci`, `deps` (`pnpm check:branch`; CI
-  enforces it on pull requests).
+  enforces it on pull requests). The one exception is `staging`: push a branch
+  there to click through it on the staging site before merging
+  ([docs/DEPLOY.md](docs/DEPLOY.md#7-staging-try-a-change-before-merging)).
 - Git hooks in `.githooks/` are set up by `pnpm install` (in an existing clone:
   `pnpm prepare`). Before a commit: not on `main`, and Prettier and ESLint
   on the staged files. Before a push: the branch name, then `pnpm check`
@@ -160,8 +162,8 @@ how to run a single test.
 ## Deployment
 
 **Now: Vercel (Hobby), payments off.** Every merge to `main` deploys to
-production (branches get preview deployments): `scripts/vercel-build.mjs` applies pending migrations (production
-only, never previews), then builds. `vercel.json` runs the functions in
+production (branches get preview deployments): `scripts/vercel-build.mjs` applies pending migrations (production,
+and the `staging` branch's own database; never other previews), then builds. `vercel.json` runs the functions in
 Singapore next to the Neon database and calls `/api/cron/recurring` once a day.
 `/api/health/live` says the app is up and `/api/health` whether it can reach
 the database, for uptime monitors; errors and slow requests go to Sentry when

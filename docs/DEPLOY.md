@@ -23,7 +23,7 @@ region **AWS Asia Pacific (Singapore)**. Copy both connection strings: pooled
    pick another name; the URL follows it).
 3. Before the first deploy, open **Environment Variables** and add everything from
    `.env.example`, ticking **Production only** (preview builds would otherwise use
-   the production database):
+   the production database; the `staging` branch gets its own set, section 7):
    - `DATABASE_URL`, `DATABASE_URL_UNPOOLED` from step 1.
    - `BETTER_AUTH_URL=https://<your-project>.vercel.app` and a **new** `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
    - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (step 3).
@@ -91,6 +91,65 @@ Neon's free plan keeps only 6 hours of history, so a GitHub Action
 - [ ] Uptime monitors on `/api/health/live` (every 5 minutes) and `/api/health` (hourly), and Sentry with a test error that reached your inbox: [OBSERVABILITY.md](OBSERVABILITY.md).
 - [ ] Check each AI provider's terms allow your use of its free tier.
 - [ ] Have the legal pages reviewed if you can; they're written in plain English, not by a lawyer.
+
+## 7. Staging: try a change before merging
+
+The `staging` branch gets its own copy of the app at a fixed address, with its
+own database and its own Google sign-in, so you can click through a pull
+request before it reaches production (D-037). Other branches' previews get no
+settings and show only the landing page.
+
+**Once:**
+
+1. **Database.** In the **development** Neon project (never production):
+   **Branches → New branch**, named `staging`, from the development branch.
+   Copy its pooled and direct connection strings.
+2. **Address.** Push a branch to `staging` once (below), so Vercel creates its
+   deployment. Copy the branch's address from Vercel (the deployment →
+   **Domains**: the one with `-git-staging-` in it, like
+   `https://clearpaisa-git-staging-<team>.vercel.app`). It stays the same.
+3. **Google.** A separate Google Cloud project, "ClearPaisa staging". Leave its
+   **OAuth consent screen** in **Testing** and add yourself as a test user (only
+   test users can sign in). Add an OAuth client (Web) with the origin
+   `https://<staging address>` and the redirect URI
+   `https://<staging address>/api/auth/callback/google`.
+4. **Vercel → Settings → Environment Variables:** add these with only
+   **Preview** ticked and the branch `staging` chosen, so no other branch's
+   preview gets them:
+   - `DATABASE_URL`, `DATABASE_URL_UNPOOLED` from step 1.
+   - `BETTER_AUTH_URL=https://<staging address>` and a **new**
+     `BETTER_AUTH_SECRET` (`openssl rand -base64 32`; never production's).
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from step 3.
+   - `ENABLE_EXPERIMENTAL_COREPACK=1`.
+   - `NEXT_PUBLIC_APP_NAME="ClearPaisa staging"`, so tabs and the Google screen
+     say which one it is.
+   - Optional: `ADMIN_EMAILS`; AI keys (staging counts AI use in its own
+     database, so it doesn't use up production's daily cap, but it does use the
+     providers' free quota); `NEXT_PUBLIC_SENTRY_DSN` (its events are labelled
+     `preview`; leave out `SENTRY_AUTH_TOKEN`).
+   - Never `BILLING_ENABLED` or `CRON_SECRET` (Vercel runs crons on production
+     only).
+5. **Settings → Deployment Protection:** keep it on for previews, so only you,
+   signed in to Vercel, can open staging.
+6. Push to `staging` again. The build log says "Migrating the staging
+   database"; then sign in on the staging address with Google.
+
+**Trying a pull request:**
+
+```sh
+git fetch origin staging
+git push --force-with-lease origin <branch>:staging
+```
+
+The very first time, `git push origin <branch>:staging`. It replaces what was
+on staging, so it's a force push: coding agents ask before doing it. Use the
+staging address, not the per-deployment address Vercel also shows (sign-in only
+works on the staging address). Staging's data is test data.
+
+If a pull request with a migration is abandoned, or you try one whose migration
+is older than one already on staging, reset the database: Neon → the `staging`
+branch → **Reset from parent**. Migrations apply in order, and one applied
+ahead of its turn makes an older one be skipped.
 
 # Part 2: Your own server, with payments
 

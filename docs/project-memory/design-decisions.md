@@ -60,6 +60,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-034 | Actions pinned to commits; backup secrets only for `main`; weekly audit  | accepted                               |
 | D-035 | Signed-in devices; sign out the others; a fresh sign-in to delete        | accepted                               |
 | D-036 | Fonts by next/font (latin only); link previews, robots.txt and a sitemap | accepted                               |
+| D-037 | One staging branch for trying a change before merging                    | accepted                               |
 
 ### D-001 Product scope
 
@@ -104,8 +105,9 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 - **Status:** accepted · **Date:** 2026-10-23
 - **Decision:** Postgres on Neon, Drizzle ORM with node-postgres (`pg` Pool),
   SQL migrations generated into `drizzle/` and committed. Applied by the
-  production build on Vercel (`scripts/vercel-build.mjs`) and on container start
-  in the Docker image (`src/instrumentation.ts`, `RUN_MIGRATIONS=1`).
+  production build on Vercel (`scripts/vercel-build.mjs`; since D-037 also by
+  the `staging` branch's previews, to staging's own database) and on container
+  start in the Docker image (`src/instrumentation.ts`, `RUN_MIGRATIONS=1`).
 - **Alternatives:** Prisma, rejected in the original plan (kept outside the
   repo): its latest major was an incompatible release candidate at the time.
 - **Consequences:** the previous version keeps serving while a migration runs,
@@ -407,8 +409,9 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   runs Prettier and ESLint on staged files; pre-push checks the branch name,
   then runs `pnpm check`; post-merge reminds to install when `pnpm-lock.yaml`
   changed. Branch names are `<type>/<short-description>`
-  (`scripts/check-branch-name.mjs`), and CI fails a pull request from a branch
-  that doesn't follow it. Commit messages aren't checked.
+  (`scripts/check-branch-name.mjs`; `staging` is allowed too since D-037), and
+  CI fails a pull request from a branch that doesn't follow it. Commit messages
+  aren't checked.
 - **Rationale:** hooks give fast feedback; CI is the gate, because hooks can be
   skipped. **Alternatives:** Husky (it does the same `core.hooksPath` setup,
   as a dependency); lint-staged (checks only the staged version of each file
@@ -482,7 +485,8 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   routes (two policies to keep straight).
 - **Trade-offs / consequences:** no static shell from the CDN: every page view
   is a function call (slower first paint, more Vercel usage; to be measured,
-  known-issues.md), and build-time shell validation is off. Pages must keep
+  known-issues.md: PageSpeed on 2026-11-01 found the public pages well within
+  the targets), and build-time shell validation is off. Pages must keep
   working without a static shell. The global error page is still prebuilt
   without a nonce, so its "Try again" is a plain link. Browser tests on
   `pnpm dev` don't show production rendering: run `PW_PROD=1 pnpm test:e2e
@@ -741,3 +745,34 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
   `src/app/page.tsx`, `src/config/site.ts`, `src/proxy.ts`. **References:**
   `tests/unit/seo.test.ts`, `tests/e2e/sharing.spec.ts`,
   `tests/security/headers.test.ts`.
+
+### D-037 One staging branch for trying a change before merging
+
+- **Status:** accepted · **Date:** 2026-11-01
+- **Context:** preview deployments get no settings (they would otherwise use
+  the production database), so a pull request couldn't be clicked through
+  before it reached production. Google accepts only exact sign-in return
+  addresses, and every preview has a new one.
+- **Decision:** one branch, `staging`, with settings of its own in Vercel
+  (Preview, that branch only): a Neon branch of the development database, its
+  own `BETTER_AUTH_SECRET`, and a separate Google Cloud project whose consent
+  screen stays in Testing, at the branch's fixed address. A change is tried by
+  pushing it there (`git push --force-with-lease origin <branch>:staging`).
+  `scripts/vercel-build.mjs` (`migrationTarget`) migrates staging's database on
+  its builds; `scripts/check-branch-name.mjs` allows the name. No auth code
+  changed.
+- **Rationale:** every piece is configuration the app already supports;
+  branch-scoped settings never reach other branches' previews (Dependabot's
+  included); staging's data is test data. **Alternatives:** Better Auth's OAuth proxy, so
+  every preview could sign in (an auth configuration change, and a shared key
+  that preview code can read and that could sign in as anyone); previews on the
+  development database itself (an unmerged migration there would make later
+  ones be skipped, since Drizzle applies only migrations newer than the last).
+- **Trade-offs / consequences:** one change at a time on staging; each push
+  there replaces the last (a force push, so agents ask first). A migration from
+  an abandoned branch stays on staging's database until it's reset from its
+  parent (docs/DEPLOY.md). Vercel's login guards the previews, so PageSpeed and
+  link-preview checkers can't reach staging: measure on production.
+- **Affected:** `scripts/vercel-build.mjs`, `scripts/check-branch-name.mjs`.
+  **References:** docs/DEPLOY.md (section 7), `tests/unit/dev-workflow.test.ts`,
+  D-004, D-025.

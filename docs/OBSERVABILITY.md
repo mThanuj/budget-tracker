@@ -156,7 +156,8 @@ and deploy.
    (Settings → Auth Tokens; it can upload source maps and nothing else). Keep
    the token in your password manager; it's shown once.
 4. **Vercel → Settings → Environment Variables**, Production only (like the
-   rest, see [DEPLOY.md](DEPLOY.md)): `NEXT_PUBLIC_SENTRY_DSN`,
+   rest, see [DEPLOY.md](DEPLOY.md); a DSN for staging is optional, and its
+   events are labelled `preview`, so filter Insights to production): `NEXT_PUBLIC_SENTRY_DSN`,
    `SENTRY_AUTH_TOKEN` (mark it Sensitive), `SENTRY_ORG`, `SENTRY_PROJECT`.
    The DSN is read at build time, so it takes effect with the next deploy.
 5. **Deploy**, then go through [Checking that it works](#checking-that-it-works).
