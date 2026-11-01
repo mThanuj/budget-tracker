@@ -205,16 +205,20 @@ export async function recordDueForEveryone(db: Db, now: Date = new Date()) {
   return { users: users.length, recorded: count };
 }
 
+/** "Ask me first" rules whose date has come, from listRules' rows (no query of its own). */
+export function awaitingFrom(rows: readonly RuleRow[], today: ISODate) {
+  return rows
+    .filter((r) => r.rule.active && r.rule.mode === "confirm" && r.rule.nextDueOn && r.rule.nextDueOn <= today)
+    .map((r) => ({
+      ...r,
+      dueOn: r.rule.nextDueOn!,
+      pendingCount: occurrencesBetween(scheduleOf(r.rule), r.rule.nextDueOn!, today).length,
+    }));
+}
+
 /** "Ask me first" rules whose date has come, waiting for the user. */
 export async function listAwaitingConfirmation(db: Db, userId: string, today: ISODate) {
-  const rows = (await listRules(db, userId)).filter(
-    (r) => r.rule.active && r.rule.mode === "confirm" && r.rule.nextDueOn && r.rule.nextDueOn <= today,
-  );
-  return rows.map((r) => ({
-    ...r,
-    dueOn: r.rule.nextDueOn!,
-    pendingCount: occurrencesBetween(scheduleOf(r.rule), r.rule.nextDueOn!, today).length,
-  }));
+  return awaitingFrom(await listRules(db, userId), today);
 }
 
 async function advanceFrom(db: Db, r: Rule) {
@@ -258,9 +262,8 @@ export async function skipOccurrence(db: Db, userId: string, id: string, today: 
   await advanceFrom(db, r);
 }
 
-/** Dates coming up across active rules (both modes), soonest first. */
-export async function listUpcoming(db: Db, userId: string, today: ISODate, days = 14) {
-  const rows = await listRules(db, userId);
+/** Dates coming up across active rules (both modes), soonest first, from listRules' rows (no query of its own). */
+export function upcomingFrom(rows: readonly RuleRow[], today: ISODate, days = 14) {
   const until = addDays(today, days);
   return rows
     .filter((r) => r.rule.active && r.rule.nextDueOn)
@@ -269,6 +272,11 @@ export async function listUpcoming(db: Db, userId: string, today: ISODate, days 
       return occurrencesBetween(scheduleOf(r.rule), from, until, 10).map((date) => ({ ...r, date }));
     })
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Dates coming up across active rules (both modes), soonest first. */
+export async function listUpcoming(db: Db, userId: string, today: ISODate, days = 14) {
+  return upcomingFrom(await listRules(db, userId), today, days);
 }
 
 // ---------------------------------------------------------------------------

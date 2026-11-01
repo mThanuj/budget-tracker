@@ -1,6 +1,5 @@
 "use server";
 
-import { and, desc, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { priceLabel } from "@/config/plans";
@@ -14,13 +13,17 @@ import {
   verifyCheckoutSignature,
 } from "@/server/billing/razorpay";
 import {
+  findReusableCheckout,
+  getOwnSubscription,
   isConfirming,
+  markAuthenticated,
+  markCancelAtCycleEnd,
+  recordCheckout,
   saveSubscriptionState,
   subscriptionsToSync,
   unsettledSubscriptions,
 } from "@/server/billing/subscriptions";
 import { db } from "@/server/db";
-import { subscription } from "@/server/db/schema";
 import { requireUser } from "@/server/session";
 import { log } from "@/server/log";
 import { currentRequestId } from "@/server/request-id";
@@ -55,23 +58,10 @@ export async function startCheckout(interval: "monthly" | "yearly"): Promise<Che
       };
     }
 
-    const [reusable] = await db
-      .select()
-      .from(subscription)
-      .where(
-        and(
-          eq(subscription.userId, user.id),
-          eq(subscription.planKey, chosen.data),
-          eq(subscription.status, "created"),
-        ),
-      )
-      .orderBy(desc(subscription.createdAt))
-      .limit(1);
-    let subscriptionId = reusable?.razorpaySubscriptionId;
+    let subscriptionId = (await findReusableCheckout(db, user.id, chosen.data))?.razorpaySubscriptionId;
     if (!subscriptionId) {
       const created = await createSubscription(cfg, chosen.data, user.id);
-      await db.insert(subscription).values({
-        userId: user.id,
+      await recordCheckout(db, user.id, {
         razorpaySubscriptionId: created.id,
         planKey: chosen.data,
         status: created.status,
@@ -109,15 +99,7 @@ export async function confirmCheckout(response: unknown): Promise<CheckoutConfir
   if (!input.success) return { ok: false, error: "That payment response looks incomplete." };
 
   // Only a subscription we created for this user counts; its id is the one we stored.
-  const [row] = await db
-    .select()
-    .from(subscription)
-    .where(
-      and(
-        eq(subscription.userId, user.id),
-        eq(subscription.razorpaySubscriptionId, input.data.razorpay_subscription_id),
-      ),
-    );
+  const row = await getOwnSubscription(db, user.id, input.data.razorpay_subscription_id);
   const signed =
     row &&
     verifyCheckoutSignature(
@@ -142,8 +124,7 @@ export async function confirmCheckout(response: unknown): Promise<CheckoutConfir
   } catch (err) {
     log.error("billing.checkout_confirm_fetch_failed", { err, requestId: await currentRequestId() });
     // Only move forward: never overwrite a state Razorpay already confirmed.
-    if (row.status === "created")
-      await db.update(subscription).set({ status: "authenticated" }).where(eq(subscription.id, row.id));
+    await markAuthenticated(db, user.id, row.id);
   }
   refresh();
   return { ok: true, active: (await getUserPlan(db, user.id)).id === "pro" };
@@ -184,15 +165,7 @@ export async function cancelPro(): Promise<{ ok: true } | { ok: false; error: st
     log.error("billing.cancel_failed", { err, requestId: await currentRequestId() });
     return { ok: false, error: TRY_AGAIN };
   }
-  await db
-    .update(subscription)
-    .set({ cancelAtCycleEnd: true })
-    .where(
-      and(
-        eq(subscription.userId, user.id),
-        eq(subscription.razorpaySubscriptionId, plan.subscription.razorpaySubscriptionId),
-      ),
-    );
+  await markCancelAtCycleEnd(db, user.id, plan.subscription.razorpaySubscriptionId);
   refresh();
   return { ok: true };
 }

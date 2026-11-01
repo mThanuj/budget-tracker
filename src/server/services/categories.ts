@@ -7,6 +7,22 @@ import { category, transaction } from "../db/schema";
 import { rethrowUnique, UserError } from "./errors";
 import { assertRoomFor } from "./limits";
 
+/** Categories for a picker: no usage counts (listCategories counts entries per category). Same order. */
+export async function listCategoryOptions(db: Db, userId: string, { includeArchived = false } = {}) {
+  return db
+    .select({
+      id: category.id,
+      name: category.name,
+      kind: category.kind,
+      icon: category.icon,
+      color: category.color,
+      archivedAt: category.archivedAt,
+    })
+    .from(category)
+    .where(and(eq(category.userId, userId), includeArchived ? undefined : isNull(category.archivedAt)))
+    .orderBy(asc(category.kind), asc(category.position), asc(category.createdAt));
+}
+
 export async function listCategories(db: Db, userId: string, { includeArchived = false } = {}) {
   return db
     .select({

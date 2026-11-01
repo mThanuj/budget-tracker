@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { test as base, type Page } from "@playwright/test";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -9,7 +10,8 @@ import * as schema from "../../../src/server/db/schema";
 import { seedNewUser } from "../../../src/server/db/seed-defaults";
 import { deleteAccountData } from "../../../src/server/services/account";
 
-process.loadEnvFile(".env.local");
+// Locally the settings come from .env.local; in CI, from the job's environment (D-032).
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 // Same timeouts as the app: a dropped connection fails the test with a clear
 // error instead of hanging silently until the test timeout.

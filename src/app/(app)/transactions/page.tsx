@@ -13,14 +13,14 @@ import { addDays, monthOf, monthRange } from "@/lib/dates";
 import { entrySearchHref, parseEntrySearch, SEARCH_MAX, SEARCH_PAGE } from "@/lib/entry-search";
 import { formatMoney } from "@/lib/money";
 import { db } from "@/server/db";
-import { listCategories } from "@/server/services/categories";
+import { listCategoryOptions } from "@/server/services/categories";
 import {
   listTransactions,
   summarizeTransactions,
   type TransactionFilters as Filters,
   type TransactionRow,
 } from "@/server/services/transactions";
-import { listWallets } from "@/server/services/wallets";
+import { listWalletOptions } from "@/server/services/wallets";
 import { syncRecurring } from "@/server/recurring-sync";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";
@@ -107,8 +107,8 @@ async function TransactionsContent({ searchParams }: Pick<PageProps<"/transactio
   const [rows, summary, wallets, categories] = await Promise.all([
     listTransactions(db, user.id, filters, limit),
     summarizeTransactions(db, user.id, filters),
-    listWallets(db, user.id, { includeArchived: true }),
-    listCategories(db, user.id, { includeArchived: true }),
+    listWalletOptions(db, user.id, { includeArchived: true }),
+    listCategoryOptions(db, user.id, { includeArchived: true }),
   ]);
 
   const values: FilterValues = {

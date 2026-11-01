@@ -201,6 +201,17 @@ has more. Add new ones under the right heading.
   `tests/e2e/support/`). Read those to check results; don't pipe test commands
   through `tee` or `head` (the tools then lose their live output, and a closed
   pipe can kill Playwright).
+- `createTestDb({ logger })` sees every query, so a test can count them
+  (`tests/db/dashboard.test.ts` keeps the home page's data within 11).
+- `upgrade-insecure-requests` is sent only when the page came over https
+  (`secure` in `contentSecurityPolicy`, from the request's protocol, which Next
+  takes from `x-forwarded-proto`). On a plain-http production run, WebKit on
+  Linux upgrades every script request to `https://localhost` and the app can't
+  start; Chrome and macOS WebKit exempt localhost, so this only showed in CI
+  (run 48: 24 iPhone tests failed, desktop all passed).
+- In CI the browser tests have no `.env.local` (the fixture loads it only if it
+  exists): the job sets a throwaway Postgres URL, a per-run secret and
+  placeholder Google keys (`src/env.ts` only needs them non-empty).
 - Browser tests need `.env.local` and write to its database (a development one).
   They sign in with Better Auth's test helpers, so no Google account is used.
 - Server actions count against the per-minute limit (D-026) in Vitest too: a

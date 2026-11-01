@@ -130,7 +130,8 @@ how to run a single test.
   the only way in. CI (`.github/workflows/ci.yml`) runs lint, formatting, type
   checks, the migration and docs checks, every Vitest suite, a production build
   and a dependency audit, and its `checks` job must pass (on a branch up to
-  date with `main`) before the merge. Run `pnpm check` locally first, and
+  date with `main`) before the merge. Its `e2e` job runs the browser tests
+  against a production build. Run `pnpm check` locally first, and
   `pnpm test:e2e` for UI changes.
 - Branch names are `<type>/<short-description>`, lowercase with hyphens:
   `feat/csv-import`, `fix/budget-rollover`. Types: `feat`, `fix`, `docs`,

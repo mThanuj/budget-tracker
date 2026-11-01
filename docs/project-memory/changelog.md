@@ -4,6 +4,15 @@ Significant changes to architecture, behaviour or the development workflow,
 newest first. One line each, with the commit; `git log` has the rest. Add a line
 when you merge something a future agent should know about.
 
+## 2026-11-01
+
+- Engineering: the home page's data in 9 queries (was about 15; recurring items
+  read once, `loadDashboard`), light picker lists for the entry dialog and
+  filters, foreign-key indexes (migration `0010`), browser tests in CI against a
+  production build (D-032), no action queries tables itself (services +
+  static guard), direct tests for 9 actions that had none. The CSP asks for
+  https upgrades only on pages served over https (Linux WebKit broke on http).
+
 ## 2026-10-31
 
 - Entries: search across months, by date range and amount (address-based,
