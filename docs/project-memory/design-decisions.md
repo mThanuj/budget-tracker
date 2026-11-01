@@ -59,6 +59,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-033 | The nightly backup is test-restored; a missed or failed night alerts     | accepted                               |
 | D-034 | Actions pinned to commits; backup secrets only for `main`; weekly audit  | accepted                               |
 | D-035 | Signed-in devices; sign out the others; a fresh sign-in to delete        | accepted                               |
+| D-036 | Fonts by next/font (latin only); link previews, robots.txt and a sitemap | accepted                               |
 
 ### D-001 Product scope
 
@@ -593,7 +594,8 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
   the installed app may open Safari, which keeps its own cookies: check on a
   real phone.
 - **Affected:** `src/app/manifest.ts`, `src/app/icon.tsx`, `src/app/apple-icon.tsx`,
-  `src/proxy.ts`, `src/app/layout.tsx`. **References:** `tests/e2e/pwa.spec.ts`,
+  `src/proxy.ts`, `src/app/layout.tsx` (the link-preview image joined
+  `PUBLIC_ASSET` in D-036). **References:** `tests/e2e/pwa.spec.ts`,
   `tests/unit/manifest.test.ts`, `tests/security/headers.test.ts`.
 
 ### D-032 Browser tests in CI against a production build, no secrets
@@ -703,3 +705,39 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
 - **Affected:** `src/server/services/sessions.ts`, `src/server/actions/account.ts`,
   `src/app/(app)/settings/page.tsx`, `src/components/settings/`.
   **References:** business-rules.md (Accounts and access), SECURITY.md.
+
+### D-036 Fonts by next/font (latin only); link previews, robots.txt and a sitemap
+
+- **Status:** accepted · **Date:** 2026-11-01
+- **Context:** the fonts came from Fontsource's CSS: not preloaded, no
+  size-matched fallback (so text could jump on a first visit), and each family
+  in up to 7 subsets. None of them has ₹, yet the latin-ext subset claims it, so
+  every ₹ on a page downloaded up to three files that couldn't draw it. Shared
+  links showed no preview card, and there was no `robots.txt` or sitemap.
+- **Decision:** `src/app/fonts.ts` loads Onest, Young Serif and Spline Sans
+  Mono with `next/font/local` from the Fontsource packages' latin files only:
+  preloaded, with size-matched Arial and Times New Roman fallbacks (none for the
+  monospace font). The root layout's `generateMetadata` sets `metadataBase` from
+  `siteUrl()` (`src/config/site.ts`, `BETTER_AUTH_URL` read per request) and
+  Open Graph basics; `src/app/opengraph-image.tsx` draws the icon, name and
+  headline at build time, and the proxy lets crawlers fetch it without a
+  cookie (`PUBLIC_ASSET`). `robots.ts` allows everything but `/api/`;
+  `sitemap.ts` lists the public pages (the refund policy only while payments
+  are on). The landing page's canonical address is `/`.
+- **Rationale:** `next/font` is Next's own way to self-host and preload fonts,
+  with fallback metrics to stop layout shift; the files stay on our domain
+  (no CSP change) and Dependabot keeps them current through the Fontsource
+  packages. **Alternatives:** keeping Fontsource's CSS with preload links by
+  hand (no fallback metrics); copying the font files into the repo (they'd go
+  stale); a separate `SITE_URL` setting (one more value to keep in step with
+  `BETTER_AUTH_URL`, which already is the site's address).
+- **Trade-offs / consequences:** characters outside latin (₹, as before, and
+  rare names such as "Łukasz") use the fallback font. Three font files are
+  preloaded on every page (about 97 KB, once cached). Without `BETTER_AUTH_URL`
+  the preview image URL falls back to Next's guess and the sitemap is empty.
+  Whether CLS and LCP improved is to be measured (known-issues.md, D-027).
+- **Affected:** `src/app/fonts.ts`, `src/app/layout.tsx`, `src/app/globals.css`,
+  `src/app/opengraph-image.tsx`, `src/app/robots.ts`, `src/app/sitemap.ts`,
+  `src/app/page.tsx`, `src/config/site.ts`, `src/proxy.ts`. **References:**
+  `tests/unit/seo.test.ts`, `tests/e2e/sharing.spec.ts`,
+  `tests/security/headers.test.ts`.

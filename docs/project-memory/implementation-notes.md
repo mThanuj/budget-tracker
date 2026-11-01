@@ -20,9 +20,22 @@ has more. Add new ones under the right heading.
 - Generated app icons (`src/app/icon.tsx` with `generateImageMetadata`,
   `apple-icon.tsx`) are served at `/icon/192`, `/icon/512`, `/apple-icon`: no
   dot, so the proxy runs on them, and they're fetched without cookies when
-  installing; `PUBLIC_ASSET` in `src/proxy.ts` lets them through (D-031). The
-  manifest is `/manifest.webmanifest` (a dot: the fixed CSP, no proxy).
-  `ImageResponse` lays out with flexbox only.
+  installing; `PUBLIC_ASSET` in `src/proxy.ts` lets them through (D-031), as it
+  does the link-preview image `/opengraph-image` (D-036; the `?<hash>` Next adds
+  isn't part of the path). The manifest, `/robots.txt` and `/sitemap.xml` have
+  a dot: the fixed CSP, no proxy. `ImageResponse` lays out with flexbox only,
+  and reads ttf, otf or woff fonts, not woff2 (the preview image uses Young
+  Serif's `.woff` from its Fontsource package).
+- Fonts (D-036): `next/font/local` takes `src` paths into `node_modules`
+  (`src/app/fonts.ts`), copies them to `/_next/static/media` and preloads them.
+  A variable font needs its weight range (`"100 900"`), or it's treated as 400
+  only and bolder text is faked. None of the three fonts has ₹ in any subset
+  (checked with fontkit): it's always drawn by the fallback. No Vitest file can
+  import `fonts.ts` (next/font needs the build).
+- The root layout's `generateMetadata` reads the site's address per request
+  (`await connection()`, `src/config/site.ts`), because the build has no
+  settings. Without `metadataBase`, Next falls back to Vercel's variables for
+  images only, and to localhost on any other host.
 - CSP nonces (D-027): Next takes the nonce from the **request's**
   `content-security-policy` header (not `x-nonce`, which is only for app code),
   and adds it to its own scripts, not to a plain `<script>` you render: the

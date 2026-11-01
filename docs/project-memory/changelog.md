@@ -6,6 +6,10 @@ when you merge something a future agent should know about.
 
 ## 2026-11-01
 
+- Fonts through `next/font/local` (latin files only, preloaded, size-matched
+  fallbacks; 3 font files instead of 13), link-preview image and Open Graph
+  tags, `robots.txt` and a sitemap, the site's address from `BETTER_AUTH_URL`
+  per request (D-036).
 - Security and operations: each nightly backup is restored on the runner and
   checked, and Sentry check-ins catch a missed or failed night (D-033); GitHub
   Actions pinned to commits (`pnpm/action-setup` moves from its `v6` tag to

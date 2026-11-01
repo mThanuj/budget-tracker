@@ -58,11 +58,11 @@ below; keep this list in step when an item is done or a new one outranks it.
 - **Backups: restore check and environment verified** (2026-11-01). The GitHub
   environment `production-backup` exists, limited to `main`; the first backup
   run from `main` with it (run 41287862637) dumped, uploaded and passed the
-  restore check on real production data, and the weekly audit ran green. Still
-  optional: the Sentry monitor `nightly-backup` and its secret (the check-in
-  steps are skipped without it; [OBSERVABILITY.md](../OBSERVABILITY.md#setting-it-up-in-production),
-  step 7). Not checkable from outside: that the repository-level copies of the
-  backup secrets were deleted.
+  restore check on real production data, and the weekly audit ran green. The
+  repository-level copies of the secrets are deleted, and a run after that
+  (41291403964) read them from the environment. The owner chose not to set up
+  the Sentry monitor `nightly-backup` (its check-in steps are skipped); a failed
+  run still emails the owner, but a night that never runs goes unnoticed.
 - **Monitoring is on; parts are still unverified** (2026-10-26). Verified on
   the live site: a test error reached Sentry scrubbed, source maps uploaded,
   Sentry's default alert emailed the owner, a browser test error's replay was
@@ -78,16 +78,13 @@ below; keep this list in step when an item is done or a new one outranks it.
   [docs/RESTORE.md](../RESTORE.md) end to end. Do it once into a throwaway Neon
   branch: it tests the owner's own steps and tools.
 - **Every page now renders per request (D-027); the cost isn't measured yet.**
-  Compare PageSpeed Insights (first paint, LCP) on the preview against the live
-  site before merging, and check Vercel's usage page a week after.
-- Fonts (Onest, Young Serif, Spline Sans Mono via Fontsource) swap in without
-  preloading, so the first visit may shift layout. Not measured: check with
-  PageSpeed Insights on the live site; if CLS > 0.1, switch to `next/font/local`
-  (mind the unicode-range subsets: ₹ may be outside the latin one).
+  Previews are behind Vercel's login, so measure the live site: PageSpeed
+  Insights on `/` and `/privacy` (median of 3, mobile and desktop), Sentry
+  Insights filtered to production, and Vercel's usage for 1–7 November against
+  25–31 October. Record the numbers here and in D-027, against the targets in
+  OBSERVABILITY.md. A baseline is due before the D-036 font change deploys.
 
 ## Code quality
 
 - `noUncheckedIndexedAccess` is off; the code often destructures query results
   (`const [row] = …`). Turning it on would flag many spots: adopt deliberately.
-- No SEO metadata beyond title and description (`metadataBase`, an OG image,
-  `robots.ts`, `sitemap.ts`).

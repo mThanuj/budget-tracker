@@ -39,7 +39,9 @@ avatars and icon badges.
 
 **Type:** `font-heading` (Young Serif) for page titles (`text-3xl`, via
 `PageHeader`), section titles (`text-xl`) and card titles (`text-lg`);
-Onest for everything else; `font-medium` for list-group labels.
+Onest for everything else; `font-medium` for list-group labels. Fonts load
+through `next/font` (`src/app/fonts.ts`, latin only; D-036): a character
+outside latin, like ₹, uses the fallback font.
 
 **Surfaces:** `rounded-2xl bg-card ring-1 ring-foreground/10`, padding `p-5`
 (`sm:p-6` for a page's main card). Inset tiles inside a card:
