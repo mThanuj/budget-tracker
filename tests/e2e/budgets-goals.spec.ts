@@ -1,5 +1,6 @@
 import { todayInTz } from "../../src/lib/dates";
 import { listCategories } from "../../src/server/services/categories";
+import { createRule } from "../../src/server/services/recurring";
 import { createTransaction } from "../../src/server/services/transactions";
 import { listWallets } from "../../src/server/services/wallets";
 import { db, expect, test } from "./support/fixtures";
@@ -33,6 +34,32 @@ test("set a monthly limit and see what's left on the home page", async ({ signed
   const hero = page.getByRole("region", { name: "Left to spend this month" });
   await expect(hero).toContainText("₹8,000.00");
   await expect(hero.getByRole("meter")).toHaveAttribute("aria-valuenow", "20");
+
+  // A bill due today that's waiting to be recorded: part of what's left is spoken for.
+  // (Due today, not later, so this works on the last day of a month too.)
+  const today = todayInTz("Asia/Kolkata");
+  const [cash] = await listWallets(db, userId);
+  await createRule(
+    db,
+    userId,
+    {
+      type: "expense",
+      amount: 500_00,
+      description: "Electricity",
+      walletId: cash.id,
+      toWalletId: null,
+      categoryId: null,
+      frequency: "monthly",
+      interval: 1,
+      anchorDate: today,
+      endDate: null,
+      mode: "confirm",
+      isSubscription: false,
+    },
+    today,
+  );
+  await page.reload();
+  await expect(hero).toContainText("₹500.00 of it is for bills still due this month, so ₹7,500.00 is safe to spend.");
 });
 
 test("a category budget warns at 80% and the alert can be dismissed", async ({ signedIn: { page, userId } }) => {

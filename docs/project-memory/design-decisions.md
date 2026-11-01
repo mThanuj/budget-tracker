@@ -53,6 +53,8 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-027 | Nonce-based CSP; every page renders per request                          | accepted                               |
 | D-028 | Category colors look different from each other, enforced by the server   | accepted                               |
 | D-029 | One CSP per response; a fixed one where the proxy doesn't run            | accepted                               |
+| D-030 | Undo after deleting an entry, from a short-lived trash table             | accepted                               |
+| D-031 | Installable app: manifest and generated icons, no service worker         | accepted                               |
 
 ### D-001 Product scope
 
@@ -544,3 +546,48 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
   a table of paths.
 - **Affected:** `src/lib/security-headers.ts`, `next.config.ts`, `src/proxy.ts`.
   **References:** `tests/security/headers.test.ts`, `tests/e2e/security.spec.ts`.
+
+### D-030 Undo after deleting an entry, from a short-lived trash table
+
+- **Status:** accepted · **Date:** 2026-10-31
+- **Context:** every delete said "This can't be undone"; beginners tap the
+  wrong thing.
+- **Decision:** `deleteTransaction` moves the row into `deleted_entry` (the
+  whole row as JSON, keyed by the entry's id) in the same transaction;
+  `undoRemoveTransaction` → `restoreTransaction` puts it back as it was within
+  `undoDeleteMinutes` (10). Expired copies go on the user's next delete and in
+  the daily job (`pruneDeletedEntries`). The toast after deleting has "Undo".
+- **Rationale:** nothing that reads entries changes. **Alternatives:** a
+  `deleted_at` column (about 25 queries read `transaction`; one missed filter
+  would count deleted money); re-creating from what the client holds (loses the
+  recurring link and source, counts again against limits, and trusts client
+  data for fields like `recurringRuleId`).
+- **Trade-offs / consequences:** a deleted entry's text stays up to about a day
+  in the database (privacy page says so), then in backups for 7 days as before.
+  Only entries have undo. During a deploy the old version's deletes skip the trash.
+- **Affected:** `src/server/services/transactions.ts`, `src/server/actions/transactions.ts`,
+  `src/app/api/cron/recurring/route.ts`, `src/components/transactions/transaction-form.tsx`,
+  `drizzle/0009_deleted_entries.sql`. **References:** `tests/db/undo-delete.test.ts`,
+  `tests/security/access-control.test.ts`.
+
+### D-031 Installable app: manifest and generated icons, no service worker
+
+- **Status:** accepted · **Date:** 2026-10-31
+- **Context:** the mobile layout is app-like, but it couldn't be added to a
+  home screen as an app.
+- **Decision:** `src/app/manifest.ts` (standalone, starts on `/dashboard`) and
+  icons drawn with `next/og` from the brand mark (`src/app/icon.tsx`,
+  `apple-icon.tsx`, `src/components/app/brand-icon.tsx`), built at build time;
+  `appleWebApp` metadata. The icon paths are public in the proxy (`PUBLIC_ASSET`).
+  No service worker.
+- **Rationale:** installing needs no service worker in current browsers; one
+  would mean caching user data on the device (D-002, privacy). No image files
+  or tooling to maintain. **Alternatives:** PNG files in `public/` (binary
+  assets to keep in step with the brand); offline entry (a service worker and
+  queued saves; later, if ever).
+- **Trade-offs / consequences:** works only online. On iOS, Google sign-in from
+  the installed app may open Safari, which keeps its own cookies: check on a
+  real phone.
+- **Affected:** `src/app/manifest.ts`, `src/app/icon.tsx`, `src/app/apple-icon.tsx`,
+  `src/proxy.ts`, `src/app/layout.tsx`. **References:** `tests/e2e/pwa.spec.ts`,
+  `tests/unit/manifest.test.ts`, `tests/security/headers.test.ts`.

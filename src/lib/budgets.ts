@@ -69,3 +69,26 @@ export function suggestLimit(averageMinor: number, currency: string): number | n
   const step = major < 1_000 ? 50 : major < 10_000 ? 100 : 500;
   return Math.ceil(major / step) * step * unit;
 }
+
+type Bill = { rule: { type: "income" | "expense" | "transfer"; amountMinor: number } };
+
+/**
+ * Spending bills still to come this month: scheduled ones after today
+ * (`upcoming`, e.g. from listUpcoming) plus "ask first" ones already due but
+ * not recorded yet (`waiting`, from listAwaitingConfirmation), which aren't in
+ * "spent" yet. Waiting ones count only when their first open date is in this
+ * month (their later ones then are too); older ones belong to past months.
+ */
+export function billsLeftThisMonth(
+  month: ISOMonth,
+  upcoming: readonly (Bill & { date: ISODate })[],
+  waiting: readonly (Bill & { dueOn: ISODate; pendingCount: number })[],
+): number {
+  const later = upcoming
+    .filter((x) => x.rule.type === "expense" && monthOf(x.date) === month)
+    .reduce((s, x) => s + x.rule.amountMinor, 0);
+  const due = waiting
+    .filter((x) => x.rule.type === "expense" && monthOf(x.dueOn) === month)
+    .reduce((s, x) => s + x.rule.amountMinor * x.pendingCount, 0);
+  return later + due;
+}

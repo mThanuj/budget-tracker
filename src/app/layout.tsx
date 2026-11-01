@@ -11,6 +11,8 @@ import { APP_NAME } from "@/config/app";
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description: "Track your spending, set budgets and ask questions about your money in plain words.",
+  // Added to an iPhone's home screen, it opens like an app (the manifest does this elsewhere, D-031).
+  appleWebApp: { title: APP_NAME, capable: true },
 };
 
 export const viewport: Viewport = {

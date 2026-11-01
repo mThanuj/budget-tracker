@@ -24,6 +24,22 @@ export function isISOMonth(v: string | undefined): v is ISOMonth {
   return v >= "2000-01" && v <= "2100-12";
 }
 
+/** A real calendar date (2026-02-30 isn't) between 2000 and 2100. */
+export function isISODate(v: string | undefined): v is ISODate {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = asDate(v);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v && v >= "2000-01-01" && v <= "2100-12-31";
+}
+
+/** A range of days as a heading: "1 Jan – 31 Mar 2026", "From 1 Jan 2026", "All time". Both ends inclusive. */
+export function formatDateRange(from: ISODate | undefined, to: ISODate | undefined): string {
+  const day = (d: ISODate, withYear = true) => format(asDate(d), withYear ? "d MMM yyyy" : "d MMM", { in: utc });
+  if (from && to) return `${day(from, from.slice(0, 4) !== to.slice(0, 4))} – ${day(to)}`;
+  if (from) return `From ${day(from)}`;
+  if (to) return `Until ${day(to)}`;
+  return "All time";
+}
+
 export function monthNeighbors(month: ISOMonth) {
   return { prev: addMonths(month, -1), next: addMonths(month, 1) };
 }

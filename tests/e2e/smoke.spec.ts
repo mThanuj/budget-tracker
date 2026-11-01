@@ -1,5 +1,7 @@
 import type { Page, Route } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import * as schema from "../../src/server/db/schema";
+import { listWallets } from "../../src/server/services/wallets";
+import { db, expect, test } from "./support/fixtures";
 
 /** Opens the entry dialog, retrying until the page has hydrated. */
 async function openNewEntry(page: Page) {
@@ -75,6 +77,42 @@ test("add, edit and delete an entry", async ({ signedIn: { page } }) => {
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByText("Entry deleted")).toBeVisible();
   await expect(row).toHaveCount(0);
+
+  // Changed their mind: Undo brings it back as it was (D-030).
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("Entry restored")).toBeVisible();
+  await expect(row).toContainText("−₹250.00");
+});
+
+test("search finds entries across months, by word and by amount", async ({ signedIn: { page, userId } }) => {
+  const [cash] = await listWallets(db, userId);
+  for (const [occurredOn, description, amountMinor] of [
+    ["2025-11-03", "Plumber visit", 1_500_00],
+    ["2026-02-14", "Plumber again", 900_00],
+    ["2026-02-20", "Chai", 20_00],
+  ] as const) {
+    await db
+      .insert(schema.transaction)
+      .values({ userId, type: "expense", amountMinor, occurredOn, description, walletId: cash.id });
+  }
+
+  await page.goto("/transactions");
+  await page.getByLabel("Dates").selectOption("all");
+  await expect(page.getByRole("heading", { name: "All time" })).toBeVisible();
+  const search = page.getByLabel("Search descriptions and notes");
+  await search.fill("plumber");
+  await search.press("Enter");
+  await expect(page.getByRole("button", { name: /Plumber visit/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Plumber again/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Chai/ })).toHaveCount(0);
+
+  const smallest = page.getByLabel("Smallest amount");
+  await smallest.fill("1000");
+  await smallest.press("Enter");
+  await expect(page.getByRole("button", { name: /Plumber again/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Plumber visit/ })).toBeVisible();
+  // The search is in the address, so it survives a reload and can be shared.
+  await expect(page).toHaveURL(/period=all&q=plumber&min=1000/);
 });
 
 test("shows a friendly error for a missing amount, keeping what was typed", async ({ signedIn: { page } }) => {

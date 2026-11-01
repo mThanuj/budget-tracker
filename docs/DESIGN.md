@@ -6,7 +6,8 @@ before inventing new ones.
 
 ## Principles
 
-- **One headline number per page** (left to spend, total balance). Everything
+- **One headline number per page** (left to spend, total balance); a muted
+  line under it may explain it (e.g. "safe to spend" after bills still due). Everything
   else supports it.
 - **Status is never colour alone**: an icon and words (`BudgetStatus`, alerts).
 - **Money in lists uses `.tabular`** (monospaced, so amounts line up like a

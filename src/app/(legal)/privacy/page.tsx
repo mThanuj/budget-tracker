@@ -110,8 +110,9 @@ async function PrivacyBody() {
 
       <h2>How long we keep it</h2>
       <p>
-        As long as you have an account. When you delete your account, everything is removed from our database straight
-        away. Copies in our backups are gone within 7 days.
+        As long as you have an account. An entry you delete is kept for 10 minutes so you can undo it, then removed from
+        our database within a day. When you delete your account, everything is removed from our database straight away.
+        Copies in our backups are gone within 7 days.
         {billing && " Razorpay keeps its own payment records as the law requires."}
       </p>
 

@@ -13,12 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ui-extra/confirm-dialog";
 import { FormField, fieldAria } from "@/components/ui-extra/form-field";
 import { Segmented } from "@/components/ui-extra/segmented";
+import { LIMITS } from "@/config/limits";
 import { addDays } from "@/lib/dates";
 import { currencySymbol, minorToInput } from "@/lib/money";
 import { type ParseResult, parseEntryText, suggestCategoryFor } from "@/server/actions/ai";
 import type { EntryFormData } from "@/server/actions/entry-form";
 import type { EntryPrefill } from "@/server/ai/parse-entry";
-import { removeTransaction, saveTransaction } from "@/server/actions/transactions";
+import { removeTransaction, saveTransaction, undoRemoveTransaction } from "@/server/actions/transactions";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 import { useFormAction } from "@/components/ui-extra/use-form-action";
 
@@ -401,7 +402,7 @@ function EntryFields({
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
           title="Delete this entry?"
-          description="It will be removed from your history and wallet balances. This can't be undone."
+          description={`It will be removed from your history and wallet balances. You can undo this for ${LIMITS.undoDeleteMinutes} minutes.`}
           confirmLabel="Delete entry"
           pendingLabel="Deleting…"
           destructive
@@ -409,7 +410,19 @@ function EntryFields({
             const result = await callAction(() => removeTransaction(entry.id));
             if (result === NOT_SENT) return false;
             if (result?.ok) {
-              toast.success("Entry deleted");
+              const id = entry.id;
+              toast.success("Entry deleted", {
+                duration: 8_000,
+                action: {
+                  label: "Undo",
+                  onClick: () =>
+                    void callAction(() => undoRemoveTransaction(id)).then((undone) => {
+                      if (undone === NOT_SENT) return; // callAction already said so
+                      if (undone?.ok) toast.success("Entry restored");
+                      else toast.error(undone?.error ?? "Couldn't bring the entry back.");
+                    }),
+                },
+              });
               onDone();
               return true;
             }

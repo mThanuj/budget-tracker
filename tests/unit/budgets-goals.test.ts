@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { budgetProgress, carryIn, daysLeftInMonth, monthsBetween, suggestLimit } from "@/lib/budgets";
+import {
+  billsLeftThisMonth,
+  budgetProgress,
+  carryIn,
+  daysLeftInMonth,
+  monthsBetween,
+  suggestLimit,
+} from "@/lib/budgets";
 import { goalProgress, highestMilestone } from "@/lib/goals";
 
 describe("monthsBetween", () => {
@@ -98,5 +105,29 @@ describe("niceTicks", () => {
     expect(niceTicks(4_200_000)).toEqual([0, 1_000_000, 2_000_000, 3_000_000, 4_000_000, 5_000_000]);
     expect(niceTicks(95)).toEqual([0, 25, 50, 75, 100]);
     expect(niceTicks(0)).toEqual([0]);
+  });
+});
+
+describe('bills still due this month (billsLeftThisMonth, "safe to spend")', () => {
+  const bill = (type: "income" | "expense" | "transfer", amountMinor: number) => ({ rule: { type, amountMinor } });
+
+  it("counts spending bills after today in this month, not income, transfers or next month's", () => {
+    const upcoming = [
+      { ...bill("expense", 12_000_00), date: "2026-10-28" }, // rent
+      { ...bill("expense", 649_00), date: "2026-10-30" }, // a subscription
+      { ...bill("income", 50_000_00), date: "2026-10-31" }, // salary
+      { ...bill("transfer", 5_000_00), date: "2026-10-29" }, // to savings
+      { ...bill("expense", 12_000_00), date: "2026-11-28" }, // next month's rent
+    ];
+    expect(billsLeftThisMonth("2026-10", upcoming, [])).toBe(12_649_00);
+  });
+
+  it('adds "ask first" bills already due but not recorded yet, once per open date', () => {
+    const waiting = [
+      { ...bill("expense", 1_000_00), dueOn: "2026-10-05", pendingCount: 2 }, // weekly, two open
+      { ...bill("expense", 300_00), dueOn: "2026-09-28", pendingCount: 1 }, // last month's: not this month's limit
+      { ...bill("income", 2_000_00), dueOn: "2026-10-10", pendingCount: 1 },
+    ];
+    expect(billsLeftThisMonth("2026-10", [], waiting)).toBe(2_000_00);
   });
 });

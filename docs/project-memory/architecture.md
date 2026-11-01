@@ -112,7 +112,7 @@ may import server code (e.g. `src/components/app/user-menu.tsx`).
 | `GET /api/health`             | anyone (readiness: database within 3 s)  | `{ok:true}` 200 or `{ok:false}` 503, `no-store`    |
 | `GET/HEAD /api/health/live`   | anyone (liveness: no database)           | `{ok:true}` 200, `no-store`                        |
 | `GET /api/export`             | the signed-in user                       | CSV of their entries, or 401                       |
-| `GET /api/cron/recurring`     | scheduler with `Bearer CRON_SECRET`      | 503 unset, 401 wrong, 200 `{users, recorded}`      |
+| `GET /api/cron/recurring`     | scheduler with `Bearer CRON_SECRET`      | 503 unset, 401, 200 `{users, recorded, pruned}`    |
 | `POST /api/webhooks/razorpay` | Razorpay (HMAC signature)                | 503 off, 400 bad signature/payload, 502 retry, 200 |
 
 - **Error pages:** `src/app/error.tsx` and `src/app/(app)/error.tsx` (props
@@ -153,7 +153,8 @@ erDiagram
 Also: `merchant_rule` (learned description → category), `alert_dismissal`,
 `ai_usage` (daily counters per user, provider and globally), `action_rate`
 (server action calls this minute, one row per user), `payment_event` (webhook
-ids, for idempotency), and Better Auth's `session`, `account`, `verification`,
+ids, for idempotency), `deleted_entry` (deleted entries kept 10 minutes for
+"Undo"), and Better Auth's `session`, `account`, `verification`,
 `rate_limit` (its per-address request counts). Schema: `src/server/db/schema.ts`; migrations: `drizzle/`.
 
 ## External services
@@ -172,7 +173,7 @@ ids, for idempotency), and Better Auth's `session`, `account`, `verification`,
 
 | Feature                  | Page                       | Components               | Actions                            | Logic                                                                                           | Tests (besides security/)                                                                     |
 | ------------------------ | -------------------------- | ------------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Entries                  | `(app)/transactions`       | `transactions/`          | `transactions.ts`, `entry-form.ts` | `services/transactions.ts`                                                                      | `db/wallets-transactions`, `e2e/smoke`                                                        |
+| Entries                  | `(app)/transactions`       | `transactions/`          | `transactions.ts`, `entry-form.ts` | `services/transactions.ts`, `lib/entry-search.ts`                                               | `db/wallets-transactions`, `db/entry-search`, `db/undo-delete`, `e2e/smoke`                   |
 | Wallets, transfers       | `(app)/wallets`            | `wallets/`               | `wallets.ts`                       | `services/wallets.ts`, `lib/wallets.ts`                                                         | `db/wallets-transactions`, `component/wallet-form`                                            |
 | Categories               | `(app)/categories`         | `categories/`            | `categories.ts`                    | `services/categories.ts`, `lib/default-categories.ts`, `lib/category-colors.ts`                 | `db/category-order`, `db/seed-defaults`, `db/category-colors`, `unit/category-colors`         |
 | Budgets, alerts          | `(app)/budgets`, dashboard | `budgets/`, `dashboard/` | `budgets.ts`, `alerts.ts`          | `services/budgets.ts`, `alerts.ts`, `reports.ts`, `lib/budgets.ts`                              | `unit/budgets-goals`, `db/budgets-goals`, `e2e/budgets-goals`                                 |

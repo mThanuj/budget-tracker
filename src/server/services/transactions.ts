@@ -1,13 +1,15 @@
-import { and, desc, eq, gte, ilike, isNull, lt, or, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNull, lt, lte, or, type SQL, sql } from "drizzle-orm";
+import { z } from "zod";
+import { LIMITS } from "@/config/limits";
 import { alias } from "drizzle-orm/pg-core";
 import type { ISODate } from "@/lib/dates";
 import { normalizeMerchant } from "@/lib/merchant";
 import type { TransactionInput } from "@/lib/validation";
 import type { Db } from "../db";
-import { category, transaction, wallet } from "../db/schema";
+import { category, deletedEntry, recurringRule, transaction, wallet } from "../db/schema";
 import { getOwnedCategory } from "./categories";
 import { learnFromEntry } from "./merchant-rules";
-import { UserError } from "./errors";
+import { rethrowUnique, UserError } from "./errors";
 import { assertDailyRoomFor } from "./limits";
 import { getOwnedWallet } from "./wallets";
 
@@ -18,6 +20,8 @@ export type TransactionFilters = {
   categoryId?: string | "none";
   type?: "income" | "expense" | "transfer";
   q?: string;
+  minMinor?: number; // inclusive
+  maxMinor?: number; // inclusive
 };
 
 function conditions(userId: string, f: TransactionFilters): SQL | undefined {
@@ -28,6 +32,8 @@ function conditions(userId: string, f: TransactionFilters): SQL | undefined {
   if (f.categoryId === "none") conds.push(and(isNull(transaction.categoryId), sql`${transaction.type} <> 'transfer'`));
   else if (f.categoryId) conds.push(eq(transaction.categoryId, f.categoryId));
   if (f.type) conds.push(eq(transaction.type, f.type));
+  if (f.minMinor !== undefined) conds.push(gte(transaction.amountMinor, f.minMinor));
+  if (f.maxMinor !== undefined) conds.push(lte(transaction.amountMinor, f.maxMinor));
   if (f.q?.trim()) {
     const pattern = `%${f.q.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
     conds.push(or(ilike(transaction.description, pattern), ilike(transaction.notes, pattern)));
@@ -181,7 +187,96 @@ export async function updateTransaction(db: Db, userId: string, id: string, inpu
   return row;
 }
 
+/** Deleted entries newer than this can still be brought back (D-030). */
+const keptSince = () => sql`now() - make_interval(mins => ${LIMITS.undoDeleteMinutes})`;
+
+/**
+ * Deletes an entry, keeping a copy for a few minutes so "Undo" can bring it
+ * back (restoreTransaction). The user's expired copies go at the same time.
+ */
 export async function deleteTransaction(db: Db, userId: string, id: string) {
-  await getOwnedTransaction(db, userId, id);
-  await db.delete(transaction).where(and(eq(transaction.id, id), eq(transaction.userId, userId)));
+  const row = await getOwnedTransaction(db, userId, id);
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(deletedEntry)
+      .values({ id: row.id, userId, row })
+      .onConflictDoUpdate({ target: deletedEntry.id, set: { row, deletedAt: sql`now()` } });
+    await tx.delete(transaction).where(and(eq(transaction.id, id), eq(transaction.userId, userId)));
+    await tx.delete(deletedEntry).where(and(eq(deletedEntry.userId, userId), lt(deletedEntry.deletedAt, keptSince())));
+  });
+}
+
+/** The copy kept by deleteTransaction, read back (the dates come back from JSON as text). */
+const keptEntry = z.object({
+  id: z.uuid(),
+  userId: z.string(),
+  type: z.enum(["income", "expense", "transfer"]),
+  amountMinor: z.number().int().positive(),
+  occurredOn: z.string(),
+  description: z.string(),
+  notes: z.string().nullable(),
+  merchantKey: z.string().nullable(),
+  categoryId: z.uuid().nullable(),
+  walletId: z.uuid(),
+  toWalletId: z.uuid().nullable(),
+  recurringRuleId: z.uuid().nullable(),
+  recurrenceOn: z.string().nullable(),
+  source: z.enum(["manual", "nl", "recurring", "onboarding"]),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+/**
+ * Brings back an entry deleted in the last few minutes, as it was: same id,
+ * same date added (so it doesn't count again against the daily limit). Another
+ * user's or an expired one is refused as if it didn't exist. A wallet deleted
+ * since refuses it; a category or recurring item deleted since is let go, as
+ * deleting it would have done. Archived ones are fine, as when editing.
+ */
+export async function restoreTransaction(db: Db, userId: string, id: string) {
+  await db.transaction(async (tx) => {
+    const [kept] = await tx
+      .delete(deletedEntry)
+      .where(and(eq(deletedEntry.id, id), eq(deletedEntry.userId, userId), gte(deletedEntry.deletedAt, keptSince())))
+      .returning({ row: deletedEntry.row });
+    const entry = kept && keptEntry.parse(kept.row);
+    if (!entry || entry.userId !== userId) throw new UserError("That entry doesn't exist.");
+
+    for (const walletId of [entry.walletId, entry.toWalletId]) {
+      if (!walletId) continue;
+      await getOwnedWallet(tx, userId, walletId).catch((err: unknown) => {
+        if (err instanceof UserError) throw new UserError("Its wallet was deleted, so this entry can't come back.");
+        throw err;
+      });
+    }
+    const stillThere = async (table: typeof category | typeof recurringRule, rowId: string | null) =>
+      rowId !== null &&
+      (
+        await tx
+          .select({ id: table.id })
+          .from(table)
+          .where(and(eq(table.id, rowId), eq(table.userId, userId)))
+      ).length > 0;
+    const categoryId = (await stillThere(category, entry.categoryId)) ? entry.categoryId : null;
+    const recurringRuleId = (await stillThere(recurringRule, entry.recurringRuleId)) ? entry.recurringRuleId : null;
+
+    await tx
+      .insert(transaction)
+      .values({ ...entry, categoryId, recurringRuleId, recurrenceOn: recurringRuleId ? entry.recurrenceOn : null })
+      .catch(
+        rethrowUnique(
+          "transaction_rule_occurrence_key",
+          "This was recorded again since, so there's nothing to bring back.",
+        ),
+      );
+  });
+}
+
+/** Removes every user's deleted entries that can no longer be brought back (the daily job). */
+export async function pruneDeletedEntries(db: Db): Promise<number> {
+  const gone = await db
+    .delete(deletedEntry)
+    .where(lt(deletedEntry.deletedAt, keptSince()))
+    .returning({ id: deletedEntry.id });
+  return gone.length;
 }

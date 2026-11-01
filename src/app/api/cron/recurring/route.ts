@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { log } from "@/server/log";
 import { requestIdFrom } from "@/server/request-id";
 import { recordDueForEveryone } from "@/server/services/recurring";
+import { pruneDeletedEntries } from "@/server/services/transactions";
 
 function authorized(header: string | null, secret: string) {
   const given = Buffer.from(header ?? "");
@@ -13,7 +14,11 @@ function authorized(header: string | null, secret: string) {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-/** The scheduled job (daily on Vercel, hourly on an own server): records automatic recurring entries that came due for every user. */
+/**
+ * The scheduled job (daily on Vercel, hourly on an own server): records automatic
+ * recurring entries that came due for every user, then removes deleted entries
+ * that can no longer be brought back (D-030).
+ */
 export async function GET(request: Request) {
   const secret = env().CRON_SECRET;
   if (!secret) return Response.json({ error: "CRON_SECRET is not configured." }, { status: 503 });
@@ -32,6 +37,13 @@ export async function GET(request: Request) {
     timezone: "Etc/UTC",
   }); // a failure still reaches onRequestError (src/instrumentation.ts)
   await Sentry.flush(2_000); // deliver the check-in before the function can be frozen
-  log.info("cron.recurring_done", { ...result, ms: Date.now() - started, requestId: requestIdFrom(request.headers) });
-  return Response.json(result);
+  // Outside the check-in, which is about recurring entries; a failure still reaches onRequestError.
+  const pruned = await pruneDeletedEntries(db);
+  log.info("cron.recurring_done", {
+    ...result,
+    pruned,
+    ms: Date.now() - started,
+    requestId: requestIdFrom(request.headers),
+  });
+  return Response.json({ ...result, pruned });
 }

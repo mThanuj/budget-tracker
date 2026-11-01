@@ -88,6 +88,19 @@ describe("the proxy", () => {
     expect(withoutNonce(csp(second))).toBe(withoutNonce(csp(first)));
   });
 
+  it("lets the app icons through without a session (installing fetches them without cookies), but not pages", () => {
+    for (const path of ["/icon/192", "/icon/512", "/apple-icon"]) {
+      const res = proxy(new NextRequest(`http://localhost:3000${path}`));
+      expect(res.headers.get("location"), path).toBeNull();
+      expect(res.headers.get("x-middleware-next"), path).toBe("1");
+    }
+    for (const path of ["/dashboard", "/icon", "/icon/abc", "/icons/192", "/apple-icon/x"]) {
+      expect(proxy(new NextRequest(`http://localhost:3000${path}`)).headers.get("location"), path).toBe(
+        "http://localhost:3000/",
+      );
+    }
+  });
+
   it("does it on Vercel too", () => {
     const res = proxy(new NextRequest("http://localhost:3000/privacy", { headers: { "x-vercel-id": "sin1::abc" } }));
     expect(csp(res)).toContain("'strict-dynamic'");
@@ -113,6 +126,8 @@ describe("exactly one CSP per path (D-029)", () => {
     ["/dashboard", "proxy"],
     ["/no-such-page", "proxy"],
     ["/apifoo", "proxy"], // not under /api: a page address
+    ["/icon/192", "proxy"], // generated app icons have no dot (D-031)
+    ["/apple-icon", "proxy"],
     ["/x.php", "static"], // the 404 page for an address with a dot
     ["/a/b.html", "static"],
     ["/api.php", "static"],
