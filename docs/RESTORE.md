@@ -1,9 +1,12 @@
 # Restoring a backup
 
 Every night `.github/workflows/backup.yml` saves an encrypted copy of the
-production database as a GitHub artifact and keeps 7 of them. This guide is for
-**testing** a backup (do it once, then every few months) and for **recovering**
-after something went wrong. The commands work on macOS, Linux and Windows.
+production database as a GitHub artifact and keeps 7 of them. The same run
+then restores it into a throwaway database on GitHub's machine and checks the
+data is there (D-033), so a green run means that night's backup opens. This
+guide is for **testing** the steps yourself (do it once, then every few months)
+and for **recovering** after something went wrong. The commands work on macOS,
+Linux and Windows.
 
 You need:
 
@@ -117,8 +120,9 @@ Something went wrong in production (data deleted by mistake, a bad migration):
    2. In Vercel, change `DATABASE_URL` and `DATABASE_URL_UNPOOLED` to the new
       database (from **Connect**: pooling on for the first, off for the second),
       then **Redeploy**.
-   3. On GitHub, update the `DATABASE_URL_UNPOOLED` secret, so tonight's backup
-      copies the new database.
+   3. On GitHub, update the `DATABASE_URL_UNPOOLED` secret (Settings →
+      Environments → `production-backup`), so tonight's backup copies the new
+      database.
    4. Anything recorded after the backup was taken is lost (at most about a day).
       If you can, tell users which day to re-check.
 

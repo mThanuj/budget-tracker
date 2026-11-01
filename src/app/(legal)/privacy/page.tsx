@@ -43,8 +43,8 @@ async function PrivacyBody() {
           setup.
         </li>
         <li>
-          <strong>Sign-in sessions:</strong> to keep you signed in and spot misuse, we store each session&rsquo;s IP
-          address and browser type.
+          <strong>Sign-in sessions:</strong> to keep you signed in, show you where you&rsquo;re signed in, and spot
+          misuse, we store each session&rsquo;s IP address and browser type.
         </li>
         <li>
           <strong>Usage counts:</strong> how many AI requests you&rsquo;ve made each day, so the daily limits work.
@@ -64,23 +64,39 @@ async function PrivacyBody() {
       <h2>How the AI features use your data</h2>
       <p>
         AI features are optional and can be switched off in Settings. When they&rsquo;re on, we send only what each
-        feature needs to our AI providers (Groq, Cerebras or OpenRouter, based in the United States):
+        feature needs to our AI providers (Groq, Cerebras or OpenRouter, based in the United States). If one
+        doesn&rsquo;t answer, the same request goes to the next.
       </p>
       <ul>
         <li>
-          what you type into an AI box (for example, &ldquo;spent 240 on chai&rdquo;), and the descriptions of new
-          entries;
+          <strong>Filling in an entry from a sentence:</strong> what you typed (for example, &ldquo;spent 240 on
+          chai&rdquo;), today&rsquo;s date, your currency, and the names of your wallets and categories.
         </li>
         <li>
-          for questions in Ask and for Insights reports: the totals, category and entry names, budgets and goals needed
-          to answer.
+          <strong>Category suggestions:</strong> a new entry&rsquo;s description and the names of your categories. Not
+          sent when you&rsquo;ve picked a category for that place before.
+        </li>
+        <li>
+          <strong>Setup questions:</strong> your answer, today&rsquo;s date, your currency and, for bills, the names of
+          your categories.
+        </li>
+        <li>
+          <strong>Ask:</strong> your question and the last few messages of the conversation, plus what the AI looks up
+          to answer it: wallet names and balances, spending by category, matching entries (date, description, category,
+          wallet and amount), monthly totals, budgets, upcoming recurring items and subscriptions (name, date and
+          amount), and goals.
+        </li>
+        <li>
+          <strong>Insights reports:</strong> the period&rsquo;s totals compared with earlier ones, your top categories,
+          budgets, your biggest expenses and possible duplicate charges (description, amount and date), subscription
+          price changes (name and amounts), and goals.
         </li>
       </ul>
       <p>
-        Your name and email are never sent. We picked providers whose terms say they don&rsquo;t train their models on
-        data sent through their APIs, and we ask OpenRouter to use only providers that don&rsquo;t keep it. We
-        don&rsquo;t save your Ask conversations. Written Insights reports are saved in your account so you can read them
-        again.
+        Your name, email address and entry notes are never sent. We picked providers whose terms say they don&rsquo;t
+        train their models on data sent through their APIs, and we ask OpenRouter to use only providers that don&rsquo;t
+        keep it. We don&rsquo;t save your Ask conversations. Written Insights reports are saved in your account so you
+        can read them again.
       </p>
 
       <h2>Who else sees it</h2>
@@ -120,6 +136,7 @@ async function PrivacyBody() {
       <ul>
         <li>Download all your entries as a CSV file from Settings.</li>
         <li>Switch AI features off in Settings.</li>
+        <li>See where you&rsquo;re signed in, and sign out other devices, in Settings.</li>
         <li>Delete your account and all its data from Settings.</li>
         <li>
           Ask us to correct something or explain what we hold: write to <EmailLink email={d.email} />.

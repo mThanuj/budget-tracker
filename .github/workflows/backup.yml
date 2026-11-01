@@ -1,7 +1,11 @@
 # Nightly encrypted database backup, kept for 7 days as a workflow artifact
-# (the privacy policy promises deleted data leaves backups within 7 days).
-# Needs two repository secrets: DATABASE_URL_UNPOOLED and BACKUP_PASSPHRASE.
-# To test or restore a backup, see docs/RESTORE.md.
+# (the privacy policy promises deleted data leaves backups within 7 days), then
+# restored into a throwaway Postgres on the runner to prove it can be (D-033).
+# Secrets, in the main-only "production-backup" environment (D-034):
+# DATABASE_URL_UNPOOLED (ideally a read-only role, with sslmode=verify-full and
+# sslrootcert=system so pg_dump checks Neon's certificate) and BACKUP_PASSPHRASE;
+# optional SENTRY_BACKUP_CHECKIN_URL, so a failed or missing night raises an alert.
+# To restore a backup by hand, see docs/RESTORE.md.
 name: Nightly database backup
 
 on:
@@ -15,8 +19,25 @@ permissions:
 jobs:
   backup:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    environment: production-backup
+    services:
+      scratch:
+        image: postgres:18
+        env:
+          POSTGRES_USER: restore
+          POSTGRES_PASSWORD: restore # a throwaway container, not a secret
+          POSTGRES_DB: restore_check
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U restore -d restore_check"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      CHECKIN_URL: ${{ secrets.SENTRY_BACKUP_CHECKIN_URL }}
     steps:
+      - name: Tell Sentry the backup started
+        if: env.CHECKIN_URL != ''
+        run: curl -fsS --max-time 10 "${CHECKIN_URL}?status=in_progress" > /dev/null || true
       - name: Dump and encrypt
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
@@ -28,9 +49,34 @@ jobs:
           docker run --rm postgres:18-alpine pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL" \
             | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_PASSPHRASE -out clearpaisa.dump.enc
           ls -lh clearpaisa.dump.enc
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: clearpaisa-db-${{ github.run_number }}
           path: clearpaisa.dump.enc
           retention-days: 7
           if-no-files-found: error
+      # A backup is only as good as its restore: decrypt it straight into the
+      # throwaway Postgres (never to disk) and check the data is there. Prints
+      # only pass or fail.
+      - name: Restore check
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          SCRATCH_URL: postgresql://restore:restore@localhost:5432/restore_check
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:BACKUP_PASSPHRASE -in clearpaisa.dump.enc \
+            | docker run --rm -i --network host postgres:18-alpine \
+                pg_restore --no-owner --no-privileges --exit-on-error -d "$SCRATCH_URL"
+          docker run --rm --network host postgres:18-alpine psql "$SCRATCH_URL" -q -v ON_ERROR_STOP=1 -c "
+            DO \$\$ BEGIN
+              -- A missing table fails too, with Postgres's own error.
+              IF NOT EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations)
+                 OR NOT EXISTS (SELECT 1 FROM \"user\")
+                 OR NOT EXISTS (SELECT 1 FROM category) THEN
+                RAISE EXCEPTION 'The restored backup is missing data';
+              END IF;
+            END \$\$;"
+          echo "Restore check passed"
+      - name: Tell Sentry how it went
+        if: always() && env.CHECKIN_URL != ''
+        run: curl -fsS --max-time 10 "${CHECKIN_URL}?status=${{ job.status == 'success' && 'ok' || 'error' }}" > /dev/null || true

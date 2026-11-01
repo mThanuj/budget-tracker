@@ -19,7 +19,7 @@ code. Nothing here depends on an AI tool's private memory.
 
 Elsewhere, kept current and not repeated here: [docs/TESTING.md](../TESTING.md)
 (test suites), [docs/DESIGN.md](../DESIGN.md) (UI rules),
-[docs/DEPLOY.md](../DEPLOY.md) and [docs/RESTORE.md](../RESTORE.md) (operations),
+[docs/DEPLOY.md](../DEPLOY.md), [docs/RESTORE.md](../RESTORE.md) and [docs/ROTATION.md](../ROTATION.md) (operations),
 [SECURITY.md](../../SECURITY.md) (security model), the [README](../../README.md)
 (setup and scripts).
 

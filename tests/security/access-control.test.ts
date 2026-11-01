@@ -22,7 +22,7 @@ vi.mock("@/server/session", async () => {
   const { redirect } = await import("next/navigation");
   return {
     requireUser: vi.fn(async () => session.user ?? redirect("/?signed-out=1")),
-    getSession: vi.fn(async () => (session.user ? { user: session.user } : null)),
+    getSession: vi.fn(async () => (session.user ? { user: session.user, session: { createdAt: new Date() } } : null)),
   };
 });
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
@@ -30,7 +30,9 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers()),
   cookies: vi.fn(async () => ({ getAll: () => [], delete: vi.fn() })),
 }));
-vi.mock("@/server/auth", () => ({ auth: { api: { signOut: vi.fn(async () => undefined) } } }));
+vi.mock("@/server/auth", () => ({
+  auth: { api: { signOut: vi.fn(async () => undefined), revokeOtherSessions: vi.fn(async () => ({ status: true })) } },
+}));
 // Razorpay's API is the outside world: its calls are stand-ins, the signature checks are real.
 vi.mock("@/server/billing/razorpay", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/billing/razorpay")>()),
@@ -87,6 +89,7 @@ const modules = Object.fromEntries(
 const REVIEWED: Record<string, string> = {
   "account.ts › signOut": "no input; ends the caller's own session",
   "account.ts › deleteAccount": "no ids; deletes the caller's own account",
+  "account.ts › signOutOtherDevices": "no input; ends only the caller's own other sessions",
   "admin.ts › sendTestError": "no input; admins only, reads and writes no records",
   "ai.ts › parseEntryText": "text only; matched against the caller's own wallets and categories",
   "ai.ts › suggestCategoryFor": "text only; picks from the caller's own categories",

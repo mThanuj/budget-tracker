@@ -97,3 +97,49 @@ test("the admin page is a plain 404 for everyone else", async ({ signedIn: { pag
   await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Admin" })).toHaveCount(0);
 });
+
+test("deleting the account needs a recent Google sign-in", async ({ signedIn: { page, userId } }) => {
+  // Signed in an hour ago, say on a shared computer.
+  await db
+    .update(schema.session)
+    .set({ createdAt: new Date(Date.now() - 60 * 60_000) })
+    .where(eq(schema.session.userId, userId));
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Delete account" }).click();
+  const dialog = page.getByRole("alertdialog", { name: "Delete your account?" });
+  await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
+  await dialog.getByRole("button", { name: "Delete everything" }).click();
+
+  await expect(dialog.getByRole("alert")).toHaveText("For your safety, sign in with Google again, then delete.");
+  await expect(dialog.getByRole("button", { name: "Sign in again" })).toBeVisible();
+  expect(await db.select().from(schema.user).where(eq(schema.user.id, userId))).toHaveLength(1);
+});
+
+test("signed-in devices: this one is marked, and the others can be signed out", async ({
+  signedIn: { page, userId },
+}) => {
+  // A phone that signed in yesterday.
+  const phone = crypto.randomUUID();
+  await db.insert(schema.session).values({
+    id: phone,
+    userId,
+    token: `e2e-${phone}`,
+    createdAt: new Date(Date.now() - 24 * 60 * 60_000),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+  });
+  await page.goto("/settings");
+  await expect(page.getByRole("listitem").filter({ hasText: "This device" })).toBeVisible();
+  const other = page.getByRole("listitem").filter({ hasText: "Safari on iPhone" });
+  await expect(other).toContainText("Signed in yesterday");
+
+  await page.getByRole("button", { name: "Sign out other devices" }).click();
+  await expect(page.getByText("Signed out of your other devices")).toBeVisible();
+  await expect(other).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign out other devices" })).toHaveCount(0);
+  expect(await db.select().from(schema.session).where(eq(schema.session.id, phone))).toHaveLength(0);
+  // Still signed in here.
+  await page.reload();
+  await expect(page.getByRole("listitem").filter({ hasText: "This device" })).toBeVisible();
+});

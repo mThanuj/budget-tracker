@@ -18,7 +18,7 @@ vi.mock("@/server/session", async () => {
   const { redirect } = await import("next/navigation");
   return {
     requireUser: vi.fn(async () => session.user ?? redirect("/?signed-out=1")),
-    getSession: vi.fn(async () => (session.user ? { user: session.user } : null)),
+    getSession: vi.fn(async () => (session.user ? { user: session.user, session: { createdAt: new Date() } } : null)),
   };
 });
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
@@ -26,7 +26,9 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers()),
   cookies: vi.fn(async () => ({ getAll: () => [], delete: vi.fn() })),
 }));
-vi.mock("@/server/auth", () => ({ auth: { api: { signOut: vi.fn(async () => undefined) } } }));
+vi.mock("@/server/auth", () => ({
+  auth: { api: { signOut: vi.fn(async () => undefined), revokeOtherSessions: vi.fn(async () => ({ status: true })) } },
+}));
 // Every call is already over the limit.
 vi.mock("@/server/services/limits", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/services/limits")>()),
@@ -42,6 +44,7 @@ const { countActionCall } = await import("@/server/services/limits");
 const EXEMPT: Record<string, string> = {
   "account.ts › signOut": "must always work",
   "account.ts › deleteAccount": "must always work (and needs the word DELETE)",
+  "account.ts › signOutOtherDevices": "must work while a stolen session floods the limit",
   "admin.ts › sendTestError": "admins only",
   "entry-form.ts › getEntryFormData": "only reads the user's own lists, like a page load (pages aren't limited)",
 };
@@ -76,11 +79,13 @@ describe("every server action is rate limited, or reviewed as exempt", () => {
           (value: unknown) => ({ value }),
           (err: unknown) => ({ err }),
         );
+        // Counts only: the calls' arguments include the database, too big to print in a failure.
+        const counted = vi.mocked(countActionCall).mock.calls.length;
         if (key in EXEMPT) {
-          expect(countActionCall, key).not.toHaveBeenCalled();
+          expect(counted, `${key} is exempt but counted`).toBe(0);
           continue;
         }
-        expect(countActionCall, key).toHaveBeenCalledOnce();
+        expect(counted, key).toBe(1);
         expect(outcome, key).not.toHaveProperty("err");
         expect(JSON.stringify("value" in outcome ? outcome.value : undefined), key).toMatch(BLOCKED);
       }

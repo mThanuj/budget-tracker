@@ -81,6 +81,13 @@ has more. Add new ones under the right heading.
   tests print the warning because their requests carry no address.
 - A session cookie is `<token>.<base64 HMAC-SHA256 of the token>`, URL-encoded;
   tests build one this way.
+- Its `listSessions` needs a session created within `freshAge` (a day by
+  default), so the signed-in devices list reads the `session` table through
+  `src/server/services/sessions.ts` instead (D-035). `revokeOtherSessions` needs
+  only a valid session; `auth.api.revokeOtherSessions({ headers })` from a server
+  action skips the browser-request checks (tested in `auth.test.ts`).
+- Signing in again doesn't end the session the browser already had: both stay
+  in the table until they expire, so the devices list can show one browser twice.
 
 ## Database
 
@@ -223,6 +230,10 @@ has more. Add new ones under the right heading.
   it may be refused for looking like a default.
 - A Vitest run of files in more than one folder writes `test-unit.log`, not the
   folders' own logs; an older `test-<suite>.log` can be left from an earlier run.
+- Don't use `toHaveBeenCalled*` on a mock that receives the database (like
+  `countActionCall`): a failure prints its arguments, and printing the PGlite
+  database runs the test worker out of memory (SIGABRT, no message). Compare
+  `mock.calls.length` instead, as `tests/security/rate-limit.test.ts` does.
 
 ## Git hooks
 

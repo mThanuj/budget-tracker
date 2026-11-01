@@ -154,6 +154,8 @@ how to run a single test.
   write them to work while the previous version is still serving.
 - Dependencies are pinned exactly and locked in `pnpm-lock.yaml`; Dependabot
   opens weekly update PRs. Install with `pnpm install --frozen-lockfile` in CI.
+  GitHub Actions are pinned to commit SHAs (Dependabot updates those too), and
+  `audit.yml` reruns the dependency audit every Monday.
 
 ## Deployment
 
@@ -172,5 +174,5 @@ once payments are on.
 
 Step-by-step guides: [docs/DEPLOY.md](docs/DEPLOY.md) (both setups),
 [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) (logs, errors, alerts, incidents),
-[docs/RESTORE.md](docs/RESTORE.md) (backups), [SECURITY.md](SECURITY.md)
-(security model and reporting).
+[docs/RESTORE.md](docs/RESTORE.md) (backups), [docs/ROTATION.md](docs/ROTATION.md)
+(replacing secrets), [SECURITY.md](SECURITY.md) (security model and reporting).

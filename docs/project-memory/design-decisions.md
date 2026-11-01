@@ -56,6 +56,9 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-030 | Undo after deleting an entry, from a short-lived trash table             | accepted                               |
 | D-031 | Installable app: manifest and generated icons, no service worker         | accepted                               |
 | D-032 | Browser tests in CI against a production build, no secrets               | accepted                               |
+| D-033 | The nightly backup is test-restored; a missed or failed night alerts     | accepted                               |
+| D-034 | Actions pinned to commits; backup secrets only for `main`; weekly audit  | accepted                               |
+| D-035 | Signed-in devices; sign out the others; a fresh sign-in to delete        | accepted                               |
 
 ### D-001 Product scope
 
@@ -428,8 +431,8 @@ to "superseded by D-NNN", add the new entry, and say what changed.
   Auth's sign-in limits were per serverless instance (every "Sign in with
   Google" click writes a `verification` row, signed in or not).
 - **Decision:** the database is the shared store. Every server action except
-  four reviewed ones (`signOut`, `deleteAccount`, `sendTestError`,
-  `getEntryFormData`) counts against a per-user limit per minute
+  reviewed ones (`signOut`, `deleteAccount`, `sendTestError`,
+  `getEntryFormData`; `signOutOtherDevices` since D-035) counts against a per-user limit per minute
   (`actionsPerMinute` in `src/config/limits.ts`), with one upsert on
   `action_rate` (`countActionCall`). `runAction(userId, fn)` checks it; other
   actions call `withinActionLimit` first. Over the limit an action returns its
@@ -615,3 +618,88 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
   pages (implementation-notes.md).
 - **Affected:** `.github/workflows/ci.yml`, `tests/e2e/support/fixtures.ts`.
   **References:** `docs/TESTING.md`.
+
+### D-033 The nightly backup is test-restored; a missed or failed night alerts
+
+- **Status:** accepted · **Date:** 2026-11-01
+- **Context:** the nightly backups (D-011) had never been restored, so nobody
+  knew they worked; and a night that didn't run at all (a schedule GitHub
+  disabled, an outage) raised no alert, because GitHub only emails about runs
+  that fail.
+- **Decision:** after uploading, `backup.yml` decrypts the backup straight into
+  a throwaway `postgres:18` service container on the runner
+  (`pg_restore --exit-on-error`) and fails unless the migrations table,
+  `"user"` and `category` have rows. It prints only pass or fail. If the
+  optional secret `SENTRY_BACKUP_CHECKIN_URL` is set, the job sends Sentry Crons
+  check-ins (in progress, then ok or error) to the monitor `nightly-backup`
+  (alert A8).
+- **Rationale:** a restore every night proves the dump, the encryption and the
+  passphrase together, for free; Sentry Crons already watches the daily job
+  (A3) and is the only thing here that notices a run that never started.
+  **Alternatives:** restoring into a Neon branch (a Neon API key in CI, and the
+  data in one more place); restoring only by hand (docs/RESTORE.md, still worth
+  doing every few months, since it also tests the owner's steps).
+- **Trade-offs / consequences:** the decrypted data exists only in the
+  runner's containers, which GitHub discards after the job. Check-ins carry
+  only a status. With `--exit-on-error`, a dump that needs something plain
+  Postgres 18 lacks fails the job: fix the dump options rather than dropping
+  the flag. The check-in URL is a secret so nobody else can report a backup as
+  done.
+- **Affected:** `.github/workflows/backup.yml`. **References:**
+  docs/RESTORE.md, docs/OBSERVABILITY.md (A8), D-011, D-024.
+
+### D-034 Actions pinned to commits; backup secrets only for `main`; weekly audit
+
+- **Status:** accepted · **Date:** 2026-11-01
+- **Context:** the workflows used actions by tag (`@v7`), so whoever controls
+  an action's repository could change the code that runs beside our secrets;
+  the checkout left a GitHub token in `.git/config` for every later step; the
+  backup's production database URL was a repository secret, which a workflow
+  on any branch can read; and an advisory published between changes went
+  unnoticed until the next pull request.
+- **Decision:** every `uses:` names a full commit SHA, with the version in a
+  comment (Dependabot's `github-actions` updates change both);
+  `actions/checkout` runs with `persist-credentials: false`; the backup job runs
+  in the GitHub environment `production-backup`, limited to `main`, which holds
+  its secrets; a weekly `audit.yml` (Mondays, or by hand) runs CI's
+  `pnpm audit --audit-level=high` (D-023).
+- **Rationale:** GitHub's own hardening advice, at no cost per run.
+  **Alternatives:** pinning the Docker images (`postgres:18`) by digest, not
+  done: they're Docker's official images, and with nothing to update a digest
+  they'd miss security fixes.
+- **Trade-offs / consequences:** a new action or version is added by SHA
+  (`gh api repos/<owner>/<repo>/commits/<tag> --jq .sha`), never a tag.
+  Secrets moved to the environment must also be deleted from the repository's
+  secrets, or the limit means nothing. The environment is the owner's setting
+  in GitHub (docs/DEPLOY.md).
+- **Affected:** `.github/workflows/ci.yml`, `backup.yml`, `audit.yml`.
+  **References:** SECURITY.md (Supply chain), D-020, D-023.
+
+### D-035 Signed-in devices; sign out the others; a fresh sign-in to delete
+
+- **Status:** accepted · **Date:** 2026-11-01
+- **Context:** someone who signed in on a shared computer, or whose session
+  cookie was stolen, had no way to see it or end it short of deleting the
+  account; and any session, however old, could delete the account.
+- **Decision:** Settings lists the user's live sessions (browser and system
+  from the User-Agent, the day each signed in, "This device"; never the token
+  or IP address: `listSignedInDevices`, `src/lib/user-agent.ts`). "Sign out
+  other devices" (`signOutOtherDevices`) calls Better Auth's
+  `revokeOtherSessions`, and isn't rate limited (D-026), so a flood from a
+  stolen session can't block it. `deleteAccount` needs a session created in the
+  last `freshSignInMinutes` (15, `src/config/limits.ts`); otherwise it asks the
+  person to sign in with Google again (back to `/settings`), before anything
+  is cancelled or deleted.
+- **Rationale:** Better Auth already has the sessions and the revoke; its own
+  `listSessions` needs a session under a day old, so the list reads the table
+  through a service instead. **Alternatives:** signing out one chosen device
+  (needs its token in the browser, or a new endpoint); a fresh sign-in for
+  every sensitive action (only deletion can't be undone).
+- **Trade-offs / consequences:** a stolen session can also sign out the
+  owner's other devices; signing in again and pressing the button wins it
+  back. Signing in again doesn't end the old session in that browser, so it
+  stays listed until it expires or is signed out. The User-Agent is whatever
+  the browser sent: a hint, not proof. The list stops at 50 sessions.
+- **Affected:** `src/server/services/sessions.ts`, `src/server/actions/account.ts`,
+  `src/app/(app)/settings/page.tsx`, `src/components/settings/`.
+  **References:** business-rules.md (Accounts and access), SECURITY.md.

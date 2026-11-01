@@ -33,8 +33,11 @@ export function GoogleSignInButton({
   variant = "default",
   size = "lg",
   className,
+  callbackURL = "/dashboard",
 }: {
   label?: string;
+  /** Where an existing user lands after signing in. */
+  callbackURL?: string;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "lg";
   className?: string;
@@ -45,7 +48,7 @@ export function GoogleSignInButton({
     setPending(true);
     const { error } = await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/dashboard",
+      callbackURL,
       newUserCallbackURL: "/welcome",
     });
     // On success the browser is already navigating to Google.
