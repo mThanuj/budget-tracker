@@ -6,6 +6,14 @@ when you merge something a future agent should know about.
 
 ## 2026-11-01
 
+- Security and operations: each nightly backup is restored on the runner and
+  checked, and Sentry check-ins catch a missed or failed night (D-033); GitHub
+  Actions pinned to commits (`pnpm/action-setup` moves from its `v6` tag to
+  v6.1.0), checkouts keep no token, the backup's secrets in the main-only
+  `production-backup` environment, a weekly audit (D-034); Settings lists
+  signed-in devices and signs out the others, and deleting the account needs a
+  Google sign-in from the last 15 minutes (D-035); the privacy page lists what
+  each AI feature sends; `docs/ROTATION.md`.
 - Engineering: the home page's data in 9 queries (was about 15; recurring items
   read once, `loadDashboard`), light picker lists for the entry dialog and
   filters, foreign-key indexes (migration `0010`), browser tests in CI against a

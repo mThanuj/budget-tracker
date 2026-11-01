@@ -6,7 +6,10 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as schema from "@/server/db/schema";
 
-const session = vi.hoisted(() => ({ user: null as null | typeof import("@/server/db/schema").user.$inferSelect }));
+const session = vi.hoisted(() => ({
+  user: null as null | typeof import("@/server/db/schema").user.$inferSelect,
+  signedInAt: new Date(),
+}));
 const cookieJar = vi.hoisted(() => ({ deleted: [] as string[] }));
 
 vi.mock("@/server/db", async () => {
@@ -18,7 +21,9 @@ vi.mock("@/server/session", async () => {
   const { redirect } = await import("next/navigation");
   return {
     requireUser: vi.fn(async () => session.user ?? redirect("/?signed-out=1")),
-    getSession: vi.fn(async () => (session.user ? { user: session.user } : null)),
+    getSession: vi.fn(async () =>
+      session.user ? { user: session.user, session: { createdAt: session.signedInAt } } : null,
+    ),
   };
 });
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
@@ -29,7 +34,9 @@ vi.mock("next/headers", () => ({
     delete: (name: string) => cookieJar.deleted.push(name),
   })),
 }));
-vi.mock("@/server/auth", () => ({ auth: { api: { signOut: vi.fn(async () => undefined) } } }));
+vi.mock("@/server/auth", () => ({
+  auth: { api: { signOut: vi.fn(async () => undefined), revokeOtherSessions: vi.fn(async () => ({ status: true })) } },
+}));
 // Razorpay's API is the outside world: its calls are stand-ins, the signature checks are real.
 vi.mock("@/server/billing/razorpay", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/billing/razorpay")>()),
@@ -60,8 +67,9 @@ async function newUser(name: string) {
   const groceries = (await listCategories(db, row.id)).find((c) => c.name === "Groceries")!;
   return { user: fresh, cashId: cash.id, groceriesId: groceries.id };
 }
-const signInAs = (u: { user: typeof schema.user.$inferSelect } | null) => {
+const signInAs = (u: { user: typeof schema.user.$inferSelect } | null, signedInAt = new Date()) => {
   session.user = u?.user ?? null;
+  session.signedInAt = signedInAt;
 };
 const form = (fields: Record<string, string>) => {
   const data = new FormData();
@@ -623,13 +631,63 @@ describe("signing out (signOut)", async () => {
   });
 });
 
+describe("signing out other devices (signOutOtherDevices)", async () => {
+  const { signOutOtherDevices } = await import("@/server/actions/account");
+  const { auth } = await import("@/server/auth");
+  const { refresh } = await import("next/cache");
+
+  it("asks Better Auth to end the caller's other sessions, and refreshes the list", async () => {
+    expect(await signOutOtherDevices()).toEqual({ ok: true });
+    expect(auth.api.revokeOtherSessions).toHaveBeenCalledOnce();
+    expect(vi.mocked(auth.api.revokeOtherSessions).mock.calls[0][0]).toHaveProperty("headers");
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+});
+
 describe("deleting the account (deleteAccount)", async () => {
   const { deleteAccount } = await import("@/server/actions/account");
+  const { auth } = await import("@/server/auth");
 
   it("needs the word DELETE, and copes with input that isn't text", async () => {
     expect(await deleteAccount("please")).toEqual({ ok: false, error: "Type DELETE to confirm." });
     expect(await Reflect.apply(deleteAccount, null, [42])).toEqual({ ok: false, error: "Type DELETE to confirm." });
     expect(await db.$count(schema.user, eq(schema.user.id, alice.user.id))).toBe(1);
+  });
+
+  it("needs a Google sign-in from the last 15 minutes, and touches nothing without one", async () => {
+    const erin = await newUser("Erin");
+    // A Pro renewal that would be cancelled first: it mustn't be.
+    await db.insert(schema.subscription).values({
+      userId: erin.user.id,
+      razorpaySubscriptionId: "sub_fresh_check",
+      planKey: "monthly",
+      status: "active",
+    });
+    signInAs(erin, new Date(Date.now() - 16 * 60_000));
+    expect(await deleteAccount("DELETE")).toEqual({
+      ok: false,
+      error: "For your safety, sign in with Google again, then delete.",
+      signInAgain: true,
+    });
+    expect(razorpay.cancelSubscriptionNow).not.toHaveBeenCalled();
+    expect(auth.api.signOut).not.toHaveBeenCalled();
+    expect(await db.$count(schema.user, eq(schema.user.id, erin.user.id))).toBe(1);
+
+    // Signed in 14 minutes ago is recent enough: on to the next step.
+    vi.mocked(razorpay.cancelSubscriptionNow).mockRejectedValueOnce(new Error("Razorpay is down"));
+    for (const [k, v] of Object.entries({
+      RAZORPAY_KEY_ID: "rzp_test",
+      RAZORPAY_KEY_SECRET: "key_secret",
+      RAZORPAY_PLAN_MONTHLY: "plan_m",
+      RAZORPAY_PLAN_YEARLY: "plan_y",
+    }))
+      vi.stubEnv(k, v);
+    signInAs(erin, new Date(Date.now() - 14 * 60_000));
+    expect(await deleteAccount("DELETE")).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/^We couldn't cancel/),
+    });
+    expect(razorpay.cancelSubscriptionNow).toHaveBeenCalledOnce();
   });
 
   it("removes the account and its data, clears sign-in cookies, and redirects", async () => {

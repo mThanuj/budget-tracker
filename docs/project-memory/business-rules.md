@@ -123,11 +123,16 @@ Verified against the code on 2026-10-26 (independent audit).
   restored one whose color now clashes gets the nearest allowed. Enforced by
   `src/server/services/categories.ts` with `src/lib/category-colors.ts`; D-028.
 - Server actions: 120 calls per minute per user, all actions together, except
-  signing out, deleting the account, the admin test error and loading the entry
-  form. Over it nothing runs, and the person sees "Too many requests. Wait a
+  signing out (here or on other devices), deleting the account, the admin test
+  error and loading the entry form. Over it nothing runs, and the person sees "Too many requests. Wait a
   minute and try again." (or the AI's "busy" message). Sign-in: 3 attempts per
   10 seconds per address (Better Auth's default). `src/config/limits.ts`,
   `src/server/action-utils.ts`, D-026.
+- Deleting the account needs a Google sign-in from the last 15 minutes
+  (`freshSignInMinutes`); otherwise the person is asked to sign in again and
+  nothing is cancelled or deleted. D-035.
+- A user can see where they're signed in (their live sessions; never tokens or
+  IP addresses) and sign out every other device. D-035.
 - Deleting the account first cancels, immediately, every subscription that
   isn't finished (including unpaid or paused ones) at Razorpay; if a cancel
   fails, nothing is deleted (except for a never-paid "created" one). Then all the

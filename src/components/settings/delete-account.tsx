@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
 import {
   AlertDialog,
@@ -16,10 +17,16 @@ import { Label } from "@/components/ui/label";
 import { deleteAccount } from "@/server/actions/account";
 import { callAction, NOT_SENT, NOT_SENT_MESSAGE } from "@/lib/call-action";
 
+// Loaded only when needed: Better Auth's browser client isn't otherwise part of signed-in pages.
+const GoogleSignInButton = dynamic(() =>
+  import("@/components/auth/google-sign-in-button").then((m) => m.GoogleSignInButton),
+);
+
 export function DeleteAccount({ pro }: { pro: boolean }) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [signInAgain, setSignInAgain] = useState(false);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -34,6 +41,7 @@ export function DeleteAccount({ pro }: { pro: boolean }) {
           setOpen(o);
           setTyped("");
           setError(null);
+          setSignInAgain(false);
         }}
       >
         <AlertDialogContent>
@@ -55,7 +63,10 @@ export function DeleteAccount({ pro }: { pro: boolean }) {
                 const result = await callAction(() => deleteAccount(typed), { notify: false });
                 // On success the server redirects, so only failures come back.
                 if (result === NOT_SENT) setError(NOT_SENT_MESSAGE);
-                else if (result && !result.ok) setError(result.error);
+                else if (result && !result.ok) {
+                  setError(result.error);
+                  setSignInAgain(result.signInAgain === true);
+                }
               });
             }}
           >
@@ -71,6 +82,16 @@ export function DeleteAccount({ pro }: { pro: boolean }) {
               <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
+            )}
+            {signInAgain && (
+              // Back on Settings afterwards, with a fresh sign-in.
+              <GoogleSignInButton
+                label="Sign in again"
+                variant="outline"
+                size="default"
+                callbackURL="/settings"
+                className="justify-self-start"
+              />
             )}
           </form>
           <AlertDialogFooter>

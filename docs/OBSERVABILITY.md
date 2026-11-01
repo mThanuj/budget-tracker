@@ -17,7 +17,7 @@ Decision and policy: D-024 in
 | Is it slow?                      | Sentry → Insights (Backend; Frontend for Web Vitals)                   | A7, if your Sentry plan has it         |
 | Is the AI working?               | `/admin` → AI providers (outcomes per provider)                        | none: the fallback chain handles it    |
 | Is the database healthy?         | Neon console → Monitoring                                              | Neon's own usage emails                |
-| Did last night's backup run?     | GitHub → Actions → Nightly database backup                             | GitHub's email for a failed workflow   |
+| Did last night's backup run?     | Sentry → Crons → `nightly-backup`; GitHub → Actions                    | A8: missed, failed or didn't restore   |
 | Did a deploy fail?               | Vercel → Deployments                                                   | Vercel's email for a failed deployment |
 | What happened in one request?    | Vercel → Logs, by request id; Sentry, by `request_id` or `digest` tags | (see [Logs](#logs))                    |
 
@@ -69,6 +69,9 @@ tells Sentry not to infer IPs, the scrubber removes `user`, and the Sentry
 project is set not to store IPs); local variables; database query values; on-screen or typed text (click and input breadcrumbs are dropped);
 AI prompts and answers (Sentry's AI integrations are removed; AI calls appear
 only as HTTP timings).
+
+**From GitHub Actions:** the nightly backup's check-ins (D-033) carry only the
+monitor's name and a status (in progress, ok, error), nothing from the database.
 
 **Session replay** (browser, the owner's decision of 2026-10-26, D-024): only
 for a visit in which an error happens. The browser keeps about the last minute
@@ -159,6 +162,14 @@ and deploy.
 5. **Deploy**, then go through [Checking that it works](#checking-that-it-works).
 6. **Alerts and uptime monitors:** [Alerts](#alerts),
    [Uptime monitors](#uptime-monitors).
+7. **Backup monitor** (A8, D-033): Sentry → Crons → **Add Monitor**, named
+   `nightly-backup`, schedule crontab `30 21 * * *` in UTC, check-in margin 60
+   minutes, max runtime 20 minutes. From its HTTP instructions, copy the
+   check-in URL (it ends in `/cron/nightly-backup/<key>/`) without any
+   `?status=…`, and save it as the secret `SENTRY_BACKUP_CHECKIN_URL` in the
+   GitHub environment `production-backup` ([DEPLOY.md](DEPLOY.md#5-backups)).
+   Run the backup by hand (Actions → Nightly database backup → Run workflow):
+   the monitor shows an OK check-in.
 
 Locally, leave the DSN out of `.env.local`. To try Sentry locally, set it in
 your shell for one run; events are labelled `development`.
@@ -210,6 +221,7 @@ Thresholds are a starting point for a small site; revisit them after a month
 | A5  | Database unreachable | UptimeRobot on `/api/health`               | no `"ok":true` in the reply, confirmed by a re-check (hourly)                                                                  | Neon status page and console; `health.db_unreachable` in logs  |
 | A6  | Error rate           | Sentry metric alert, if your plan has them | more than 5% of transactions failing over 15 minutes                                                                           | as A2                                                          |
 | A7  | Slow                 | Sentry metric alert, if your plan has them | p95 transaction duration over 3 s for 30 minutes (excluding `/ask`, where AI answers take longer)                              | Insights → Backend: which spans (database, outside calls) grew |
+| A8  | Nightly backup       | Sentry Crons, monitor `nightly-backup`     | no check-in by 4:00 India time (GitHub can start scheduled runs late), or the run failed: the dump, upload or restore check    | GitHub → Actions → the run's log; [RESTORE.md](RESTORE.md)     |
 
 Already on without setup: Vercel emails a failed deployment; GitHub emails a
 failed scheduled workflow (the nightly backup) to whoever last changed it; Neon

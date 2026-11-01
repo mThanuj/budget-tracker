@@ -80,6 +80,29 @@ describe("sessions", () => {
   });
 });
 
+describe("signing out other devices (what signOutOtherDevices calls)", () => {
+  it("ends only the caller's other sessions: this one and other people's stay", async () => {
+    const carol = (await createTestUser(db, { name: "Carol" })).id;
+    const dave = (await createTestUser(db, { name: "Dave" })).id;
+    const [mine, otherDevice, someoneElse] = [
+      await sessionCookie(carol),
+      await sessionCookie(carol),
+      await sessionCookie(dave),
+    ];
+    const signedInAs = async (c: string) => (await (await call("/get-session", { cookie: c })).json())?.user?.id;
+
+    await auth.api.revokeOtherSessions({ headers: new Headers({ cookie: mine }) });
+    expect(await signedInAs(mine)).toBe(carol);
+    expect(await signedInAs(otherDevice)).toBeUndefined();
+    expect(await signedInAs(someoneElse)).toBe(dave);
+    expect(await db.$count(schema.session, eq(schema.session.userId, carol))).toBe(1);
+  });
+
+  it("needs a real session", async () => {
+    await expect(auth.api.revokeOtherSessions({ headers: new Headers() })).rejects.toThrow();
+  });
+});
+
 describe("cross-site requests (CSRF) and redirects", () => {
   it("refuses a state-changing request from another site, even with the cookie", async () => {
     const res = await call("/sign-out", { body: {}, cookie, origin: "https://evil.example" });

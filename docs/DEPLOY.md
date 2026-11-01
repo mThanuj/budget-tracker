@@ -61,11 +61,25 @@ Check **Settings → Cron Jobs** after the first deploy.
 Neon's free plan keeps only 6 hours of history, so a GitHub Action
 (`.github/workflows/backup.yml`) saves an encrypted copy every night and keeps 7.
 
-1. GitHub → the repository → **Settings → Secrets and variables → Actions**: add
-   `DATABASE_URL_UNPOOLED` (production) and `BACKUP_PASSPHRASE` (a long random
-   phrase; keep it in your password manager, without it the backups can't be opened).
-2. **Actions → Nightly database backup → Run workflow** once, and check it succeeds.
-3. Try a restore into a throwaway Neon branch once: [RESTORE.md](RESTORE.md) (macOS, Linux and Windows).
+1. GitHub → the repository → **Settings → Environments → New environment**,
+   named `production-backup`. Under **Deployment branches and tags**, choose
+   **Selected branches and tags** and add `main`, so no other branch's workflow
+   can read its secrets (D-034).
+2. In that environment, add the secrets:
+   - `DATABASE_URL_UNPOOLED`: production's direct (unpooled) connection string,
+     with `sslmode=verify-full&sslrootcert=system` in place of
+     `sslmode=require`, so the backup checks it's really talking to Neon.
+   - `BACKUP_PASSPHRASE`: a long random phrase; keep it in your password
+     manager, without it the backups can't be opened.
+   - Optional, `SENTRY_BACKUP_CHECKIN_URL`: alerts you when a night's backup
+     fails or doesn't run ([OBSERVABILITY.md](OBSERVABILITY.md#setting-it-up-in-production), step 7).
+
+   If you added them as repository secrets before, delete those (**Secrets and
+   variables → Actions**).
+
+3. **Actions → Nightly database backup → Run workflow** on `main`, and check it
+   succeeds: the **Restore check** step ends with "Restore check passed".
+4. Try a restore into a throwaway Neon branch once: [RESTORE.md](RESTORE.md) (macOS, Linux and Windows).
 
 ## 6. Before you announce it
 

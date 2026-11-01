@@ -43,7 +43,8 @@ below; keep this list in step when an item is done or a new one outranks it.
 - Real Google sign-in and the signup seeding hook (tests use Better Auth's test
   helpers); the real Razorpay checkout popup; `checkPaymentStatus` and a
   successful `cancelPro`; AI answer quality (only `pnpm test:e2e:live` and the
-  `ai:*` scripts); the admin stats page; restoring a backup.
+  `ai:*` scripts); the admin stats page; restoring a backup by hand (the
+  nightly workflow restores each one, D-033).
 - Pages have no unit tests (Vitest line coverage on 2026-10-26: 0% for pages,
   14% for components); they're covered by the browser tests, which run in CI
   since D-032 (`e2e` job), not counting billing and AI, which skip there.
@@ -54,6 +55,14 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 ## Operations
 
+- **Owner steps for D-033/D-034 not done yet** (2026-11-01): create the GitHub
+  environment `production-backup` limited to `main` and move
+  `DATABASE_URL_UNPOOLED` (with `sslmode=verify-full&sslrootcert=system`) and
+  `BACKUP_PASSPHRASE` into it, deleting the repository copies
+  ([DEPLOY.md](../DEPLOY.md#5-backups)); create the Sentry monitor
+  `nightly-backup` and its secret ([OBSERVABILITY.md](../OBSERVABILITY.md#setting-it-up-in-production),
+  step 7); then run the backup and the weekly audit once from `main`. Until the
+  secrets move, the backup still reads the repository secrets.
 - **Monitoring is on; parts are still unverified** (2026-10-26). Verified on
   the live site: a test error reached Sentry scrubbed, source maps uploaded,
   Sentry's default alert emailed the owner, a browser test error's replay was
@@ -64,9 +73,11 @@ below; keep this list in step when an item is done or a new one outranks it.
   address with a query string, and alerts A1–A3 if the default alert proves
   too quiet. Vercel
   Hobby keeps runtime logs only briefly.
-- **A backup has never been restored.** The nightly encrypted backups (D-011)
-  run, but nobody has tried restoring one, so they're unproven. Do it once
-  with [docs/RESTORE.md](../RESTORE.md) into a throwaway Neon branch.
+- **No restore by hand yet.** Since D-033 every nightly backup is restored
+  into a throwaway database on GitHub's runner, but nobody has followed
+  [docs/RESTORE.md](../RESTORE.md) end to end. Do it once into a throwaway Neon
+  branch. Its first run with the restore check, and the Sentry monitor
+  `nightly-backup` (OBSERVABILITY.md, setup step 7), are still to do.
 - **Every page now renders per request (D-027); the cost isn't measured yet.**
   Compare PageSpeed Insights (first paint, LCP) on the preview against the live
   site before merging, and check Vercel's usage page a week after.

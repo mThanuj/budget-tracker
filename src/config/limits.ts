@@ -17,4 +17,7 @@ export const LIMITS = {
   actionsPerMinute: 120,
   // How long a deleted entry can be brought back with "Undo" (D-030).
   undoDeleteMinutes: 10,
+  // Deleting the account needs a Google sign-in at most this old, so a session
+  // left open on a shared computer, or a stolen cookie, isn't enough (D-035).
+  freshSignInMinutes: 15,
 } as const;

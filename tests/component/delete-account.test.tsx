@@ -7,6 +7,14 @@ import { describe, expect, it, vi } from "vitest";
 const deleteAccount = vi.hoisted(() => vi.fn());
 vi.mock("@/server/actions/account", () => ({ deleteAccount }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+// The real button starts Google sign-in through Better Auth's browser client.
+const signInButton = vi.hoisted(() => vi.fn());
+vi.mock("@/components/auth/google-sign-in-button", () => ({
+  GoogleSignInButton: (props: { label: string; callbackURL: string }) => {
+    signInButton(props);
+    return <button type="button">{props.label}</button>;
+  },
+}));
 
 const { DeleteAccount } = await import("@/components/settings/delete-account");
 
@@ -38,6 +46,22 @@ describe("deleting the account", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "We couldn't cancel your Pro renewal, so nothing was deleted.",
     );
+  });
+
+  it("asks for a fresh Google sign-in when the server wants one, coming back to Settings", async () => {
+    deleteAccount.mockResolvedValue({
+      ok: false,
+      error: "For your safety, sign in with Google again, then delete.",
+      signInAgain: true,
+    });
+    const { confirm, user } = await openAndType("DELETE");
+    expect(screen.queryByRole("button", { name: "Sign in again" })).toBeNull();
+    await user.click(confirm);
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "For your safety, sign in with Google again, then delete.",
+    );
+    expect(await screen.findByRole("button", { name: "Sign in again" })).toBeTruthy();
+    expect(signInButton).toHaveBeenLastCalledWith(expect.objectContaining({ callbackURL: "/settings" }));
   });
 
   it("says the request didn't go through, and stays open", async () => {

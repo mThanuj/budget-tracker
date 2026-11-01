@@ -12,7 +12,9 @@ within 2 working days.
   change-email and update-user are disabled, so the name and avatar are the ones
   Google gave at sign-up. Sessions are httpOnly and `SameSite=lax`, and secure
   when the site is served over https (Better Auth defaults). The admin area requires a Google-verified
-  email in `ADMIN_EMAILS` and otherwise returns 404.
+  email in `ADMIN_EMAILS` and otherwise returns 404. Settings lists where the
+  account is signed in and can sign out every other device; deleting the
+  account needs a Google sign-in from the last 15 minutes (D-035).
 - **Access control**: every page and server action calls `requireUser()`.
   Route handlers check a session (`getSession()`, else 401), the cron secret or
   Razorpay's signature; only `/api/health` is public. Services take
@@ -40,7 +42,8 @@ within 2 working days.
   Only `NEXT_PUBLIC_APP_NAME` and the public Sentry DSN reach the client. Logs
   and error reports are redacted (credentials, user-written text, emails,
   query strings, query parameters) and carry no user identity; see
-  docs/OBSERVABILITY.md.
+  docs/OBSERVABILITY.md. How to replace each secret, and what breaks while you
+  do: docs/ROTATION.md.
 - **Side effects need a click**: links can't make the app act for someone. A
   `/ask?q=` link only fills in the question; it's sent straight away only when
   it came from the home page's ask box in the same tab.
@@ -51,7 +54,7 @@ within 2 working days.
   and live in `src/config/limits.ts`; the check is a count in the same
   database, so it needs no shared store. Two simultaneous requests can
   overshoot a limit by a little, which doesn't matter for its purpose.
-- **Rate limits**: every server action (except signing out, deleting the
+- **Rate limits**: every server action (except signing out, here or elsewhere, deleting the
   account, the admin test error and loading the entry form) counts against a
   per-user limit per minute (`src/config/limits.ts`), counted in the database so
   every server instance shares it; over it, nothing runs. Better Auth limits its
@@ -68,7 +71,13 @@ within 2 working days.
 - **Supply chain**: pinned registry, install scripts restricted
   (`pnpm-workspace.yaml` allowBuilds), a release-age delay on new versions (pnpm 11's
   default `minimumReleaseAge`), Dependabot for known CVEs, and CI failing on
-  high or critical advisories (`pnpm audit --audit-level=high`).
+  high or critical advisories (`pnpm audit --audit-level=high`), rerun weekly
+  so a new advisory surfaces between changes. GitHub Actions are pinned to
+  commits, checkouts keep no token, and the backup's secrets live in an
+  environment only `main` can use (decision D-034).
+- **Backups**: encrypted nightly, kept 7 days, and restored into a throwaway
+  database on every run to prove they open; a missed or failed night alerts
+  through Sentry (D-011, D-033, docs/RESTORE.md).
 
 ## Known trade-offs and deferred hardening
 

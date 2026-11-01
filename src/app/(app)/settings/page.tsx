@@ -7,18 +7,23 @@ import { AiToggle } from "@/components/settings/ai-toggle";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SignOutButton } from "@/components/settings/sign-out-button";
+import { SignOutOtherDevices } from "@/components/settings/sign-out-other-devices";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { Skeleton } from "@/components/ui/skeleton";
 import { billingEnabled } from "@/config/features";
+import { relativeDay } from "@/lib/date-format";
+import { todayInTz } from "@/lib/dates";
 import { currencyOptions, timeZoneOptions } from "@/lib/preferences-options";
+import { describeUserAgent } from "@/lib/user-agent";
 import { aiConfigured } from "@/server/ai";
 import { getUserPlan } from "@/server/billing/plan";
 import { db } from "@/server/db";
-import { requireUser } from "@/server/session";
-import { userCurrency, userTimeZone } from "@/lib/user-prefs";
+import { listSignedInDevices } from "@/server/services/sessions";
+import { getSession, requireUser } from "@/server/session";
+import { userCurrency, userTimeZone, userToday } from "@/lib/user-prefs";
 
 export const metadata = { title: "Settings" };
 
@@ -111,6 +116,7 @@ async function SettingsContent() {
           <SignOutButton />
         </div>
       </Section>
+      <SignedInDevices />
       {aiConfigured() && (
         <Section
           title="AI features"
@@ -130,6 +136,36 @@ async function SettingsContent() {
         />
       </Section>
     </>
+  );
+}
+
+async function SignedInDevices() {
+  const user = await requireUser();
+  const current = (await getSession())?.session.id;
+  // This device first, then the newest.
+  const devices = (await listSignedInDevices(db, user.id)).sort(
+    (a, b) => Number(b.id === current) - Number(a.id === current),
+  );
+  const timezone = userTimeZone(user);
+  const today = userToday(user);
+
+  return (
+    <Section title="Signed-in devices" description="Where your account is open. Sign out anywhere you don't recognise.">
+      <div className="grid gap-4">
+        <ul className="grid gap-3 text-sm">
+          {devices.map((d) => (
+            <li key={d.id}>
+              <p className="font-medium">
+                {describeUserAgent(d.userAgent)}
+                {d.id === current && <span className="font-normal text-muted-foreground"> · This device</span>}
+              </p>
+              <p className="text-muted-foreground">Signed in {relativeDay(todayInTz(timezone, d.createdAt), today)}</p>
+            </li>
+          ))}
+        </ul>
+        {devices.some((d) => d.id !== current) && <SignOutOtherDevices />}
+      </div>
+    </Section>
   );
 }
 

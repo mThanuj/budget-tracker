@@ -166,7 +166,7 @@ ids, for idempotency), `deleted_entry` (deleted entries kept 10 minutes for
 | Groq / Cerebras / OpenRouter   | AI features, optional           | `src/server/ai/`                                  | `LLM_*`, `AI_GLOBAL_DAILY_LIMIT`        |
 | Razorpay                       | Pro subscriptions, switched off | `src/server/billing/`                             | `BILLING_ENABLED`, `RAZORPAY_*`         |
 | Vercel                         | hosting, daily cron             | `vercel.json`, `scripts/vercel-build.mjs`         | project settings                        |
-| GitHub Actions                 | CI, nightly encrypted backup    | `.github/workflows/`                              | repo secrets                            |
+| GitHub Actions                 | CI, nightly backup, audit       | `.github/workflows/`                              | secrets; backup's in an environment     |
 | Sentry, optional               | errors, traces, cron check-ins  | `src/lib/monitoring.ts`, `src/instrumentation.ts` | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_*`    |
 
 ## Feature map
@@ -184,7 +184,7 @@ ids, for idempotency), `deleted_entry` (deleted entries kept 10 minutes for
 | Onboarding               | `/welcome`, `/setup`       | `setup/`                 | `settings.ts`, `setup.ts`          | `services/setup.ts`, `lib/setup-plan.ts`, `server/ai/setup.ts`                                  | `db/setup`, `unit/setup-plan`, `e2e/setup`                                                    |
 | Insights                 | `(app)/insights`           | `insights/`              | `insights.ts`                      | `services/insight-facts.ts`, `insights.ts`, `server/ai/insights.ts`                             | `unit/insights`, `db/insights`, `e2e/billing`                                                 |
 | Plans, billing           | `(app)/billing`            | `billing/`               | `billing.ts`                       | `server/billing/*`, `api/webhooks/razorpay`                                                     | `unit/billing`, `db/billing`, `integration/`                                                  |
-| Settings, export, delete | `(app)/settings`           | `settings/`              | `settings.ts`, `account.ts`        | `services/account.ts`, `services/settings.ts`, `api/export`                                     | `db/account`, `unit/account`, `integration/routes`, `component/delete-account`, `e2e/account` |
+| Settings, export, delete | `(app)/settings`           | `settings/`              | `settings.ts`, `account.ts`        | `services/account.ts`, `services/settings.ts`, `services/sessions.ts`, `api/export`             | `db/account`, `unit/account`, `integration/routes`, `component/delete-account`, `e2e/account` |
 | Admin                    | `(app)/admin`              | `admin/`                 | `admin.ts` (test error)            | `server/admin.ts`, `services/admin-stats.ts`                                                    | `e2e/account`, `unit/observability`                                                           |
 | Legal pages              | `(legal)/*`                | `legal/`                 | —                                  | `config/legal.ts`                                                                               | `e2e/account`                                                                                 |
 
