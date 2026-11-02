@@ -4,6 +4,17 @@ Significant changes to architecture, behaviour or the development workflow,
 newest first. One line each, with the commit; `git log` has the rest. Add a line
 when you merge something a future agent should know about.
 
+## 2026-11-02
+
+- Cerebras removed as an AI provider: the free chain is Groq then OpenRouter
+  (`.env.example`, privacy page and the AI setting's text; policy date
+  2 November). Providers are settings only, so no code changed; a chain entry
+  without settings is skipped.
+- Previews had production's settings (Vercel ticks Production and Preview by
+  default) from 24 October until 2 November; the owner made every secret
+  Production-only and replaced the auth, Google, cron, Groq, OpenRouter and
+  Sentry secrets. The `staging` branch is set up (D-037).
+
 ## 2026-11-01
 
 - Staging (D-037): the `staging` branch gets its own settings, database

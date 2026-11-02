@@ -62,15 +62,16 @@ const raw = (over: Partial<RawEntry> = {}): RawEntry => ({
 
 describe("providerChain", () => {
   const env = {
-    LLM_CHAIN_FREE: "groq, cerebras ,openrouter",
+    LLM_CHAIN_FREE: "groq, spare ,openrouter",
     LLM_GROQ_BASE_URL: "https://api.groq.com/openai/v1",
     LLM_GROQ_API_KEY: "gsk_test",
     LLM_GROQ_MODEL: "openai/gpt-oss-120b",
     LLM_GROQ_MODEL_FAST: "openai/gpt-oss-20b",
     LLM_GROQ_STRUCTURED: "true",
     LLM_GROQ_OPTIONS: '{"reasoningEffort":"low"}',
-    LLM_CEREBRAS_BASE_URL: "https://api.cerebras.ai/v1",
-    LLM_CEREBRAS_MODEL: "gpt-oss-120b",
+    // Listed and partly set up, but without a key.
+    LLM_SPARE_BASE_URL: "https://ai.example/v1",
+    LLM_SPARE_MODEL: "some-model",
     LLM_OPENROUTER_BASE_URL: "https://openrouter.ai/api/v1",
     LLM_OPENROUTER_API_KEY: "sk-or-test",
     LLM_OPENROUTER_MODEL: "nvidia/nemotron-3-super-120b-a12b:free",
@@ -212,7 +213,7 @@ describe("runWithFallback", () => {
   it("tries a provider's second model before moving to the next provider", async () => {
     const two: ProviderConfig = { ...p("groq"), model: "big", fastModel: "small" };
     const tried: string[] = [];
-    const result = await runWithFallback([two, p("cerebras")], async (m) => {
+    const result = await runWithFallback([two, p("openrouter")], async (m) => {
       tried.push(`${m.provider}/${m.modelId}`);
       if (m.modelId === "small") throw rateLimited();
       return "ok";

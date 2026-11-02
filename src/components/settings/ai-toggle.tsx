@@ -37,10 +37,10 @@ export function AiToggle({ enabled }: { enabled: boolean }) {
         {on ? "On" : "Off"}
       </button>
       <p className="text-sm text-muted-foreground">
-        When on, what you type into the AI boxes and the descriptions of new entries are sent to our AI provider (Groq,
-        Cerebras or OpenRouter). When you ask a question or read Insights, what&rsquo;s needed to answer is sent too:
-        totals, wallet balances, the names of categories, entries and recurring items, budgets and goals. Your name,
-        email and notes are never sent. When off, everything else still works; you just fill in forms yourself.
+        When on, what you type into the AI boxes and the descriptions of new entries are sent to our AI provider (Groq
+        or OpenRouter). When you ask a question or read Insights, what&rsquo;s needed to answer is sent too: totals,
+        wallet balances, the names of categories, entries and recurring items, budgets and goals. Your name, email and
+        notes are never sent. When off, everything else still works; you just fill in forms yourself.
       </p>
     </div>
   );

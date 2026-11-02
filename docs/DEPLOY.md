@@ -23,7 +23,9 @@ region **AWS Asia Pacific (Singapore)**. Copy both connection strings: pooled
    pick another name; the URL follows it).
 3. Before the first deploy, open **Environment Variables** and add everything from
    `.env.example`, ticking **Production only** (preview builds would otherwise use
-   the production database; the `staging` branch gets its own set, section 7):
+   the production database; the `staging` branch gets its own set, section 7).
+   Vercel ticks Production **and Preview** by default when you add a variable:
+   untick Preview for every secret, or every branch's preview gets it:
    - `DATABASE_URL`, `DATABASE_URL_UNPOOLED` from step 1.
    - `BETTER_AUTH_URL=https://<your-project>.vercel.app` and a **new** `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
    - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (step 3).
