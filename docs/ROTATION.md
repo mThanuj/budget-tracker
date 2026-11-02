@@ -84,8 +84,8 @@ SQL Editor on the production branch.
 
 ## AI provider keys
 
-For each of `LLM_GROQ_API_KEY`, `LLM_CEREBRAS_API_KEY`, `LLM_OPENROUTER_API_KEY`
-(and `LLM_GROQ_PAID_API_KEY` if you use one):
+For each of `LLM_GROQ_API_KEY` and `LLM_OPENROUTER_API_KEY` (and
+`LLM_GROQ_PAID_API_KEY` if you use one):
 
 1. Create a new key in the provider's console (links in `.env.example`).
 2. Set it in Vercel and redeploy.

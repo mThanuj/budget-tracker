@@ -87,9 +87,12 @@ below; keep this list in step when an item is done or a new one outranks it.
   monospace font (+37 KB, all three are preloaded everywhere). Still to do:
   Vercel → Usage, function invocations and duration for 1–7 November against
   25–31 October; Sentry's field Web Vitals once there are enough samples.
-- **Staging (D-037) needs the owner's one-time setup** ([DEPLOY.md](../DEPLOY.md#7-staging-try-a-change-before-merging)):
-  the Neon `staging` branch, the separate Google project, Vercel's branch-only
-  settings; then a first push to `staging` and a sign-in there.
+- **Production's database password reached preview builds** until 2026-11-02
+  (Vercel had every variable on Production and Preview), including Dependabot
+  PR #23's build. The other secrets were replaced that day; the database
+  password, rotated on 2026-11-01, wasn't yet. Rotate it once more
+  ([ROTATION.md](../ROTATION.md#database-password)). Staging (D-037) is set up
+  and verified: its build migrated its own database, and a sign-in landed there.
 
 ## Code quality
 

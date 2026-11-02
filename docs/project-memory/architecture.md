@@ -163,7 +163,7 @@ ids, for idempotency), `deleted_entry` (deleted entries kept 10 minutes for
 | ------------------------------ | ------------------------------- | ------------------------------------------------- | --------------------------------------- |
 | Neon Postgres                  | everything stored               | `src/server/db/`                                  | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` |
 | Google OAuth (via Better Auth) | sign-in                         | `src/server/auth.ts`                              | `BETTER_AUTH_*`, `GOOGLE_*`             |
-| Groq / Cerebras / OpenRouter   | AI features, optional           | `src/server/ai/`                                  | `LLM_*`, `AI_GLOBAL_DAILY_LIMIT`        |
+| Groq / OpenRouter              | AI features, optional           | `src/server/ai/`                                  | `LLM_*`, `AI_GLOBAL_DAILY_LIMIT`        |
 | Razorpay                       | Pro subscriptions, switched off | `src/server/billing/`                             | `BILLING_ENABLED`, `RAZORPAY_*`         |
 | Vercel                         | hosting, daily cron             | `vercel.json`, `scripts/vercel-build.mjs`         | project settings                        |
 | GitHub Actions                 | CI, nightly backup, audit       | `.github/workflows/`                              | secrets; backup's in an environment     |
