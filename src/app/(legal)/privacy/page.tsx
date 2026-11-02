@@ -64,8 +64,8 @@ async function PrivacyBody() {
       <h2>How the AI features use your data</h2>
       <p>
         AI features are optional and can be switched off in Settings. When they&rsquo;re on, we send only what each
-        feature needs to our AI providers (Groq, Cerebras or OpenRouter, based in the United States). If one
-        doesn&rsquo;t answer, the same request goes to the next.
+        feature needs to our AI providers (Groq or OpenRouter, based in the United States). If one doesn&rsquo;t answer,
+        the same request goes to the next.
       </p>
       <ul>
         <li>

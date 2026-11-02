@@ -2,7 +2,7 @@
 // these before switching on live payments). They're public on the site but
 // kept out of the repo: set them as env vars on the server and in .env.local.
 
-export const LEGAL_UPDATED = "1 November 2026";
+export const LEGAL_UPDATED = "2 November 2026";
 
 export function legalDetails(env: Record<string, string | undefined> = process.env) {
   const v = (key: string) => env[key]?.trim() || null;

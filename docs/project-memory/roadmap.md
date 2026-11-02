@@ -17,6 +17,6 @@ Suggested after the launch (2026-10-24); the owner chose to keep them aside.
 
 - Try a restore from a nightly backup once: now tracked as a high-priority
   open issue in [known-issues.md](known-issues.md#operations).
-- Backup AI provider keys (Cerebras, OpenRouter): configuration only, the
-  fallback chain already supports them.
+- Backup AI provider keys (a second free-tier provider, or a paid Groq key):
+  configuration only, the fallback chain already supports them.
 - A legal review of the policy pages.
