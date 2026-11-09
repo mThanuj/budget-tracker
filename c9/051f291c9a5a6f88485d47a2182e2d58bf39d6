@@ -1,0 +1,29 @@
+docs/project-memory/architecture.md
+  s_9afb937c10f046::t_4d64c75f6d6a79 71-72
+docs/project-memory/changelog.md
+  s_9afb937c10f046::t_b6eaf5952b5e84 9-13
+docs/project-memory/implementation-notes.md
+  s_9afb937c10f046::t_3beda771982dbb 104-113,129-134
+src/app/(app)/recurring/page.tsx
+  s_9afb937c10f046::t_2b241f9480c355 11,38,44
+src/app/(app)/settings/page.tsx
+  s_9afb937c10f046::t_dc3678f5771b9c 140,145-155
+src/server/auth.ts
+  s_9afb937c10f046::t_182cd99372ab90 17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c9051f291c9a5a6f88485d47a2182e2d58bf39d6",
+  "prompts": {},
+  "sessions": {
+    "s_9afb937c10f046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2b6cd525-0f64-4ad8-a06a-557ca4d2c74b",
+        "model": "unknown"
+      },
+      "human_author": "mThanuj <mullagurithanuj0@gmail.com>"
+    }
+  }
+}
