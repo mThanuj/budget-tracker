@@ -28,8 +28,11 @@ function change(now: number, before: number) {
 
 type Span = { from: ISODate; to: ISODate }; // end exclusive
 
-/** The main income's dates from four months before `month` to its end: enough to place the pay months around it. */
-async function mainIncomeDates(db: Db, userId: string, categoryId: string, month: ISOMonth): Promise<ISODate[]> {
+/**
+ * The main income's dates from five months before today's month to the end of
+ * the next: every pay month either report needs, and the three before it.
+ */
+async function mainIncomeDates(db: Db, userId: string, categoryId: string, today: ISODate): Promise<ISODate[]> {
   const rows = await db
     .select({ occurredOn: transaction.occurredOn })
     .from(transaction)
@@ -38,8 +41,8 @@ async function mainIncomeDates(db: Db, userId: string, categoryId: string, month
         eq(transaction.userId, userId),
         eq(transaction.categoryId, categoryId),
         eq(transaction.type, "income"),
-        gte(transaction.occurredOn, monthRange(addMonths(month, -4)).start),
-        lt(transaction.occurredOn, monthRange(month).end),
+        gte(transaction.occurredOn, monthRange(addMonths(monthOf(today), -5)).start),
+        lt(transaction.occurredOn, monthRange(addMonths(monthOf(today), 1)).end),
       ),
     );
   return rows.map((r) => r.occurredOn);
@@ -48,23 +51,23 @@ async function mainIncomeDates(db: Db, userId: string, categoryId: string, month
 /**
  * The months Insights reports on today: the one in progress ("so far") and
  * the last finished one. Pay months when a main income is set (src/lib/pay-months.ts),
- * otherwise calendar months.
+ * otherwise calendar months. `paydays` (null for calendar months) goes to
+ * buildInsightFacts, so the dates are read once per page.
  */
 export async function insightMonths(
   db: Db,
   userId: string,
   { today, mainIncome }: { today: ISODate; mainIncome: string | null },
-): Promise<{ thisMonth: ISOMonth; lastMonth: ISOMonth }> {
-  const thisMonth = mainIncome
-    ? payMonthOf(today, await mainIncomeDates(db, userId, mainIncome, monthOf(today)))
-    : monthOf(today);
-  return { thisMonth, lastMonth: addMonths(thisMonth, -1) };
+): Promise<{ thisMonth: ISOMonth; lastMonth: ISOMonth; paydays: ISODate[] | null }> {
+  const paydays = mainIncome ? await mainIncomeDates(db, userId, mainIncome, today) : null;
+  const thisMonth = paydays ? payMonthOf(today, paydays) : monthOf(today);
+  return { thisMonth, lastMonth: addMonths(thisMonth, -1), paydays };
 }
 
 /**
  * The facts for a finished month, or for the current month up to today
- * ("so far", compared with the same days of last month). With a main income
- * the months are pay months; budgets stay calendar months either way.
+ * ("so far", compared with the same days of last month). With `paydays` from
+ * insightMonths the months are pay months; budgets stay calendar months either way.
  */
 export async function buildInsightFacts(
   db: Db,
@@ -74,11 +77,10 @@ export async function buildInsightFacts(
     month,
     today,
     currency,
-    mainIncome = null,
-  }: { kind: InsightKind; month: ISOMonth; today: ISODate; currency: string; mainIncome?: string | null },
+    paydays = null,
+  }: { kind: InsightKind; month: ISOMonth; today: ISODate; currency: string; paydays?: readonly ISODate[] | null },
 ): Promise<InsightFacts> {
   const money = (minor: number) => formatMoney(minor, currency, { trimWhole: true });
-  const paydays = mainIncome ? await mainIncomeDates(db, userId, mainIncome, month) : null;
   const range = (m: ISOMonth) => (paydays ? payMonthRange(m, paydays) : monthRange(m));
   const prevMonth = addMonths(month, -1);
   const full = range(month);
@@ -100,6 +102,10 @@ export async function buildInsightFacts(
     return kind === "so_far" ? `1–${Number(last.slice(8, 10))} ${formatMonth(m)}` : formatMonth(m);
   };
   const budgetMonth = kind === "so_far" ? monthOf(today) : month;
+  // The check-in's pace runs to the end of the calendar month the limit is for.
+  const cal = monthRange(budgetMonth);
+  const [calDay, calDays] = [daysBetween(cal.start, today) + 1, daysBetween(cal.start, cal.end)];
+  const pace = kind === "so_far" && calDay >= 7 && calDay < calDays;
   const inSpan = (s: Span) => and(gte(transaction.occurredOn, s.from), lt(transaction.occurredOn, s.to));
   const mine = eq(transaction.userId, userId);
 
@@ -140,111 +146,115 @@ export async function buildInsightFacts(
       : monthlyTotals(db, userId, addMonths(month, -3), prevMonth).then((r) => r.map((m) => m.expenseMinor));
 
   const twin = aliasedTable(transaction, "twin");
-  const [now, then, cats, prevCats, history, overview, biggest, dupes, subs, charges, goals, late] = await Promise.all([
-    totals(span),
-    totals(before),
-    spendingByCategory(db, userId, span.from, span.to),
-    spendingByCategory(db, userId, before.from, before.to),
-    kind === "month" ? spendingBefore() : Promise.resolve([]),
-    getBudgetOverview(db, userId, budgetMonth),
-    db
-      .select({
-        description: transaction.description,
-        amountMinor: transaction.amountMinor,
-        occurredOn: transaction.occurredOn,
-        category: category.name,
-      })
-      .from(transaction)
-      .leftJoin(category, eq(category.id, transaction.categoryId))
-      .where(and(mine, inSpan(span), eq(transaction.type, "expense")))
-      .orderBy(desc(transaction.amountMinor), asc(transaction.occurredOn))
-      .limit(3),
-    // Same merchant and amount within two days, not from a schedule: often a double charge.
-    db
-      .select({
-        description: transaction.description,
-        amountMinor: transaction.amountMinor,
-        first: transaction.occurredOn,
-        second: twin.occurredOn,
-      })
-      .from(transaction)
-      .innerJoin(
-        twin,
-        and(
-          eq(twin.userId, transaction.userId),
-          eq(twin.type, transaction.type),
-          eq(twin.merchantKey, transaction.merchantKey),
-          eq(twin.amountMinor, transaction.amountMinor),
-          isNull(twin.recurringRuleId),
-          sql`${twin.occurredOn} between ${transaction.occurredOn} and ${transaction.occurredOn} + 2`,
-          sql`(${twin.occurredOn} > ${transaction.occurredOn} or ${twin.id} > ${transaction.id})`,
-        ),
-      )
-      .where(and(mine, inSpan(span), eq(transaction.type, "expense"), isNull(transaction.recurringRuleId)))
-      .orderBy(asc(transaction.occurredOn))
-      .limit(3),
-    db
-      .select({
-        rules: sql<number>`count(distinct ${transaction.recurringRuleId})`.mapWith(Number),
-        spent: sql<number>`coalesce(sum(${transaction.amountMinor}), 0)`.mapWith(Number),
-      })
-      .from(transaction)
-      .innerJoin(recurringRule, eq(recurringRule.id, transaction.recurringRuleId))
-      .where(and(mine, inSpan(span), eq(transaction.type, "expense"), eq(recurringRule.isSubscription, true)))
-      .then((r) => r[0]),
-    // Each subscription charge next to the one before it, up to the end of the period.
-    db
-      .select({
-        name: recurringRule.description,
-        occurredOn: transaction.occurredOn,
-        amountMinor: transaction.amountMinor,
-        previousMinor: sql<
-          number | null
-        >`lag(${transaction.amountMinor}) over (partition by ${transaction.recurringRuleId} order by ${transaction.occurredOn}, ${transaction.createdAt})`.mapWith(
-          (v) => (v === null ? null : Number(v)),
-        ),
-      })
-      .from(transaction)
-      .innerJoin(recurringRule, eq(recurringRule.id, transaction.recurringRuleId))
-      .where(
-        and(
-          mine,
-          lt(transaction.occurredOn, span.to),
-          eq(transaction.type, "expense"),
-          eq(recurringRule.isSubscription, true),
-        ),
-      ),
-    db
-      .select({
-        name: goal.name,
-        createdAt: goal.createdAt,
-        targetMinor: goal.targetMinor,
-        targetDate: goal.targetDate,
-        savedMinor:
-          sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(
-            Number,
+  const [now, then, cats, prevCats, history, overview, biggest, dupes, subs, charges, goals, late, upcoming, calNow] =
+    await Promise.all([
+      totals(span),
+      totals(before),
+      spendingByCategory(db, userId, span.from, span.to),
+      spendingByCategory(db, userId, before.from, before.to),
+      kind === "month" ? spendingBefore() : Promise.resolve([]),
+      getBudgetOverview(db, userId, budgetMonth),
+      db
+        .select({
+          description: transaction.description,
+          amountMinor: transaction.amountMinor,
+          occurredOn: transaction.occurredOn,
+          category: category.name,
+        })
+        .from(transaction)
+        .leftJoin(category, eq(category.id, transaction.categoryId))
+        .where(and(mine, inSpan(span), eq(transaction.type, "expense")))
+        .orderBy(desc(transaction.amountMinor), asc(transaction.occurredOn))
+        .limit(3),
+      // Same merchant and amount within two days, not from a schedule: often a double charge.
+      db
+        .select({
+          description: transaction.description,
+          amountMinor: transaction.amountMinor,
+          first: transaction.occurredOn,
+          second: twin.occurredOn,
+        })
+        .from(transaction)
+        .innerJoin(
+          twin,
+          and(
+            eq(twin.userId, transaction.userId),
+            eq(twin.type, transaction.type),
+            eq(twin.merchantKey, transaction.merchantKey),
+            eq(twin.amountMinor, transaction.amountMinor),
+            isNull(twin.recurringRuleId),
+            sql`${twin.occurredOn} between ${transaction.occurredOn} and ${transaction.occurredOn} + 2`,
+            sql`(${twin.occurredOn} > ${transaction.occurredOn} or ${twin.id} > ${transaction.id})`,
           ),
-        addedMinor:
-          sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} >= ${span.from} and ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(
-            Number,
+        )
+        .where(and(mine, inSpan(span), eq(transaction.type, "expense"), isNull(transaction.recurringRuleId)))
+        .orderBy(asc(transaction.occurredOn))
+        .limit(3),
+      db
+        .select({
+          rules: sql<number>`count(distinct ${transaction.recurringRuleId})`.mapWith(Number),
+          spent: sql<number>`coalesce(sum(${transaction.amountMinor}), 0)`.mapWith(Number),
+        })
+        .from(transaction)
+        .innerJoin(recurringRule, eq(recurringRule.id, transaction.recurringRuleId))
+        .where(and(mine, inSpan(span), eq(transaction.type, "expense"), eq(recurringRule.isSubscription, true)))
+        .then((r) => r[0]),
+      // Each subscription charge next to the one before it, up to the end of the period.
+      db
+        .select({
+          name: recurringRule.description,
+          occurredOn: transaction.occurredOn,
+          amountMinor: transaction.amountMinor,
+          previousMinor: sql<
+            number | null
+          >`lag(${transaction.amountMinor}) over (partition by ${transaction.recurringRuleId} order by ${transaction.occurredOn}, ${transaction.createdAt})`.mapWith(
+            (v) => (v === null ? null : Number(v)),
           ),
-      })
-      .from(goal)
-      .leftJoin(goalContribution, eq(goalContribution.goalId, goal.id))
-      .where(and(eq(goal.userId, userId), isNull(goal.archivedAt)))
-      .groupBy(goal.id)
-      .orderBy(asc(goal.createdAt)),
-    // The first income last month after the same days: pay that lands late in the month.
-    kind === "so_far" && !paydays
-      ? db
-          .select({ occurredOn: transaction.occurredOn })
-          .from(transaction)
-          .where(and(mine, inSpan({ from: before.to, to: prevFull.end }), eq(transaction.type, "income")))
-          .orderBy(asc(transaction.occurredOn))
-          .limit(1)
-          .then((r) => r[0]?.occurredOn ?? null)
-      : Promise.resolve(null),
-  ]);
+        })
+        .from(transaction)
+        .innerJoin(recurringRule, eq(recurringRule.id, transaction.recurringRuleId))
+        .where(
+          and(
+            mine,
+            lt(transaction.occurredOn, span.to),
+            eq(transaction.type, "expense"),
+            eq(recurringRule.isSubscription, true),
+          ),
+        ),
+      db
+        .select({
+          name: goal.name,
+          createdAt: goal.createdAt,
+          targetMinor: goal.targetMinor,
+          targetDate: goal.targetDate,
+          savedMinor:
+            sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(
+              Number,
+            ),
+          addedMinor:
+            sql<number>`coalesce(sum(${goalContribution.amountMinor}) filter (where ${goalContribution.occurredOn} >= ${span.from} and ${goalContribution.occurredOn} < ${span.to}), 0)`.mapWith(
+              Number,
+            ),
+        })
+        .from(goal)
+        .leftJoin(goalContribution, eq(goalContribution.goalId, goal.id))
+        .where(and(eq(goal.userId, userId), isNull(goal.archivedAt)))
+        .groupBy(goal.id)
+        .orderBy(asc(goal.createdAt)),
+      // The first income last month after the same days: pay that lands late in the month.
+      kind === "so_far" && !paydays
+        ? db
+            .select({ occurredOn: transaction.occurredOn })
+            .from(transaction)
+            .where(and(mine, inSpan({ from: before.to, to: prevFull.end }), eq(transaction.type, "income")))
+            .orderBy(asc(transaction.occurredOn))
+            .limit(1)
+            .then((r) => r[0]?.occurredOn ?? null)
+        : Promise.resolve(null),
+      // For the pace: bills still to come, and (in pay months) the calendar month's spending so far.
+      pace ? listUpcoming(db, userId, today, calDays - calDay) : Promise.resolve([]),
+      pace && paydays ? totals({ from: cal.start, to: span.to }) : Promise.resolve(null),
+    ]);
 
   const pastMonths = history.filter((spent) => spent > 0);
   const prevByCat = new Map(prevCats.map((c) => [c.categoryId, c.spentMinor]));
@@ -257,14 +267,11 @@ export async function buildInsightFacts(
     let projectedOverLimit = false;
     // Day-to-day spending at its current pace, plus scheduled bills still to come,
     // to the end of the calendar month the limit is for.
-    const cal = monthRange(budgetMonth);
-    const [calDay, calDays] = [daysBetween(cal.start, today) + 1, daysBetween(cal.start, cal.end)];
-    if (kind === "so_far" && calDay >= 7 && calDay < calDays) {
-      const upcoming = await listUpcoming(db, userId, today, calDays - calDay);
+    if (pace) {
       const billsLeft = upcoming
         .filter((u) => u.rule.type === "expense" && monthOf(u.date) === budgetMonth)
         .reduce((s, u) => s + u.rule.amountMinor, 0);
-      const soFar = paydays ? await totals({ from: cal.start, to: span.to }) : now;
+      const soFar = calNow ?? now;
       const dayToDay = soFar.spending - soFar.recurringSpending;
       const projected = soFar.spending + (dayToDay / calDay) * (calDays - calDay) + billsLeft;
       const unit = 100 * 10 ** currencyExponent(currency);

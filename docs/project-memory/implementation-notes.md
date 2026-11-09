@@ -101,6 +101,16 @@ has more. Add new ones under the right heading.
   action skips the browser-request checks (tested in `auth.test.ts`).
 - Signing in again doesn't end the session the browser already had: both stay
   in the table until they expire, so the devices list can show one browser twice.
+- Finding a session is one query only with `advanced.database.joins` and the
+  Drizzle relations in `schema.ts` (`sessionRelations`, `userRelations`,
+  `accountRelations`). Without the relations the adapter logs an error and
+  quietly goes back to two queries in a row; `session-queries.test.ts` counts them.
+- Its session cookie cache is written only where Next lets code set cookies:
+  sign-in, server actions and route handlers. In a page render the
+  `nextCookies` plugin skips the write (`better-auth/dist/integrations/next-js.mjs`,
+  an empty `catch`), so on its own the cache lasts only `maxAge` after the last
+  sign-in or action. App fields on the session user (settings) come from the
+  cookie while it's cached. Not enabled as of 2026-11-09.
 
 ## Database
 
@@ -116,6 +126,12 @@ has more. Add new ones under the right heading.
 - The app uses the pooled Neon URL; migrations need the direct one
   (`DATABASE_URL_UNPOOLED`, see `drizzle.config.ts`). Client-side timeouts on the
   pool make a dropped connection fail fast (`src/server/db/index.ts`).
+- `pg` runs a pool's queries at most `max` at a time; the rest wait. On Vercel
+  the pool was `max: 3` with a 5 s idle timeout until 2026-11-09, so a page's
+  `Promise.all` ran in waves of 3 and a page after a short pause opened new
+  connections first. Now `max: 10` and 60 s. An idle connection the server
+  closes emits `error` on the pool (without a listener that crashes the
+  process); it's logged as `db.idle_connection_error` and the pool replaces it.
 - `drizzle.config.ts` and the browser-test fixtures load `.env.local` with
   `process.loadEnvFile`, which doesn't override variables already set in the
   shell: an exported `DATABASE_URL` wins over the file.

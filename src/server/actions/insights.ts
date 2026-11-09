@@ -44,7 +44,7 @@ export async function writeInsight(kind: InsightKind): Promise<WriteInsightResul
     month,
     today,
     currency: userCurrency(user),
-    mainIncome,
+    paydays: months.paydays,
   });
   if (facts.entries < MIN_ENTRIES_FOR_INSIGHTS) return { ok: false, reason: "not_enough" };
 

@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 // Relative on purpose: drizzle-kit loads this file without the "@/" alias.
 import { DEFAULT_CURRENCY, DEFAULT_TIME_ZONE } from "../../config/defaults";
 import {
@@ -85,6 +85,17 @@ export const account = pgTable(
   },
   (t) => [index().on(t.userId)],
 );
+
+// Better Auth's joins (advanced.database.joins in src/server/auth.ts) read the
+// user with the session, or the accounts with the user, in one query through
+// these. Relations are TypeScript only: they change no SQL and need no migration.
+export const userRelations = relations(user, ({ many }) => ({ sessions: many(session), accounts: many(account) }));
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(user, { fields: [session.userId], references: [user.id] }),
+}));
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(user, { fields: [account.userId], references: [user.id] }),
+}));
 
 export const verification = pgTable(
   "verification",

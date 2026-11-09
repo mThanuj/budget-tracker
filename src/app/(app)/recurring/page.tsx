@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/server/db";
 import { syncRecurring } from "@/server/recurring-sync";
 import { listCategories } from "@/server/services/categories";
-import { listAwaitingConfirmation, listRules, listSubscriptionSuggestions } from "@/server/services/recurring";
+import { awaitingFrom, listRules, listSubscriptionSuggestions } from "@/server/services/recurring";
 import { listWallets } from "@/server/services/wallets";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";
@@ -35,13 +35,13 @@ async function RecurringContent({ searchParams }: Pick<PageProps<"/recurring">, 
     .object({ view: z.enum(["all", "subscriptions"]).optional().catch(undefined) })
     .parse(await searchParams);
 
-  const [rules, waiting, suggestions, wallets, categories] = await Promise.all([
+  const [rules, suggestions, wallets, categories] = await Promise.all([
     listRules(db, user.id),
-    listAwaitingConfirmation(db, user.id, today),
     listSubscriptionSuggestions(db, user.id, today),
     listWallets(db, user.id, { includeArchived: true }),
     listCategories(db, user.id, { includeArchived: true }),
   ]);
+  const waiting = awaitingFrom(rules, today); // from the same rows, not a second listRules
 
   return (
     <div className="grid gap-6">

@@ -310,18 +310,18 @@ describe("insight facts in pay months (a main income is set)", () => {
   });
   afterAll(() => t.close());
 
-  const facts = (kind: "month" | "so_far", month: string, today: string) =>
-    buildInsightFacts(t.db, userId, { kind, month, today, currency: "INR", mainIncome: salary });
   const months = (today: string, mainIncome: string | null = salary) =>
     insightMonths(t.db, userId, { today, mainIncome });
+  const facts = async (kind: "month" | "so_far", month: string, today: string) =>
+    buildInsightFacts(t.db, userId, { kind, month, today, currency: "INR", paydays: (await months(today)).paydays });
 
   it("move on to the next month on the day the main income comes in", async () => {
-    expect(await months("2026-10-29")).toEqual({ thisMonth: "2026-10", lastMonth: "2026-09" });
-    expect(await months("2026-10-30")).toEqual({ thisMonth: "2026-11", lastMonth: "2026-10" });
-    expect(await months("2026-11-09")).toEqual({ thisMonth: "2026-11", lastMonth: "2026-10" });
+    expect(await months("2026-10-29")).toMatchObject({ thisMonth: "2026-10", lastMonth: "2026-09" });
+    expect(await months("2026-10-30")).toMatchObject({ thisMonth: "2026-11", lastMonth: "2026-10" });
+    expect(await months("2026-11-09")).toMatchObject({ thisMonth: "2026-11", lastMonth: "2026-10" });
     // Not recorded yet: November's last working day.
-    expect(await months("2026-11-30")).toEqual({ thisMonth: "2026-12", lastMonth: "2026-11" });
-    expect(await months("2026-10-30", null)).toEqual({ thisMonth: "2026-10", lastMonth: "2026-09" });
+    expect(await months("2026-11-30")).toMatchObject({ thisMonth: "2026-12", lastMonth: "2026-11" });
+    expect(await months("2026-10-30", null)).toMatchObject({ thisMonth: "2026-10", lastMonth: "2026-09" });
   });
 
   it("check in from payday, with that pay set against what it pays for", async () => {

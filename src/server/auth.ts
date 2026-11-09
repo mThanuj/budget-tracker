@@ -14,6 +14,9 @@ export const auth = betterAuth({
   baseURL: env().BETTER_AUTH_URL,
   secret: env().BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema }),
+  // The session and its user in one query instead of two, on every signed-in
+  // request (through the relations in schema.ts).
+  advanced: { database: { joins: true } },
   // Better Auth's per-IP limits (on in production; its defaults: 100 requests
   // per 10 s per path, 3 for sign-in), counted in the database so every
   // serverless instance shares them. See implementation-notes.md for the IP header.

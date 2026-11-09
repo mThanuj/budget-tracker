@@ -60,12 +60,12 @@ async function InsightsContent() {
   const today = todayInTz(timeZone);
   // Pay months when a main income is set (Settings), otherwise calendar months.
   const mainIncome = user.mainIncomeCategoryId ?? null;
-  const { thisMonth, lastMonth } = await insightMonths(db, user.id, { today, mainIncome });
+  const { thisMonth, lastMonth, paydays } = await insightMonths(db, user.id, { today, mainIncome });
 
   const [plan, last, soFar, report, checkIn, used] = await Promise.all([
     getUserPlan(db, user.id),
-    buildInsightFacts(db, user.id, { kind: "month", month: lastMonth, today, currency, mainIncome }),
-    buildInsightFacts(db, user.id, { kind: "so_far", month: thisMonth, today, currency, mainIncome }),
+    buildInsightFacts(db, user.id, { kind: "month", month: lastMonth, today, currency, paydays }),
+    buildInsightFacts(db, user.id, { kind: "so_far", month: thisMonth, today, currency, paydays }),
     getInsight(db, user.id, "month", lastMonth),
     getInsight(db, user.id, "so_far", thisMonth),
     // Rewrites are counted per calendar month (writeInsight).
