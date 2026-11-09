@@ -1,0 +1,21 @@
+docs/project-memory/implementation-notes.md
+  s_9afb937c10f046::t_f4613d8c44b746 250-254
+tests/unit/monitoring.test.ts
+  s_9afb937c10f046::t_51db35dc77dd0d 26-29,34-50,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8d79f5717fc4d52a67a0215a872842b5e6a4a805",
+  "prompts": {},
+  "sessions": {
+    "s_9afb937c10f046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2b6cd525-0f64-4ad8-a06a-557ca4d2c74b",
+        "model": "unknown"
+      },
+      "human_author": "mThanuj <mullagurithanuj0@gmail.com>"
+    }
+  }
+}
