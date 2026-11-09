@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { LegalLinks } from "@/components/legal/legal-links";
 import { AiToggle } from "@/components/settings/ai-toggle";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { MainIncome } from "@/components/settings/main-income";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SignOutButton } from "@/components/settings/sign-out-button";
 import { SignOutOtherDevices } from "@/components/settings/sign-out-other-devices";
@@ -21,6 +22,7 @@ import { describeUserAgent } from "@/lib/user-agent";
 import { aiConfigured } from "@/server/ai";
 import { getUserPlan } from "@/server/billing/plan";
 import { db } from "@/server/db";
+import { listCategoryOptions } from "@/server/services/categories";
 import { listSignedInDevices } from "@/server/services/sessions";
 import { getSession, requireUser } from "@/server/session";
 import { userCurrency, userTimeZone, userToday } from "@/lib/user-prefs";
@@ -100,6 +102,7 @@ async function SettingsContent() {
   const user = await requireUser();
   const currency = userCurrency(user);
   const timezone = userTimeZone(user);
+  const incomes = (await listCategoryOptions(db, user.id)).filter((c) => c.kind === "income");
 
   return (
     <>
@@ -134,6 +137,9 @@ async function SettingsContent() {
           currencies={currencyOptions()}
           timeZones={timeZoneOptions([timezone])}
         />
+      </Section>
+      <Section title="Main income" description="When a month starts in Insights.">
+        <MainIncome value={user.mainIncomeCategoryId ?? null} categories={incomes} />
       </Section>
     </>
   );

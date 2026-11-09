@@ -115,6 +115,7 @@ const REVIEWED: Record<string, string> = {
   "settings.ts › savePreferences": "no ids; the caller's own settings",
   "settings.ts › completeWelcome": "no ids; the caller's own settings",
   "settings.ts › setAiEnabled": "no ids; the caller's own settings",
+  "settings.ts › setMainIncome": "a category id: below",
   "setup.ts › parseSetupAnswer": "text only; matched against the caller's own categories",
   "setup.ts › applySetupAction": "category ids: below",
   "transactions.ts › saveTransaction": "entry, wallet and category ids: below",
@@ -165,6 +166,7 @@ describe("no action touches another user's records", async () => {
   const { removeTransaction, saveTransaction, undoRemoveTransaction } = await import("@/server/actions/transactions");
   const { dismissAlert } = await import("@/server/actions/alerts");
   const { applySetupAction } = await import("@/server/actions/setup");
+  const { setMainIncome } = await import("@/server/actions/settings");
   const { cancelPro, checkPaymentStatus, confirmCheckout, startCheckout } = await import("@/server/actions/billing");
   const { listSubscriptionSuggestions } = await import("@/server/services/recurring");
   const { buildInsightFacts } = await import("@/server/services/insight-facts");
@@ -356,6 +358,7 @@ describe("no action touches another user's records", async () => {
         `${op} Bob's category`,
         () => categoryAction(op, bob.categoryId),
       ]),
+      ["make Bob's category Alice's main income", () => setMainIncome(bob.categoryId)],
       [
         "edit Bob's goal",
         () =>

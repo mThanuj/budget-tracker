@@ -36,6 +36,7 @@ export const auth = betterAuth({
       onboardedAt: { type: "date", required: false, input: false },
       aiEnabled: { type: "boolean", required: false, defaultValue: true, input: false },
       defaultWalletId: { type: "string", required: false, input: false },
+      mainIncomeCategoryId: { type: "string", required: false, input: false },
     },
   },
   databaseHooks: {

@@ -3,10 +3,11 @@ import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 import { aliasedTable, and, asc, count, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { formatMonth } from "@/lib/date-format";
-import { addDays, addMonths, type ISODate, type ISOMonth, monthOf, monthRange, sameDaysLastMonth } from "@/lib/dates";
+import { addDays, addMonths, daysBetween, type ISODate, type ISOMonth, monthOf, monthRange } from "@/lib/dates";
 import { goalProgress } from "@/lib/goals";
 import type { InsightFacts, InsightKind } from "@/lib/insights";
 import { currencyExponent, formatMoney } from "@/lib/money";
+import { payMonthOf, payMonthRange } from "@/lib/pay-months";
 import type { Db } from "../db";
 import { category, goal, goalContribution, recurringRule, transaction } from "../db/schema";
 import { getBudgetOverview } from "./budgets";
@@ -27,26 +28,78 @@ function change(now: number, before: number) {
 
 type Span = { from: ISODate; to: ISODate }; // end exclusive
 
+/** The main income's dates from four months before `month` to its end: enough to place the pay months around it. */
+async function mainIncomeDates(db: Db, userId: string, categoryId: string, month: ISOMonth): Promise<ISODate[]> {
+  const rows = await db
+    .select({ occurredOn: transaction.occurredOn })
+    .from(transaction)
+    .where(
+      and(
+        eq(transaction.userId, userId),
+        eq(transaction.categoryId, categoryId),
+        eq(transaction.type, "income"),
+        gte(transaction.occurredOn, monthRange(addMonths(month, -4)).start),
+        lt(transaction.occurredOn, monthRange(month).end),
+      ),
+    );
+  return rows.map((r) => r.occurredOn);
+}
+
+/**
+ * The months Insights reports on today: the one in progress ("so far") and
+ * the last finished one. Pay months when a main income is set (src/lib/pay-months.ts),
+ * otherwise calendar months.
+ */
+export async function insightMonths(
+  db: Db,
+  userId: string,
+  { today, mainIncome }: { today: ISODate; mainIncome: string | null },
+): Promise<{ thisMonth: ISOMonth; lastMonth: ISOMonth }> {
+  const thisMonth = mainIncome
+    ? payMonthOf(today, await mainIncomeDates(db, userId, mainIncome, monthOf(today)))
+    : monthOf(today);
+  return { thisMonth, lastMonth: addMonths(thisMonth, -1) };
+}
+
 /**
  * The facts for a finished month, or for the current month up to today
- * ("so far", compared with the same days of last month).
+ * ("so far", compared with the same days of last month). With a main income
+ * the months are pay months; budgets stay calendar months either way.
  */
 export async function buildInsightFacts(
   db: Db,
   userId: string,
-  { kind, month, today, currency }: { kind: InsightKind; month: ISOMonth; today: ISODate; currency: string },
+  {
+    kind,
+    month,
+    today,
+    currency,
+    mainIncome = null,
+  }: { kind: InsightKind; month: ISOMonth; today: ISODate; currency: string; mainIncome?: string | null },
 ): Promise<InsightFacts> {
   const money = (minor: number) => formatMoney(minor, currency, { trimWhole: true });
+  const paydays = mainIncome ? await mainIncomeDates(db, userId, mainIncome, month) : null;
+  const range = (m: ISOMonth) => (paydays ? payMonthRange(m, paydays) : monthRange(m));
   const prevMonth = addMonths(month, -1);
-  const full = monthRange(month);
-  const daysInMonth = Number(addDays(full.end, -1).slice(8, 10));
-  const day = kind === "so_far" ? Number(today.slice(8, 10)) : daysInMonth;
+  const full = range(month);
+  const daysInMonth = daysBetween(full.start, full.end);
+  const day = kind === "so_far" ? daysBetween(full.start, today) + 1 : daysInMonth;
   const span: Span =
     kind === "so_far" ? { from: full.start, to: addDays(today, 1) } : { from: full.start, to: full.end };
-  const prevFull = monthRange(prevMonth);
-  const sameDays = sameDaysLastMonth(today);
+  const prevFull = range(prevMonth);
+  // The same stretch of last month, cut short if it was shorter.
+  const sameDaysEnd = addDays(prevFull.start, day);
   const before: Span =
-    kind === "so_far" ? { from: sameDays.start, to: sameDays.end } : { from: prevFull.start, to: prevFull.end };
+    kind === "so_far"
+      ? { from: prevFull.start, to: sameDaysEnd < prevFull.end ? sameDaysEnd : prevFull.end }
+      : { from: prevFull.start, to: prevFull.end };
+  // "October 2026" or "1–24 October 2026"; for pay months, "30 Sep – 29 Oct 2026".
+  const periodOf = (m: ISOMonth, s: Span) => {
+    const last = addDays(s.to, -1);
+    if (paydays) return `${shortDate(s.from)} – ${shortDate(last)} ${last.slice(0, 4)}`;
+    return kind === "so_far" ? `1–${Number(last.slice(8, 10))} ${formatMonth(m)}` : formatMonth(m);
+  };
+  const budgetMonth = kind === "so_far" ? monthOf(today) : month;
   const inSpan = (s: Span) => and(gte(transaction.occurredOn, s.from), lt(transaction.occurredOn, s.to));
   const mine = eq(transaction.userId, userId);
 
@@ -75,14 +128,25 @@ export async function buildInsightFacts(
       .where(and(mine, inSpan(s), sql`${transaction.type} <> 'transfer'`))
       .then((r) => r[0]);
 
+  // Spending in each of the 3 months before, for the average.
+  const spendingBefore = (): Promise<number[]> =>
+    paydays
+      ? Promise.all(
+          [3, 2, 1].map((n) => {
+            const r = range(addMonths(month, -n));
+            return totals({ from: r.start, to: r.end }).then((t) => t.spending);
+          }),
+        )
+      : monthlyTotals(db, userId, addMonths(month, -3), prevMonth).then((r) => r.map((m) => m.expenseMinor));
+
   const twin = aliasedTable(transaction, "twin");
-  const [now, then, cats, prevCats, history, overview, biggest, dupes, subs, charges, goals] = await Promise.all([
+  const [now, then, cats, prevCats, history, overview, biggest, dupes, subs, charges, goals, late] = await Promise.all([
     totals(span),
     totals(before),
     spendingByCategory(db, userId, span.from, span.to),
     spendingByCategory(db, userId, before.from, before.to),
-    kind === "month" ? monthlyTotals(db, userId, addMonths(month, -3), prevMonth) : Promise.resolve([]),
-    getBudgetOverview(db, userId, month),
+    kind === "month" ? spendingBefore() : Promise.resolve([]),
+    getBudgetOverview(db, userId, budgetMonth),
     db
       .select({
         description: transaction.description,
@@ -170,9 +234,19 @@ export async function buildInsightFacts(
       .where(and(eq(goal.userId, userId), isNull(goal.archivedAt)))
       .groupBy(goal.id)
       .orderBy(asc(goal.createdAt)),
+    // The first income last month after the same days: pay that lands late in the month.
+    kind === "so_far" && !paydays
+      ? db
+          .select({ occurredOn: transaction.occurredOn })
+          .from(transaction)
+          .where(and(mine, inSpan({ from: before.to, to: prevFull.end }), eq(transaction.type, "income")))
+          .orderBy(asc(transaction.occurredOn))
+          .limit(1)
+          .then((r) => r[0]?.occurredOn ?? null)
+      : Promise.resolve(null),
   ]);
 
-  const pastMonths = history.filter((m) => m.expenseMinor > 0);
+  const pastMonths = history.filter((spent) => spent > 0);
   const prevByCat = new Map(prevCats.map((c) => [c.categoryId, c.spentMinor]));
   const kept = now.income - now.spending;
 
@@ -181,14 +255,18 @@ export async function buildInsightFacts(
     const o = overview.overall;
     let projectedMonthEnd: string | null = null;
     let projectedOverLimit = false;
-    // Day-to-day spending at its current pace, plus scheduled bills still to come.
-    if (kind === "so_far" && day >= 7 && day < daysInMonth) {
-      const upcoming = await listUpcoming(db, userId, today, daysInMonth - day);
+    // Day-to-day spending at its current pace, plus scheduled bills still to come,
+    // to the end of the calendar month the limit is for.
+    const cal = monthRange(budgetMonth);
+    const [calDay, calDays] = [daysBetween(cal.start, today) + 1, daysBetween(cal.start, cal.end)];
+    if (kind === "so_far" && calDay >= 7 && calDay < calDays) {
+      const upcoming = await listUpcoming(db, userId, today, calDays - calDay);
       const billsLeft = upcoming
-        .filter((u) => u.rule.type === "expense" && monthOf(u.date) === month)
+        .filter((u) => u.rule.type === "expense" && monthOf(u.date) === budgetMonth)
         .reduce((s, u) => s + u.rule.amountMinor, 0);
-      const dayToDay = now.spending - now.recurringSpending;
-      const projected = now.spending + (dayToDay / day) * (daysInMonth - day) + billsLeft;
+      const soFar = paydays ? await totals({ from: cal.start, to: span.to }) : now;
+      const dayToDay = soFar.spending - soFar.recurringSpending;
+      const projected = soFar.spending + (dayToDay / calDay) * (calDays - calDay) + billsLeft;
       const unit = 100 * 10 ** currencyExponent(currency);
       projectedMonthEnd = `about ${money(Math.round(projected / unit) * unit)}`;
       projectedOverLimit = o.remainingMinor >= 0 && projected > o.availableMinor;
@@ -211,7 +289,7 @@ export async function buildInsightFacts(
 
   return {
     kind,
-    period: kind === "so_far" ? `1–${day} ${formatMonth(month)}` : formatMonth(month),
+    period: periodOf(month, span),
     dayOfMonth: kind === "so_far" ? { day, daysInMonth } : null,
     entries: now.entries,
     income: money(now.income),
@@ -219,20 +297,18 @@ export async function buildInsightFacts(
     kept: now.income > 0 && kept >= 0 ? { amount: money(kept), shareOfIncome: pct(kept, now.income) } : null,
     spentMoreThanIncomeBy: now.income > 0 && kept < 0 ? money(-kept) : null,
     noIncomeRecorded: now.income === 0,
+    incomeLastMonthOn: now.income === 0 && late ? shortDate(late) : undefined,
     comparedWith:
       then.entries > 0
         ? {
-            period:
-              kind === "so_far"
-                ? `1–${Number(addDays(before.to, -1).slice(8, 10))} ${formatMonth(prevMonth)}`
-                : formatMonth(prevMonth),
+            period: periodOf(prevMonth, before),
             spending: money(then.spending),
             change: change(now.spending, then.spending),
           }
         : null,
     averageMonthlySpendingBefore:
       pastMonths.length >= 2
-        ? money(Math.round(pastMonths.reduce((s, m) => s + m.expenseMinor, 0) / pastMonths.length))
+        ? money(Math.round(pastMonths.reduce((s, spent) => s + spent, 0) / pastMonths.length))
         : null,
     categories: cats.slice(0, 6).map((c) => ({
       name: c.name ?? "No category",

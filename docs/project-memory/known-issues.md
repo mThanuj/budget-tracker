@@ -96,5 +96,9 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 ## Code quality
 
+- Budgets, the dashboard and the Insights page's budget lines always use
+  calendar months; only Insights' totals can run in pay months (D-038). For
+  someone paid on the last working day, the dashboard's "this month" still
+  sets that month's salary against spending it didn't pay for.
 - `noUncheckedIndexedAccess` is off; the code often destructures query results
   (`const [row] = …`). Turning it on would flag many spots: adopt deliberately.

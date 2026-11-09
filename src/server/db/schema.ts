@@ -44,6 +44,8 @@ export const user = pgTable("user", {
   onboardedAt: timestamp({ withTimezone: true }),
   aiEnabled: boolean().notNull().default(true),
   defaultWalletId: uuid().references((): AnyPgColumn => wallet.id, { onDelete: "set null" }),
+  // Income category whose arrival at a month's end starts Insights' next pay month; null = calendar months.
+  mainIncomeCategoryId: uuid().references((): AnyPgColumn => category.id, { onDelete: "set null" }),
   ...timestamps,
 });
 

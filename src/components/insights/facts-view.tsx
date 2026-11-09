@@ -78,7 +78,17 @@ export function FactsView({ facts }: { facts: InsightFacts }) {
   return (
     <div className="grid gap-5">
       <dl className="grid gap-2 sm:grid-cols-3 sm:gap-3">
-        <Stat label="Came in" value={facts.income} note={facts.noIncomeRecorded ? "No income recorded" : undefined} />
+        <Stat
+          label="Came in"
+          value={facts.income}
+          note={
+            facts.incomeLastMonthOn
+              ? `Last month it came in on ${facts.incomeLastMonthOn}`
+              : facts.noIncomeRecorded
+                ? "No income recorded"
+                : undefined
+          }
+        />
         <Stat
           label="Spent"
           value={facts.spending}

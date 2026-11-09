@@ -4,6 +4,14 @@ Significant changes to architecture, behaviour or the development workflow,
 newest first. One line each, with the commit; `git log` has the rest. Add a line
 when you merge something a future agent should know about.
 
+## 2026-11-09
+
+- Insights in pay months (D-038): pick a main income in Settings and the
+  month report and check-in run from payday to payday (migration `0011`,
+  action `setMainIncome`). Without one, months stay calendar months; the
+  check-in before payday then says when last month's income came instead of
+  "No income recorded", and points to the setting (`incomeLastMonthOn`).
+
 ## 2026-11-02
 
 - Cerebras removed as an AI provider: the free chain is Groq then OpenRouter

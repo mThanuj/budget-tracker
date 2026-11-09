@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { withinActionLimit } from "@/server/action-utils";
-import { addMonths, monthOf } from "@/lib/dates";
+import { monthOf } from "@/lib/dates";
 import { type InsightKind, MIN_ENTRIES_FOR_INSIGHTS } from "@/lib/insights";
 import { aiAvailableFor, record } from "@/server/ai";
 import { aiAccess } from "@/server/ai/access";
@@ -11,7 +11,7 @@ import { runWithFallback } from "@/server/ai/fallback";
 import { writeInsightWithModel } from "@/server/ai/insights";
 import { takeAiQuota } from "@/server/ai/quota";
 import { db } from "@/server/db";
-import { buildInsightFacts, factsHash } from "@/server/services/insight-facts";
+import { buildInsightFacts, factsHash, insightMonths } from "@/server/services/insight-facts";
 import { getInsight, giveBackRefresh, saveInsight, takeRefresh } from "@/server/services/insights";
 import { requireUser } from "@/server/session";
 import { userCurrency, userToday } from "@/lib/user-prefs";
@@ -35,13 +35,16 @@ export async function writeInsight(kind: InsightKind): Promise<WriteInsightResul
   if (!aiAvailableFor(user)) return { ok: false, reason: "disabled" };
 
   const today = userToday(user);
-  const thisMonth = monthOf(today);
-  const month = parsedKind.data === "month" ? addMonths(thisMonth, -1) : thisMonth;
+  const thisMonth = monthOf(today); // rewrites are counted per calendar month
+  const mainIncome = user.mainIncomeCategoryId ?? null;
+  const months = await insightMonths(db, user.id, { today, mainIncome });
+  const month = parsedKind.data === "month" ? months.lastMonth : months.thisMonth;
   const facts = await buildInsightFacts(db, user.id, {
     kind: parsedKind.data,
     month,
     today,
     currency: userCurrency(user),
+    mainIncome,
   });
   if (facts.entries < MIN_ENTRIES_FOR_INSIGHTS) return { ok: false, reason: "not_enough" };
 

@@ -19,6 +19,12 @@ export type InsightFacts = {
   kept: { amount: string; shareOfIncome: string } | null;
   spentMoreThanIncomeBy: string | null;
   noIncomeRecorded: boolean;
+  /**
+   * A check-in with nothing in yet: when income first came in last month after
+   * these same days ("30 Oct"), as with pay on the last working day. Left out
+   * otherwise, so a finished month's facts (and its report's hash) don't change.
+   */
+  incomeLastMonthOn?: string;
   comparedWith: { period: string; spending: string; change: string } | null;
   averageMonthlySpendingBefore: string | null;
   categories: { name: string; spent: string; shareOfSpending: string; before: string; change: string }[];

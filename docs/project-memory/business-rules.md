@@ -98,6 +98,15 @@ Verified against the code on 2026-10-26 (independent audit).
 - The insights write-up is Pro only and needs at least 5 entries in the period;
   last month's first report is included, check-ins and rewrites use one of the
   month's rewrites (5 for Pro). `src/server/actions/insights.ts`.
+- Insights uses calendar months unless the user picks a main income (one of
+  their own active income categories) in Settings. Then each month is a pay
+  month: November starts on the first main-income entry dated in the last
+  7 days of October, or on October's last working day (Mon–Fri) if there's
+  none, and runs to December's start. All income in it counts, of any category.
+  Budget lines (monthly limit, over budget, the end-of-month pace) stay calendar
+  months. Archiving or deleting the category goes back to calendar months.
+  `src/lib/pay-months.ts`, `insightMonths` in `src/server/services/insight-facts.ts`,
+  `updateMainIncome` in `src/server/services/settings.ts`, D-038.
 - AI never saves anything itself: it fills forms or proposes rows that the user
   confirms. Chat tools are read-only and scoped to the user. A user can switch
   AI off (`aiEnabled`). `src/server/ai/`.

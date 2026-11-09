@@ -6,11 +6,11 @@ import { z } from "zod";
 import { isValidTimeZone } from "@/lib/dates";
 import { isValidCurrency } from "@/lib/money";
 import { normalizeTimeZone } from "@/lib/preferences-options";
-import { TOO_FAST, withinActionLimit } from "@/server/action-utils";
+import { type ActionResult, idSchema, runAction, TOO_FAST, withinActionLimit } from "@/server/action-utils";
 import { db } from "@/server/db";
 import { seedNewUser } from "@/server/db/seed-defaults";
 import { UserError } from "@/server/services/errors";
-import { updateAiEnabled, updatePreferences } from "@/server/services/settings";
+import { updateAiEnabled, updateMainIncome, updatePreferences } from "@/server/services/settings";
 import { requireUser } from "@/server/session";
 
 export type PreferencesState = { ok: true } | { error: string } | undefined;
@@ -72,4 +72,13 @@ export async function setAiEnabled(enabled: boolean): Promise<PreferencesState> 
   await updateAiEnabled(db, user.id, enabled === true);
   refresh();
   return { ok: true };
+}
+
+/** The income category that starts Insights' pay months, or null for calendar months. */
+export async function setMainIncome(categoryId: string | null): Promise<ActionResult> {
+  const user = await requireUser();
+  return runAction(user.id, async () => {
+    await updateMainIncome(db, user.id, categoryId === null ? null : idSchema.parse(categoryId));
+    refresh();
+  });
 }

@@ -44,6 +44,11 @@ export function addMonths(month: ISOMonth, months: number): ISOMonth {
   return fromUTC(new Date(Date.UTC(y, m - 1 + months, 1))).slice(0, 7);
 }
 
+/** Whole days from `from` to `to` (negative if `to` is earlier). */
+export function daysBetween(from: ISODate, to: ISODate): number {
+  return Math.round((toUTC(to).getTime() - toUTC(from).getTime()) / 86_400_000);
+}
+
 /** Half-open range [start, end) covering the whole month. */
 export function monthRange(month: ISOMonth): { start: ISODate; end: ISODate } {
   return { start: `${month}-01`, end: `${addMonths(month, 1)}-01` };

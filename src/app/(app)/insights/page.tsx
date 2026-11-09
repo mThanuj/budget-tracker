@@ -15,7 +15,7 @@ import { aiAvailableFor } from "@/server/ai";
 import { getUserPlan } from "@/server/billing/plan";
 import { razorpayConfig } from "@/server/billing/razorpay";
 import { db } from "@/server/db";
-import { buildInsightFacts, factsHash } from "@/server/services/insight-facts";
+import { buildInsightFacts, factsHash, insightMonths } from "@/server/services/insight-facts";
 import { getInsight, refreshesUsed } from "@/server/services/insights";
 import { requireUser } from "@/server/session";
 import { userCurrency, userTimeZone } from "@/lib/user-prefs";
@@ -33,12 +33,15 @@ export default function InsightsPage() {
   );
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+function Section({ id, title, note, children }: { id: string; title: string; note?: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="grid gap-5 rounded-2xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6">
-      <h2 id={id} className="font-heading text-xl">
-        {title}
-      </h2>
+      <hgroup>
+        <h2 id={id} className="font-heading text-xl">
+          {title}
+        </h2>
+        {note && <p className="mt-1 text-sm text-muted-foreground">{note}</p>}
+      </hgroup>
       {children}
     </section>
   );
@@ -55,16 +58,18 @@ async function InsightsContent() {
   const currency = userCurrency(user);
   const timeZone = userTimeZone(user);
   const today = todayInTz(timeZone);
-  const thisMonth = monthOf(today);
-  const lastMonth = addMonths(thisMonth, -1);
+  // Pay months when a main income is set (Settings), otherwise calendar months.
+  const mainIncome = user.mainIncomeCategoryId ?? null;
+  const { thisMonth, lastMonth } = await insightMonths(db, user.id, { today, mainIncome });
 
   const [plan, last, soFar, report, checkIn, used] = await Promise.all([
     getUserPlan(db, user.id),
-    buildInsightFacts(db, user.id, { kind: "month", month: lastMonth, today, currency }),
-    buildInsightFacts(db, user.id, { kind: "so_far", month: thisMonth, today, currency }),
+    buildInsightFacts(db, user.id, { kind: "month", month: lastMonth, today, currency, mainIncome }),
+    buildInsightFacts(db, user.id, { kind: "so_far", month: thisMonth, today, currency, mainIncome }),
     getInsight(db, user.id, "month", lastMonth),
     getInsight(db, user.id, "so_far", thisMonth),
-    refreshesUsed(db, user.id, thisMonth),
+    // Rewrites are counted per calendar month (writeInsight).
+    refreshesUsed(db, user.id, monthOf(today)),
   ]);
   const pro = plan.limits.insights;
   const ai = aiAvailableFor(user);
@@ -76,15 +81,19 @@ async function InsightsContent() {
 
   return (
     <div className="grid gap-6">
-      <Section id="last-month" title={formatMonth(lastMonth)}>
+      <Section
+        id="last-month"
+        title={formatMonth(lastMonth)}
+        note={mainIncome ? `Pay month: ${last.period}` : undefined}
+      >
         {!enough(last.entries) ? (
           <p className="text-muted-foreground">
             {last.entries === 0
               ? "Nothing was recorded"
               : `Only ${last.entries} ${last.entries === 1 ? "entry was" : "entries were"} recorded`}{" "}
             in {formatMonth(lastMonth)}. Reports start once a month has at least {MIN_ENTRIES_FOR_INSIGHTS} entries;
-            your report for {formatMonth(thisMonth)} will be here on 1{" "}
-            {formatMonth(addMonths(thisMonth, 1)).split(" ")[0]}.
+            your report for {formatMonth(thisMonth)} will be here{" "}
+            {mainIncome ? "when your next pay comes in" : `on 1 ${formatMonth(addMonths(thisMonth, 1)).split(" ")[0]}`}.
           </p>
         ) : (
           <>
@@ -108,7 +117,11 @@ async function InsightsContent() {
         )}
       </Section>
 
-      <Section id="so-far" title={`${formatMonth(thisMonth).split(" ")[0]} so far`}>
+      <Section
+        id="so-far"
+        title={`${formatMonth(thisMonth).split(" ")[0]} so far`}
+        note={mainIncome ? `Pay month so far: ${soFar.period}` : undefined}
+      >
         {!enough(soFar.entries) ? (
           <p className="text-muted-foreground">
             A check-in needs at least {MIN_ENTRIES_FOR_INSIGHTS} entries this month. Keep adding them as you go.
@@ -126,6 +139,12 @@ async function InsightsContent() {
               />
             )}
             <FactsView facts={soFar} />
+            {soFar.incomeLastMonthOn && (
+              <p className="text-sm text-muted-foreground">
+                Paid at the end of the month? Choose your main income in <SettingsLink /> and Insights will run from
+                payday to payday.
+              </p>
+            )}
           </>
         )}
       </Section>
