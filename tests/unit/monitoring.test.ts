@@ -23,29 +23,33 @@ import { log } from "@/server/log";
 const sent = vi.hoisted(() => [] as string[]);
 vi.mock("@sentry/nextjs", async (importOriginal) => {
   const sdk = await importOriginal<typeof import("@sentry/nextjs")>();
-  // Most of the SDK's exports sit on the module's prototype (CommonJS interop),
-  // which spreading would lose; inherit them instead.
-  return Object.assign(Object.create(sdk), {
+  // Inherit the SDK's exports (they may sit on a CommonJS module's prototype,
+  // which spreading would lose) and define `init` on top: assigning it would
+  // throw, as an ES module namespace (Sentry 11.10+) refuses every assignment.
+  return Object.create(sdk, {
     // The app's options, with three changes for the test: events kept in memory,
     // every request traced (so spans are checked too), and no ContextLines,
     // which attaches nearby source lines to stack frames: the nearby source
     // here is this test, which spells out the fake secrets.
-    init: (options: NonNullable<Parameters<typeof sdk.init>[0]>) =>
-      sdk.init({
-        ...options,
-        tracesSampleRate: 1,
-        integrations: (defaults) =>
-          (typeof options.integrations === "function" ? options.integrations(defaults) : defaults).filter(
-            (i) => i.name !== "ContextLines",
-          ),
-        transport: () => ({
-          send: async (envelope: unknown) => {
-            sent.push(JSON.stringify(envelope));
-            return {};
-          },
-          flush: async () => true,
+    init: {
+      enumerable: true,
+      value: (options: NonNullable<Parameters<typeof sdk.init>[0]>) =>
+        sdk.init({
+          ...options,
+          tracesSampleRate: 1,
+          integrations: (defaults) =>
+            (typeof options.integrations === "function" ? options.integrations(defaults) : defaults).filter(
+              (i) => i.name !== "ContextLines",
+            ),
+          transport: () => ({
+            send: async (envelope: unknown) => {
+              sent.push(JSON.stringify(envelope));
+              return {};
+            },
+            flush: async () => true,
+          }),
         }),
-      }),
+    },
   });
 });
 

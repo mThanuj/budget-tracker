@@ -247,6 +247,11 @@ has more. Add new ones under the right heading.
   `countActionCall`): a failure prints its arguments, and printing the PGlite
   database runs the test worker out of memory (SIGABRT, no message). Compare
   `mock.calls.length` instead, as `tests/security/rate-limit.test.ts` does.
+- Since `@sentry/nextjs` 11.10, Vitest's `importOriginal` returns an ES module
+  namespace, which refuses every assignment, also through an object that
+  inherits from it. A mock that overrides an export defines it
+  (`Object.create(sdk, { init: { value } })`, `tests/unit/monitoring.test.ts`);
+  `Object.assign` throws "Cannot assign to property".
 
 ## Git hooks
 
