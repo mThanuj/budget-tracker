@@ -14,3 +14,6 @@ next-env.d.ts
 # Vendored from the Next.js repository, kept identical to upstream
 .claude/skills/next-bundle-optimizer/SKILL.md
 .claude/skills/next-bundle-optimizer/references/
+
+# Per-user Claude Code settings, written by Claude Code itself (ignored by git)
+.claude/settings.local.json
