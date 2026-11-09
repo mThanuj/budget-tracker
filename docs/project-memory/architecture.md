@@ -130,7 +130,9 @@ may import server code (e.g. `src/components/app/user-menu.tsx`).
 All money columns are `bigint` minor units, all calendar dates `date` strings.
 Every user-owned table has `user_id` with `on delete cascade`, except
 `ai_usage`, whose per-user rows are keyed by `scope = "user:<id>"` and removed
-by `deleteAccountData` (`src/server/services/account.ts`).
+by `deleteAccountData` (`src/server/services/account.ts`). `user` also points
+at two of its own rows, both `on delete set null`: `default_wallet_id` and
+`main_income_category_id` (Insights' pay months, D-038).
 
 ```mermaid
 erDiagram
@@ -182,7 +184,7 @@ ids, for idempotency), `deleted_entry` (deleted entries kept 10 minutes for
 | AI entry and categories  | entry dialog               | `transactions/`          | `ai.ts`                            | `server/ai/index.ts`, `parse-entry.ts`, `categorize.ts`                                         | `unit/ai`, `db/ai`                                                                            |
 | Money chat               | `(app)/ask`                | `ask/`                   | `chat.ts`                          | `server/ai/chat.ts`, `quota.ts`                                                                 | `db/chat-tools`, `component/chat-panel`, `e2e/ai`                                             |
 | Onboarding               | `/welcome`, `/setup`       | `setup/`                 | `settings.ts`, `setup.ts`          | `services/setup.ts`, `lib/setup-plan.ts`, `server/ai/setup.ts`                                  | `db/setup`, `unit/setup-plan`, `e2e/setup`                                                    |
-| Insights                 | `(app)/insights`           | `insights/`              | `insights.ts`                      | `services/insight-facts.ts`, `insights.ts`, `server/ai/insights.ts`                             | `unit/insights`, `db/insights`, `e2e/billing`                                                 |
+| Insights                 | `(app)/insights`           | `insights/`              | `insights.ts`                      | `services/insight-facts.ts`, `insights.ts`, `server/ai/insights.ts`, `lib/pay-months.ts`        | `unit/insights`, `db/insights`, `e2e/billing`, `unit/pay-months`                              |
 | Plans, billing           | `(app)/billing`            | `billing/`               | `billing.ts`                       | `server/billing/*`, `api/webhooks/razorpay`                                                     | `unit/billing`, `db/billing`, `integration/`                                                  |
 | Settings, export, delete | `(app)/settings`           | `settings/`              | `settings.ts`, `account.ts`        | `services/account.ts`, `services/settings.ts`, `services/sessions.ts`, `api/export`             | `db/account`, `unit/account`, `integration/routes`, `component/delete-account`, `e2e/account` |
 | Admin                    | `(app)/admin`              | `admin/`                 | `admin.ts` (test error)            | `server/admin.ts`, `services/admin-stats.ts`                                                    | `e2e/account`, `unit/observability`                                                           |

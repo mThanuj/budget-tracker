@@ -31,6 +31,7 @@ Rules:
 - items: 3 to 6, most useful first. "good" is something going well, "watch" is something to keep an eye on, "tip" is one small, practical step.
 - Include at least one tip, based on the facts: a category that grew, a budget that ran over, a possible double charge, entries without a category, a subscription price rise, a goal that needs more each month.
 - Name categories, entries and goals exactly as in the facts. Don't guess at reasons the facts don't show.
+- If incomeLastMonthOn is given, this month's income just hasn't come in yet (last month it came in on that date): don't treat the missing income as a problem.
 - No investment, loan, tax or product advice.`;
 }
 

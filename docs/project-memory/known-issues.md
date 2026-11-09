@@ -96,5 +96,13 @@ below; keep this list in step when an item is done or a new one outranks it.
 
 ## Code quality
 
+- `pnpm test` fails on `main` since PR #23 (2026-11-09, run locally):
+  `tests/unit/monitoring.test.ts` can't load, "Cannot assign to property
+  'init'" in its `vi.mock("@sentry/nextjs")`. Probably `@sentry/nextjs`
+  11.9.0 → 11.10.0 (unverified); the other 435 tests pass.
+- Budgets, the dashboard and the Insights page's budget lines always use
+  calendar months; only Insights' totals can run in pay months (D-038). For
+  someone paid on the last working day, the dashboard's "this month" still
+  sets that month's salary against spending it didn't pay for.
 - `noUncheckedIndexedAccess` is off; the code often destructures query results
   (`const [row] = …`). Turning it on would flag many spots: adopt deliberately.

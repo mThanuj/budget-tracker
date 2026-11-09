@@ -4,7 +4,7 @@ import { transaction } from "@/server/db/schema";
 import { createBudget } from "@/server/services/budgets";
 import { listCategories } from "@/server/services/categories";
 import { addContribution, createGoal } from "@/server/services/goals";
-import { buildInsightFacts, factsHash } from "@/server/services/insight-facts";
+import { buildInsightFacts, factsHash, insightMonths } from "@/server/services/insight-facts";
 import { getInsight, refreshesUsed, saveInsight, takeRefresh, giveBackRefresh } from "@/server/services/insights";
 import { createRule } from "@/server/services/recurring";
 import { createTransaction } from "@/server/services/transactions";
@@ -205,5 +205,150 @@ describe("insight facts", () => {
     await giveBackRefresh(t.db, userId, "2026-10");
     expect(await refreshesUsed(t.db, userId, "2026-10")).toBe(1);
     expect(await refreshesUsed(t.db, userId, "2026-11")).toBe(0);
+  });
+});
+
+describe("insight facts with pay on the last working day", () => {
+  let t: Awaited<ReturnType<typeof createTestDb>>;
+  let userId: string;
+
+  beforeAll(async () => {
+    t = await createTestDb();
+    userId = (await createTestUser(t.db)).id;
+    await seedNewUser(t.db, userId);
+    const cashId = (await listWallets(t.db, userId))[0].id;
+    const c = Object.fromEntries((await listCategories(t.db, userId)).map((x) => [x.name, x.id]));
+    const add = (type: "income" | "expense", amount: number, occurredOn: string, description: string, cat: string) =>
+      createTransaction(t.db, userId, {
+        type,
+        amount,
+        occurredOn,
+        description,
+        notes: null,
+        walletId: cashId,
+        toWalletId: null,
+        categoryId: c[cat],
+      });
+    // 31 Oct 2026 is a Saturday, so October's salary came on Friday the 30th.
+    for (const [month, payday] of [
+      ["2026-09", "2026-09-30"],
+      ["2026-10", "2026-10-30"],
+    ]) {
+      await add("expense", 15_000_00, `${month}-05`, "Rent", "Rent & Housing");
+      await add("expense", 6_000_00, `${month}-10`, "Big Bazaar", "Groceries");
+      await add("expense", 2_000_00, `${month}-18`, "Swiggy", "Dining Out");
+      await add("expense", 3_000_00, `${month}-25`, "Shopping", "Shopping");
+      await add("income", 60_000_00, payday, "Salary", "Salary");
+    }
+    await add("expense", 15_000_00, "2026-11-05", "Rent", "Rent & Housing");
+    await add("expense", 6_000_00, "2026-11-07", "Big Bazaar", "Groceries");
+  });
+  afterAll(() => t.close());
+
+  const facts = (kind: "month" | "so_far", month: string, today: string) =>
+    buildInsightFacts(t.db, userId, { kind, month, today, currency: "INR" });
+
+  it("says when last month's pay came, before this month's arrives", async () => {
+    expect(await facts("so_far", "2026-11", "2026-11-09")).toMatchObject({
+      income: "₹0",
+      noIncomeRecorded: true,
+      incomeLastMonthOn: "30 Oct",
+    });
+    // The day before payday still has nothing in.
+    expect((await facts("so_far", "2026-10", "2026-10-29")).incomeLastMonthOn).toBe("30 Sep");
+  });
+
+  it("says nothing more once pay is in, or for a finished month", async () => {
+    const payday = await facts("so_far", "2026-10", "2026-10-30");
+    expect(payday).toMatchObject({ income: "₹60,000", kept: { amount: "₹34,000", shareOfIncome: "57%" } });
+    expect(payday.incomeLastMonthOn).toBeUndefined();
+    // Left out of the JSON, so reports already written for finished months still match their facts.
+    expect(JSON.stringify(await facts("month", "2026-10", "2026-11-09"))).not.toContain("incomeLastMonthOn");
+  });
+});
+
+describe("insight facts in pay months (a main income is set)", () => {
+  let t: Awaited<ReturnType<typeof createTestDb>>;
+  let userId: string;
+  let salary: string;
+
+  beforeAll(async () => {
+    t = await createTestDb();
+    userId = (await createTestUser(t.db)).id;
+    await seedNewUser(t.db, userId);
+    const cashId = (await listWallets(t.db, userId))[0].id;
+    const c = Object.fromEntries((await listCategories(t.db, userId)).map((x) => [x.name, x.id]));
+    salary = c.Salary;
+    const add = (type: "income" | "expense", amount: number, occurredOn: string, description: string, cat: string) =>
+      createTransaction(t.db, userId, {
+        type,
+        amount,
+        occurredOn,
+        description,
+        notes: null,
+        walletId: cashId,
+        toWalletId: null,
+        categoryId: c[cat],
+      });
+    await createBudget(t.db, userId, { categoryId: null, amount: 20_000_00, rollover: false }, "2026-08");
+    await add("expense", 15_000_00, "2026-08-05", "Rent", "Rent & Housing");
+    // Salary on the last working day: 31 Aug, 30 Sep, and 30 Oct (31 Oct is a Saturday).
+    await add("income", 60_000_00, "2026-08-31", "Salary", "Salary");
+    for (const month of ["2026-09", "2026-10"]) {
+      await add("expense", 15_000_00, `${month}-05`, "Rent", "Rent & Housing");
+      await add("expense", 6_000_00, `${month}-10`, "Big Bazaar", "Groceries");
+      await add("expense", 2_000_00, `${month}-18`, "Swiggy", "Dining Out");
+      await add("expense", 3_000_00, `${month}-25`, "Shopping", "Shopping");
+    }
+    await add("income", 60_000_00, "2026-09-30", "Salary", "Salary");
+    await add("income", 5_000_00, "2026-10-15", "Logo design", "Freelance");
+    await add("income", 500_00, "2026-10-27", "Refund", "Refunds & Cashback"); // not the main income
+    await add("income", 60_000_00, "2026-10-30", "Salary", "Salary");
+    await add("expense", 1_000_00, "2026-10-31", "Dinner", "Dining Out"); // paid for by October's salary
+    await add("expense", 15_000_00, "2026-11-05", "Rent", "Rent & Housing");
+    await add("expense", 6_000_00, "2026-11-07", "Big Bazaar", "Groceries");
+  });
+  afterAll(() => t.close());
+
+  const facts = (kind: "month" | "so_far", month: string, today: string) =>
+    buildInsightFacts(t.db, userId, { kind, month, today, currency: "INR", mainIncome: salary });
+  const months = (today: string, mainIncome: string | null = salary) =>
+    insightMonths(t.db, userId, { today, mainIncome });
+
+  it("move on to the next month on the day the main income comes in", async () => {
+    expect(await months("2026-10-29")).toEqual({ thisMonth: "2026-10", lastMonth: "2026-09" });
+    expect(await months("2026-10-30")).toEqual({ thisMonth: "2026-11", lastMonth: "2026-10" });
+    expect(await months("2026-11-09")).toEqual({ thisMonth: "2026-11", lastMonth: "2026-10" });
+    // Not recorded yet: November's last working day.
+    expect(await months("2026-11-30")).toEqual({ thisMonth: "2026-12", lastMonth: "2026-11" });
+    expect(await months("2026-10-30", null)).toEqual({ thisMonth: "2026-10", lastMonth: "2026-09" });
+  });
+
+  it("check in from payday, with that pay set against what it pays for", async () => {
+    const f = await facts("so_far", "2026-11", "2026-11-09");
+    expect(f).toMatchObject({
+      period: "30 Oct – 9 Nov 2026",
+      dayOfMonth: { day: 11, daysInMonth: 31 },
+      income: "₹60,000",
+      spending: "₹22,000",
+      kept: { amount: "₹38,000", shareOfIncome: "63%" },
+      noIncomeRecorded: false,
+      comparedWith: { period: "30 Sep – 10 Oct 2026", spending: "₹21,000", change: "5% more" },
+      // The limit is for calendar November: no 31 Oct dinner, and its pace over 1–9 November.
+      overallLimit: { spent: "₹21,000", over: "₹1,000", projectedMonthEnd: "about ₹70,000" },
+    });
+    expect(f.incomeLastMonthOn).toBeUndefined();
+  });
+
+  it("report a finished pay month with every income in it", async () => {
+    expect(await facts("month", "2026-10", "2026-11-09")).toMatchObject({
+      period: "30 Sep – 29 Oct 2026",
+      income: "₹65,500", // salary 30 Sep, freelance and the refund
+      spending: "₹26,000",
+      kept: { amount: "₹39,500", shareOfIncome: "60%" },
+      comparedWith: { period: "31 Aug – 29 Sep 2026", spending: "₹26,000", change: "about the same" },
+      averageMonthlySpendingBefore: "₹20,500", // August's and September's pay months
+      overallLimit: { spent: "₹27,000" }, // calendar October
+    });
   });
 });

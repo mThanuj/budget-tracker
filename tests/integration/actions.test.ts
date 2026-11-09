@@ -517,7 +517,20 @@ describe("actions that had no direct test (C4)", async () => {
 });
 
 describe("settings", async () => {
-  const { savePreferences, setAiEnabled } = await import("@/server/actions/settings");
+  const { savePreferences, setAiEnabled, setMainIncome } = await import("@/server/actions/settings");
+
+  it("sets the main income to one of the user's income categories, or back to none", async () => {
+    const mainIncome = async () =>
+      (await db.select().from(schema.user).where(eq(schema.user.id, alice.user.id)))[0].mainIncomeCategoryId;
+    const salary = (await listCategories(db, alice.user.id)).find((c) => c.name === "Salary")!.id;
+    expect(await Reflect.apply(setMainIncome, null, ["salary"])).toMatchObject({ ok: false, fieldErrors: {} });
+    expect(await Reflect.apply(setMainIncome, null, [42])).toMatchObject({ ok: false, fieldErrors: {} });
+    expect(await mainIncome()).toBeNull();
+    expect(await setMainIncome(salary)).toEqual({ ok: true });
+    expect(await mainIncome()).toBe(salary);
+    expect(await setMainIncome(null)).toEqual({ ok: true });
+    expect(await mainIncome()).toBeNull();
+  });
 
   it("stores AI on only for a real true, whatever the client sends", async () => {
     await Reflect.apply(setAiEnabled, null, ["yes"]);

@@ -2,6 +2,7 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import { currencyExponent } from "@/lib/money";
 import type { Db } from "../db";
 import { budget, goal, recurringRule, transaction, user, wallet } from "../db/schema";
+import { getOwnedCategory } from "./categories";
 import { UserError } from "./errors";
 
 export const CURRENCY_LOCKED =
@@ -60,4 +61,17 @@ export async function updatePreferences(
 /** Turns the AI features on or off for the user. */
 export async function updateAiEnabled(db: Db, userId: string, enabled: boolean) {
   await db.update(user).set({ aiEnabled: enabled }).where(eq(user.id, userId));
+}
+
+/**
+ * Sets the income category whose arrival at the end of a month starts the
+ * next pay month in Insights (src/lib/pay-months.ts), or null for calendar months.
+ */
+export async function updateMainIncome(db: Db, userId: string, categoryId: string | null) {
+  if (categoryId) {
+    const c = await getOwnedCategory(db, userId, categoryId);
+    if (c.kind !== "income") throw new UserError("Choose an income category.", "categoryId");
+    if (c.archivedAt) throw new UserError("Restore this category before choosing it.", "categoryId");
+  }
+  await db.update(user).set({ mainIncomeCategoryId: categoryId }).where(eq(user.id, userId));
 }

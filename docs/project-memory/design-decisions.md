@@ -61,6 +61,7 @@ to "superseded by D-NNN", add the new entry, and say what changed.
 | D-035 | Signed-in devices; sign out the others; a fresh sign-in to delete        | accepted                               |
 | D-036 | Fonts by next/font (latin only); link previews, robots.txt and a sitemap | accepted                               |
 | D-037 | One staging branch for trying a change before merging                    | accepted                               |
+| D-038 | Insights in pay months, started by a main income the user picks          | accepted                               |
 
 ### D-001 Product scope
 
@@ -776,3 +777,39 @@ security.spec.ts` after changing the CSP, the proxy or the root layout.
 - **Affected:** `scripts/vercel-build.mjs`, `scripts/check-branch-name.mjs`.
   **References:** docs/DEPLOY.md (section 7), `tests/unit/dev-workflow.test.ts`,
   D-004, D-025.
+
+### D-038 Insights in pay months, started by a main income the user picks
+
+- **Status:** accepted · **Date:** 2026-11-09
+- **Context:** the owner is paid on the last working day of the month. In
+  calendar months the check-in showed no income until payday (about 29 days of
+  every month), and a month's report set that month's salary against spending
+  the previous salary paid for.
+- **Decision:** an optional `user.main_income_category_id` (an income
+  category, chosen in Settings; null = calendar months). With it, Insights'
+  month report and check-in run in pay months: a month starts on the first
+  main-income entry in the last 7 days of the month before, else on that
+  month's last working day; other income is added to whichever pay month it
+  falls in. Budget lines in the facts stay calendar months. Business rule in
+  business-rules.md ("Plans, AI and payments").
+- **Rationale:** chosen by the owner. Starting on the real entry copes with
+  pay that comes early or late because of a weekend or holiday; only the
+  chosen category moves the start, so a refund or a gift at the month's end
+  doesn't. **Alternatives:** the same date every month, learned from the first
+  income (last-working-day pay drifts across it: some months get two salaries,
+  the next none); the last working day only (doesn't know bank holidays); any
+  income in the last week (a refund would start the month); pay months for
+  budgets and the dashboard too (much larger, changes budget rules; not done).
+- **Trade-offs / consequences:** a pay month's end is only known once the next
+  pay is recorded, so a finished month's facts change if that entry's date is
+  edited (its report then offers "Update report"); switching the setting on
+  does the same for reports already written. Pay that lands more than 7 days
+  before the month's end counts in the pay month it lands in. Budget figures on
+  the Insights page are for the calendar month, so they can differ from its
+  spending total. Rewrites are still counted per calendar month.
+- **Affected:** `src/lib/pay-months.ts`, `src/server/services/insight-facts.ts`,
+  `src/app/(app)/insights/page.tsx`, `src/server/actions/insights.ts`,
+  `setMainIncome` (`src/server/actions/settings.ts`), Settings' "Main income",
+  migration `0011_main_income_category`. **References:**
+  `tests/unit/pay-months.test.ts`, `tests/db/insights.test.ts`,
+  `tests/db/settings.test.ts`.

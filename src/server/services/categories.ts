@@ -3,7 +3,7 @@ import { checkCategoryColor, type ColoredCategory, nearestAllowedColor } from "@
 import { DEFAULT_CATEGORIES, PREVIOUS_DEFAULT_COLORS } from "@/lib/default-categories";
 import type { CategoryInput } from "@/lib/validation";
 import type { Db } from "../db";
-import { category, transaction } from "../db/schema";
+import { category, transaction, user } from "../db/schema";
 import { rethrowUnique, UserError } from "./errors";
 import { assertRoomFor } from "./limits";
 
@@ -130,6 +130,11 @@ export async function archiveCategory(db: Db, userId: string, categoryId: string
     .update(category)
     .set({ archivedAt: new Date() })
     .where(and(eq(category.id, categoryId), eq(category.userId, userId)));
+  // Insights goes back to calendar months; Settings only offers active categories.
+  await db
+    .update(user)
+    .set({ mainIncomeCategoryId: null })
+    .where(and(eq(user.id, userId), eq(user.mainIncomeCategoryId, categoryId)));
 }
 
 /** Restores an archived category; if its color now looks like an active one's, it gets the nearest allowed (D-028). */

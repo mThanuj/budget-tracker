@@ -140,6 +140,10 @@ has more. Add new ones under the right heading.
   it (`src/server/ai/chat.ts`).
 - After changing a model or prompt, run `pnpm ai:eval`, `ai:chat-eval` or
   `ai:insights-eval` (they call the real providers with the keys in `.env.local`).
+- A saved month report shows "Update report" when `factsHash` of the facts
+  changes, and the hash is their JSON. A new `InsightFacts` field must be left
+  out when it doesn't apply (optional, `undefined`), or every report already
+  written looks out of date (`incomeLastMonthOn`, `src/lib/insights.ts`).
 
 ## Razorpay
 
