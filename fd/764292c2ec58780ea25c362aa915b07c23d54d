@@ -1,0 +1,57 @@
+docs/project-memory/architecture.md
+  s_9afb937c10f046::t_2e74ec5b57d3e7 133-135,187
+docs/project-memory/business-rules.md
+  s_9afb937c10f046::t_4e0b205e849496 101-109
+docs/project-memory/changelog.md
+  s_9afb937c10f046::t_690bbf5be8eb72 7-14
+docs/project-memory/design-decisions.md
+  s_9afb937c10f046::t_1dc1f9b3e42d9c 64,780-815
+docs/project-memory/implementation-notes.md
+  s_9afb937c10f046::t_ca7f84ab80b671 143-146
+docs/project-memory/known-issues.md
+  s_9afb937c10f046::t_8ab7efec78d1fa 99-106
+drizzle/0011_main_income_category.sql
+  s_9afb937c10f046::t_2054be4bb28011 1-2
+drizzle/meta/0011_snapshot.json
+  s_9afb937c10f046::t_710c4d3708b99c 1-2274
+drizzle/meta/_journal.json
+  s_9afb937c10f046::t_c043c72968f3ce 81-87
+src/components/insights/facts-view.tsx
+  s_9afb937c10f046::t_9717ebaa7e8c9f 81-91
+src/lib/dates.ts
+  s_9afb937c10f046::t_7f6fba51634b1d 47-51
+src/lib/insights.ts
+  s_9afb937c10f046::t_c2aa566c9ed0f9 22-27
+src/lib/pay-months.ts
+  s_9afb937c10f046::t_74d7b61f7d3379 1-38
+src/server/actions/settings.ts
+  s_9afb937c10f046::t_e705380468c31f 9,13,76-84
+src/server/ai/insights.ts
+  s_9afb937c10f046::t_35df988ed6c76a 34
+src/server/auth.ts
+  s_9afb937c10f046::t_3a258fab44dbbc 39
+src/server/db/schema.ts
+  s_9afb937c10f046::t_4f3932c075209b 47-48
+src/server/services/categories.ts
+  s_9afb937c10f046::t_b1e363681369a1 6,133-137
+src/server/services/settings.ts
+  s_9afb937c10f046::t_dc06379c514179 5,65-77
+tests/unit/pay-months.test.ts
+  s_9afb937c10f046::t_aa6e9297c772ff 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "fd764292c2ec58780ea25c362aa915b07c23d54d",
+  "prompts": {},
+  "sessions": {
+    "s_9afb937c10f046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2b6cd525-0f64-4ad8-a06a-557ca4d2c74b",
+        "model": "unknown"
+      },
+      "human_author": "mThanuj <mullagurithanuj0@gmail.com>"
+    }
+  }
+}
