@@ -6,6 +6,11 @@ when you merge something a future agent should know about.
 
 ## 2026-11-09
 
+- Fewer waits before signed-in pages show content: the session and its user
+  in one query (Better Auth joins, relations in `schema.ts`), a pool of 10
+  connections kept a minute on Vercel (was 3 and 5 s), Insights reads the pay
+  dates once and runs its pace queries with the rest, the recurring page
+  loads its items once, and Settings' sections load in parallel.
 - Insights in pay months (D-038): pick a main income in Settings and the
   month report and check-in run from payday to payday (migration `0011`,
   action `setMainIncome`). Without one, months stay calendar months; the

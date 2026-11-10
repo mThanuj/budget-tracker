@@ -102,7 +102,6 @@ async function SettingsContent() {
   const user = await requireUser();
   const currency = userCurrency(user);
   const timezone = userTimeZone(user);
-  const incomes = (await listCategoryOptions(db, user.id)).filter((c) => c.kind === "income");
 
   return (
     <>
@@ -138,10 +137,19 @@ async function SettingsContent() {
           timeZones={timeZoneOptions([timezone])}
         />
       </Section>
-      <Section title="Main income" description="When a month starts in Insights.">
-        <MainIncome value={user.mainIncomeCategoryId ?? null} categories={incomes} />
-      </Section>
+      <MainIncomeSection />
     </>
+  );
+}
+
+// Its own component, so its query runs alongside SignedInDevices instead of before it.
+async function MainIncomeSection() {
+  const user = await requireUser();
+  const incomes = (await listCategoryOptions(db, user.id)).filter((c) => c.kind === "income");
+  return (
+    <Section title="Main income" description="When a month starts in Insights.">
+      <MainIncome value={user.mainIncomeCategoryId ?? null} categories={incomes} />
+    </Section>
   );
 }
 

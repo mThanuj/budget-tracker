@@ -68,7 +68,8 @@ may import server code (e.g. `src/components/app/user-menu.tsx`).
    Next can add that nonce to its scripts; anything user-specific is an async
    component under `<Suspense>` that streams in.
 3. That component calls `requireUser()`, which verifies the session through
-   Better Auth (once per request, React `cache`) and redirects to
+   Better Auth (once per request, React `cache`; one query, the session joined
+   with its user, `tests/integration/session-queries.test.ts`) and redirects to
    `/?signed-out=1` if there's none, then calls services with `(db, userId, …)`.
 4. A change is a server action: `requireUser()` → the per-user rate limit
    (`runAction`, or `withinActionLimit` in actions with their own result; D-026)
